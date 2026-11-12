@@ -1,5 +1,6 @@
-# Methods of upstream's OpenGL mobject classes. Expected values come from
-# upstream manim 0.22.1 where noted.
+# Methods of upstream's OpenGL mobject classes. Expected values marked
+# "Upstream" are the oracle output of upstream manim 0.22.1, printed by
+# data-raw/opengl_methods_oracle.py.
 
 test_that("OpenGLArrowTip is a triangle pointing right, as upstream", {
   tip <- OpenGLArrowTip()
@@ -171,8 +172,9 @@ test_that("OpenGL classes have upstream's own methods", {
   # Upstream: OpenGLCircle().surround(OpenGLSquare(side_length=2), buff=0.5) is 3 by 3.
   expect_equal(c(c1$width, c1$height), c(3, 3), tolerance = 1e-6)
   dl <- OpenGLDashedLine(LEFT, RIGHT, dash_length = 0.1, dashed_ratio = 0.5)
-  # Upstream: ceil(length / (dash_length / dashed_ratio)).
-  expect_equal(dl$calculate_num_dashes(0.1, 0.5), 10L)
+  # Upstream: max(2, ceil(length / dash_length * dashed_ratio)).
+  expect_equal(dl$calculate_num_dashes(0.5), 10L)
+  expect_equal(OpenGLDashedLine(ORIGIN, 0.1 * RIGHT)$calculate_num_dashes(0.5), 2L)
   arrow <- OpenGLArrow(LEFT, RIGHT)
   arrow$set_path_arc(PI / 2)
   expect_equal(arrow$path_arc, PI / 2)

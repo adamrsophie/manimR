@@ -975,8 +975,8 @@ OPENGL_CLASS_METHODS$OpenGLCircle <- list(public = list(
   }
 ))
 OPENGL_CLASS_METHODS$OpenGLDashedLine <- list(public = list(
-  calculate_num_dashes = function(dash_length = self$dash_length, dashed_ratio = self$dashed_ratio) {
-    as.integer(ceiling(self$get_length() / (dash_length / dashed_ratio)))
+  calculate_num_dashes = function(dashed_ratio = self$dashed_ratio) {
+    max(2L, as.integer(ceiling((self$get_length() / self$dash_length) * dashed_ratio)))
   }
 ))
 # Upstream's OpenGLSurface.pointwise_become_partial(): the grid points
