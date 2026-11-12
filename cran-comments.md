@@ -1,16 +1,20 @@
 ## Test environments
 
-* local: macOS 27.2 (aarch64), R 4.6.0
-* GitHub Actions: ubuntu-latest (R devel, release and oldrel-1),
-  windows-latest (R release), macos-latest (R release)
+* local: macOS 27.2 (aarch64), R 4.6.0, `R CMD check --as-cran`
+* GitHub Actions: ubuntu-latest (R devel, release and oldrel-1) and
+  windows-latest (R release)
 
 ## R CMD check results
 
 0 errors | 0 warnings | 1 note
 
 * This is a new submission.
-* Possibly misspelled words in DESCRIPTION: Bezier is a proper name;
-  mobjects, updaters and addins are terms of the library and of 'RStudio'.
+* Should the spelling check list Bezier, mobjects, updaters or addins in
+  DESCRIPTION: Bezier is a proper name; mobjects, updaters and addins are
+  terms of the library and of 'RStudio'.
+* The local check also listed seven examples above 5 s elapsed time while
+  the machine ran other jobs; the CPU time of every example was under
+  2.1 s.
 
 ## Notes for the reviewers
 
@@ -30,7 +34,9 @@
   `tempdir()`.
 * Tests that call external programs (LaTeX, 'dvisvgm', 'ffmpeg', 'typst') and
   the ten slowest tests are skipped on CRAN. The vignette chunks that call
-  LaTeX or 'ffmpeg' are not evaluated on CRAN.
+  LaTeX or 'ffmpeg' are not evaluated on CRAN. `Code()` highlights with
+  Python's 'Pygments' when Python with that module is found and with a
+  built in highlighter otherwise; its tests pass both ways.
 * Only the introduction is shipped as a vignette. The eleven longer articles
   render many scenes and are published on the package website, to keep the
   check time and the size of the package small.
