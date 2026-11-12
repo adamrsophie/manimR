@@ -350,3 +350,90 @@ test_that("OpenGLMobject and OpenGLVMobject take upstream's arguments in order",
                c(o$fill_opacity, o$stroke_opacity, o$stroke_width))
   expect_identical(c(v$draw_stroke_behind_fill, v$long_lines), c(o$draw_stroke_behind_fill, o$long_lines))
 })
+
+test_that("OpenGLCamera turns, moves and zooms as upstream's camera", {
+  o <- oracle$camera
+  cam <- OpenGLCamera()
+  cam$set_euler_angles(theta = PI / 4, phi = PI / 3)
+  expect_equal(cam$inverse_rotation_matrix, o$rotation)
+  expect_equal(cam$get_position(), o$position)
+  expect_equal(cam$unformatted_view_matrix, o$view)
+  turned <- OpenGLCamera(euler_angles = c(0.2, 0.4, 0.1))
+  turned$rotate(0.3, RIGHT)
+  expect_equal(turned$euler_angles, o$turned)
+  moved <- OpenGLCamera(frame_shape = c(4, 3), center_point = c(1, 2, 0))
+  moved$set_zoom(2)
+  moved$increment_phi(3)
+  expect_equal(moved$points, o$moved_points)
+  expect_equal(moved$get_shape(), o$moved_shape)
+  expect_equal(moved$euler_angles[2], o$moved_phi)
+  expect_equal(moved$get_focal_distance(), o$focal)
+  moved$frame_center <- c(3, 0, 0)
+  expect_equal(moved$get_center(), c(3, 0, 0))
+  expect_warning(moved$set_focal_distance(3), "can not be adjusted")
+})
+
+test_that("Object3D trees give upstream's hierarchical matrices and copies", {
+  o <- oracle$object3d
+  a <- Object3D()
+  b <- Object3D()
+  c3 <- Object3D()
+  a$add(b)
+  b$add(c3)
+  a$model_matrix <- rbind(c(0, -1, 0, 1), c(1, 0, 0, 0), c(0, 0, 1, 0), c(0, 0, 0, 1))
+  b$set_position(c(0, 2, 0))
+  c3$normal_matrix <- diag(c(2, 3, 4, 1))
+  expect_equal(c3$hierarchical_model_matrix(), o$model)
+  expect_equal(c3$hierarchical_normal_matrix(), o$normal)
+  copied <- a$copy()
+  expect_length(copied$get_family(), o$n_family)
+  expect_false(identical(copied$children[[1]], b))
+  expect_identical(copied$children[[1]]$parent, copied)
+  expect_error(Object3D()$add(b), "already added")
+  ticks <- 0
+  a$add_updater(function(obj, dt) ticks <<- ticks + dt, call_updater = FALSE)
+  expect_true(a$has_time_based_updater())
+  a$update(0.5)
+  expect_equal(ticks, 0.5)
+})
+
+test_that("triangulate_mobject() gives upstream's fill triangles", {
+  tri <- oracle$triangulation
+  quadratic_of <- function(...) {
+    m <- OpenGLVMobject()
+    m$set_points(do.call(rbind, lapply(list(...), function(x) x$points)))
+    m
+  }
+  got <- list(square = triangulate_mobject(quadratic_of(Square())),
+              circle = triangulate_mobject(quadratic_of(Circle())),
+              two_squares = triangulate_mobject(quadratic_of(Square(), Square(0.5))))
+  for (k in names(got)) {
+    expect_equal(get("in_vert", envir = got[[k]]), tri[[k]]$in_vert, tolerance = 1e-6, info = k)
+    expect_equal(get("texture_mode", envir = got[[k]])[, 1], tri[[k]]$texture_mode, info = k)
+  }
+  f <- filter_attributes(got$square, c("in_vert", "texture_coords"))
+  expect_equal(c(names(f), length(f)), c(oracle$filtered$names, oracle$filtered$n))
+})
+
+test_that("build_matrix_lists() groups a family by its model matrices", {
+  g <- OpenGLVGroup(OpenGLSquare(), OpenGLCircle())
+  g$submobjects[[2]]$model_matrix <- diag(c(2, 1, 1, 1))
+  lists <- build_matrix_lists(g)
+  expected <- oracle$matrix_lists
+  expect_equal(lapply(strsplit(names(lists), ","), as.numeric), lapply(seq_len(nrow(expected)), function(i) expected$matrix[[i]]))
+  expect_equal(unname(lengths(lists)), expected$n)
+})
+
+test_that("Shader and FullScreenQuad read upstream's GLSL and keep declared uniforms", {
+  s <- Shader(name = "vectorized_mobject_fill")
+  expect_named(s$shader_program, c("fragment_shader", "vertex_shader"), ignore.order = TRUE)
+  expect_identical(Shader(name = "vectorized_mobject_fill")$shader_program, s$shader_program)
+  s$set_uniform("u_projection_matrix", 1)
+  s$set_uniform("not_a_uniform", 1)
+  expect_named(s$uniforms, "u_projection_matrix")
+  q <- FullScreenQuad(fragment_shader_name = "design")
+  expect_equal(dim(get("in_vert", envir = q$attributes)), c(6, 4))
+  expect_named(q$shader$uniforms, c("u_model_view_matrix", "u_projection_matrix"))
+  expect_error(Mesh(s, q$attributes)$render(), "needs an OpenGL context")
+  expect_true(dir.exists(SHADER_FOLDER))
+})

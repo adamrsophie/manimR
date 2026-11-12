@@ -150,6 +150,7 @@ reference:
   - opengl_point_cloud
   - opengl_mobjects
   - ShaderWrapper
+  - opengl_renderer
   - get_mobject_class
   - image_helpers
 - title: Animations

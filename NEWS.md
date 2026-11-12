@@ -38,6 +38,11 @@
   They also have the methods and argument names of upstream's OpenGL
   classes, including the CPU side of its GPU pipeline: shader data,
   triangulation, uniforms and `ShaderWrapper()`, with upstream's GLSL files.
+  The CPU side of upstream's OpenGL renderer is ported too: the camera
+  (`OpenGLCamera()`), trees of 3D objects and meshes (`Object3D()`,
+  `Mesh()`), `Shader()`, `triangulate_mobject()` and
+  `build_matrix_lists()`; drawing a mesh needs an OpenGL context and stops
+  with a message.
   Where an OpenGL class differs from its Cairo counterpart, it follows
   upstream's OpenGL class: `OpenGLArrow()` is a filled shape,
   `OpenGLLine()` applies `buff` twice, arcs are made of quadratic pieces,

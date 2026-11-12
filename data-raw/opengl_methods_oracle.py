@@ -122,4 +122,48 @@ out["base_vmobject"] = {"fill_color": v.get_fill_color().to_hex(), "fill_opacity
                         "stroke_width": float(v.get_stroke_width()[0]),
                         "draw_stroke_behind_fill": v.draw_stroke_behind_fill, "long_lines": v.long_lines}
 
+
+# The CPU side of the OpenGL renderer: the camera, trees of 3D objects,
+# triangulation and matrix lists.
+from manim.renderer.opengl_renderer import OpenGLCamera
+from manim.renderer.shader import Object3D, filter_attributes
+from manim.renderer.vectorized_mobject_rendering import build_matrix_lists, triangulate_mobject
+from manim.utils.bezier import get_quadratic_approximation_of_cubic
+from manim import Circle, Square, VGroup
+from manim.mobject.opengl.opengl_vectorized_mobject import OpenGLVGroup
+cam = OpenGLCamera()
+cam.set_euler_angles(theta=PI / 4, phi=PI / 3)
+turned = OpenGLCamera(euler_angles=[0.2, 0.4, 0.1])
+turned.rotate(0.3, RIGHT)
+moved = OpenGLCamera(frame_shape=(4, 3), center_point=[1, 2, 0])
+moved.set_zoom(2)
+moved.increment_phi(3)
+out["camera"] = {"rotation": np.asarray(cam.inverse_rotation_matrix).tolist(), "position": cam.get_position().tolist(),
+                 "view": cam.unformatted_view_matrix.tolist(), "turned": turned.euler_angles.tolist(),
+                 "moved_points": moved.points.tolist(), "moved_shape": list(moved.get_shape()),
+                 "moved_phi": float(moved.euler_angles[1]), "focal": moved.get_focal_distance()}
+a, b, c = Object3D(), Object3D(), Object3D()
+a.add(b)
+b.add(c)
+a.model_matrix = np.array([[0, -1, 0, 1], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], dtype=float)
+b.set_position([0, 2, 0])
+c.normal_matrix = np.diag([2.0, 3, 4, 1])
+out["object3d"] = {"model": c.hierarchical_model_matrix().tolist(), "normal": c.hierarchical_normal_matrix().tolist(),
+                   "n_family": len(list(a.copy().get_family()))}
+def quadratic(mob):
+    p = mob.points
+    return get_quadratic_approximation_of_cubic(p[0::4], p[1::4], p[2::4], p[3::4])
+tris = {}
+for k, cairo in {"square": Square(), "circle": Circle(), "two_squares": VGroup(Square(), Square(0.5)).family_members_with_points()}.items():
+    pts = np.vstack([quadratic(m) for m in cairo]) if isinstance(cairo, list) else quadratic(cairo)
+    t = triangulate_mobject(OpenGLVMobject().set_points(pts))
+    tris[k] = {"in_vert": t["in_vert"].astype(float).tolist(), "texture_mode": t["texture_mode"].tolist()}
+    if k == "square":
+        f = filter_attributes(t, ["in_vert", "texture_coords"])
+        out["filtered"] = {"names": list(f.dtype.names), "n": len(f)}
+out["triangulation"] = tris
+g = OpenGLVGroup(OpenGLSquare(), OpenGLCircle())
+g.submobjects[1].model_matrix = np.diag([2.0, 1, 1, 1])
+out["matrix_lists"] = [{"matrix": list(k), "n": len(v)} for k, v in build_matrix_lists(g).items()]
+
 json.dump(out, open(sys.argv[1], "w"), indent=1)

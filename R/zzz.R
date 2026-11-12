@@ -19,6 +19,7 @@ next_mob_id <- function() {
   .manim$color_table <- NULL
   register_knitr_engine()
   finalize_constructors(asNamespace(pkgname))
+  assign("SHADER_FOLDER", system.file("shaders", package = pkgname, lib.loc = libname), envir = asNamespace(pkgname))
   digest_startup_config_files()
   invisible()
 }

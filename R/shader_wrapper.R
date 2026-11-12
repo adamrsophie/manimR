@@ -59,8 +59,7 @@ find_file <- function(file_name, directories) {
 #' @export
 get_shader_code_from_file <- function(filename) {
   key <- as.character(filename)
-  cache <- .manim$filename_to_code_map %||% list()
-  if (!is.null(cache[[key]])) return(cache[[key]])
+  if (!is.null(filename_to_code_map[[key]])) return(filename_to_code_map[[key]])
   path <- tryCatch(find_file(key, c(get_shader_dir(), "/")), error = function(e) NULL)
   if (is.null(path) || dir.exists(path)) return(NULL)
   # As Python's text mode, which upstream reads with: "\r\n" and "\r" end lines
@@ -71,8 +70,7 @@ get_shader_code_from_file <- function(filename) {
     if (is.null(inserted)) return(NULL)
     result <- gsub(line, inserted, result, fixed = TRUE)
   }
-  cache[[key]] <- result
-  .manim$filename_to_code_map <- cache
+  assign(key, result, envir = filename_to_code_map)
   result
 }
 
