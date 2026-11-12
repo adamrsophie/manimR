@@ -4806,5 +4806,21 @@
  "image_gloss": [
   0.2,
   0.3
- ]
+ ],
+ "base_mobject": {
+  "color": "#FC6255",
+  "opacity": 0.5,
+  "gloss": 0.2,
+  "shadow": 0.3,
+  "is_fixed_in_frame": 1.0
+ },
+ "base_vmobject": {
+  "fill_color": "#58C4DD",
+  "fill_opacity": 0.5,
+  "stroke_color": "#FC6255",
+  "stroke_opacity": 0.7,
+  "stroke_width": 2.0,
+  "draw_stroke_behind_fill": true,
+  "long_lines": true
+ }
 }

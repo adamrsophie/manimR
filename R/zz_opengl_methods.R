@@ -1236,6 +1236,59 @@ OPENGL_CLASS_METHODS$OpenGLImageMobject <- list(public = list(
     self$set_shadow(shadow)
   }
 ))
+# Upstream's arguments of the base classes, in upstream's order.
+OPENGL_CLASS_METHODS$OpenGLMobject <- list(public = list(
+  opacity = 1,
+  listen_to_events = FALSE,
+  should_render = TRUE,
+  initialize = function(color = WHITE, opacity = 1, dim = 3, gloss = 0, shadow = 0, render_primitive = 4L,
+                        texture_paths = NULL, depth_test = FALSE, is_fixed_in_frame = FALSE,
+                        is_fixed_orientation = FALSE, listen_to_events = FALSE, model_matrix = NULL,
+                        should_render = TRUE, name = NULL, ...) {
+    super$initialize(color = color, name = name, ...)
+    self$opacity <- opacity
+    self$dim <- dim
+    self$gloss <- gloss
+    self$shadow <- shadow
+    self$render_primitive <- render_primitive
+    self$texture_paths <- texture_paths
+    self$depth_test <- depth_test
+    self$is_fixed_in_frame <- as.numeric(is_fixed_in_frame)
+    self$is_fixed_orientation <- as.numeric(is_fixed_orientation)
+    self$listen_to_events <- listen_to_events
+    if (!is.null(model_matrix)) self$model_matrix <- model_matrix
+    self$should_render <- should_render
+  }
+))
+# n_points_per_curve is taken but not used: manimR's curves are cubic.
+OPENGL_CLASS_METHODS$OpenGLVMobject <- list(public = list(
+  long_lines = FALSE,
+  should_subdivide_sharp_curves = FALSE,
+  should_remove_null_curves = FALSE,
+  initialize = function(fill_color = NULL, fill_opacity = 0, stroke_color = NULL, stroke_opacity = 1,
+                        stroke_width = DEFAULT_STROKE_WIDTH, draw_stroke_behind_fill = FALSE,
+                        pre_function_handle_to_anchor_scale_factor = 0.01,
+                        make_smooth_after_applying_functions = FALSE, background_image_file = NULL,
+                        tolerance_for_point_equality = 1e-8, n_points_per_curve = 3, long_lines = FALSE,
+                        should_subdivide_sharp_curves = FALSE, should_remove_null_curves = FALSE,
+                        joint_type = NULL, flat_stroke = TRUE, render_primitive = 4L,
+                        triangulation_locked = FALSE, ...) {
+    super$initialize(fill_color = fill_color, fill_opacity = fill_opacity, stroke_color = stroke_color,
+                     stroke_opacity = stroke_opacity, stroke_width = stroke_width,
+                     pre_function_handle_to_anchor_scale_factor = pre_function_handle_to_anchor_scale_factor,
+                     make_smooth_after_applying_functions = make_smooth_after_applying_functions,
+                     background_image = background_image_file,
+                     tolerance_for_point_equality = tolerance_for_point_equality,
+                     joint_type = joint_type %||% "auto", ...)
+    self$draw_stroke_behind_fill <- draw_stroke_behind_fill
+    self$long_lines <- long_lines
+    self$should_subdivide_sharp_curves <- should_subdivide_sharp_curves
+    self$should_remove_null_curves <- should_remove_null_curves
+    self$flat_stroke <- flat_stroke
+    self$render_primitive <- render_primitive
+    self$triangulation_locked <- triangulation_locked
+  }
+))
 OPENGL_CLASS_METHODS$OpenGLCubicBezier <- list(public = list(
   initialize = function(a0, h0, h1, a1, ...) super$initialize(a0, h0, h1, a1, ...)
 ))

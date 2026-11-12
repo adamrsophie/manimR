@@ -337,3 +337,16 @@ test_that("OpenGLImageMobject takes upstream's width and height", {
   expect_equal(c(glossy$gloss, glossy$shadow), oracle$image_gloss)
   expect_s3_class(glossy, "ImageMobject")
 })
+
+test_that("OpenGLMobject and OpenGLVMobject take upstream's arguments in order", {
+  o <- oracle$base_mobject
+  m <- OpenGLMobject(RED, 0.5, 3, 0.2, 0.3, is_fixed_in_frame = TRUE)
+  expect_equal(toupper(m$get_color()), o$color)
+  expect_equal(c(m$opacity, m$gloss, m$shadow, m$is_fixed_in_frame), c(o$opacity, o$gloss, o$shadow, o$is_fixed_in_frame))
+  o <- oracle$base_vmobject
+  v <- OpenGLVMobject(BLUE, 0.5, RED, 0.7, 2, TRUE, long_lines = TRUE)
+  expect_equal(toupper(c(v$get_fill_color(), v$get_stroke_color())), c(o$fill_color, o$stroke_color))
+  expect_equal(c(v$get_fill_opacity(), v$get_stroke_opacity(), v$get_stroke_width()),
+               c(o$fill_opacity, o$stroke_opacity, o$stroke_width))
+  expect_identical(c(v$draw_stroke_behind_fill, v$long_lines), c(o$draw_stroke_behind_fill, o$long_lines))
+})

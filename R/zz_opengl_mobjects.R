@@ -55,6 +55,11 @@
 #'   upstream's 101: manimR draws each face with grid, not on a GPU.
 #' * `OpenGLImageMobject(filename_or_array, width, height, ...)` is 4 units
 #'   high unless `width` or `height` is given.
+#' * `OpenGLMobject(color, opacity, dim, gloss, shadow, ...)` and
+#'   `OpenGLVMobject(fill_color, fill_opacity, stroke_color, stroke_opacity,
+#'   stroke_width, draw_stroke_behind_fill, ...)` take upstream's arguments
+#'   in upstream's order; `n_points_per_curve` is taken but not used, since
+#'   manimR's curves are cubic.
 #'
 #' Three classes have no Cairo counterpart:
 #'

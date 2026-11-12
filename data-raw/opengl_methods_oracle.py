@@ -110,4 +110,16 @@ out["image_sizes"] = [[m.get_width(), m.get_height()] for m in (OpenGLImageMobje
 glossy = OpenGLImageMobject(pixels, gloss=0.2, shadow=0.3)
 out["image_gloss"] = [glossy.gloss, glossy.shadow]
 
+# Positional arguments of the base classes.
+from manim import BLUE as _BLUE, RED as _RED
+from manim.mobject.opengl.opengl_mobject import OpenGLMobject as _OpenGLMobject
+m = _OpenGLMobject(_RED, 0.5, 3, 0.2, 0.3, is_fixed_in_frame=True)
+out["base_mobject"] = {"color": m.color.to_hex(), "opacity": m.opacity, "gloss": m.gloss, "shadow": m.shadow,
+                       "is_fixed_in_frame": m.is_fixed_in_frame}
+v = OpenGLVMobject(_BLUE, 0.5, _RED, 0.7, 2, True, long_lines=True)
+out["base_vmobject"] = {"fill_color": v.get_fill_color().to_hex(), "fill_opacity": v.get_fill_opacity(),
+                        "stroke_color": v.get_stroke_color().to_hex(), "stroke_opacity": v.get_stroke_opacity(),
+                        "stroke_width": float(v.get_stroke_width()[0]),
+                        "draw_stroke_behind_fill": v.draw_stroke_behind_fill, "long_lines": v.long_lines}
+
 json.dump(out, open(sys.argv[1], "w"), indent=1)

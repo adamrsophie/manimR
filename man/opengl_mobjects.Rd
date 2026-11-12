@@ -156,6 +156,10 @@ along \code{colorscale_axis} (0 for x, as upstream). The default
 upstream's 101: manimR draws each face with grid, not on a GPU.
 \item \code{OpenGLImageMobject(filename_or_array, width, height, ...)} is 4 units
 high unless \code{width} or \code{height} is given.
+\item \code{OpenGLMobject(color, opacity, dim, gloss, shadow, ...)} and
+\code{OpenGLVMobject(fill_color, fill_opacity, stroke_color, stroke_opacity, stroke_width, draw_stroke_behind_fill, ...)} take upstream's arguments
+in upstream's order; \code{n_points_per_curve} is taken but not used, since
+manimR's curves are cubic.
 }
 
 Three classes have no Cairo counterpart:
