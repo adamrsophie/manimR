@@ -434,3 +434,26 @@ test_that("the default media folder is in the session's temporary directory", {
     expect_equal(cfg("media_dir"), default_media_dir())
   })
 })
+
+test_that("the background job addin renders into this session's media folder", {
+  skip_if_not_installed("rstudioapi")
+  scene_file <- withr::local_tempfile(fileext = ".R")
+  writeLines("Sq <- R6::R6Class('Sq', inherit = manimR::SceneClass)", scene_file)
+  script <- NULL
+  local_mocked_bindings(
+    require_rstudio = function() invisible(TRUE),
+    active_document_file = function() list(path = scene_file, ctx = NULL),
+    find_scenes = function(path) list(Sq = NULL),
+    scene_at_cursor = function(ctx, scene_names) "Sq",
+    later_call = function(f, delay) invisible(NULL)
+  )
+  local_mocked_bindings(jobRunScript = function(path, ...) {
+    script <<- readLines(path)
+    "job"
+  }, .package = "rstudioapi")
+  with_manim_config(list(media_dir = default_media_dir()), addin_render_background())
+  # The job is another R process; its own temporary directory would vanish.
+  expect_equal(script[1], sprintf("manimR::manim_config(media_dir = %s)",
+                                  deparse(normalizePath(default_media_dir(), mustWork = FALSE))))
+  expect_match(script[2], "render_file", fixed = TRUE)
+})

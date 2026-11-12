@@ -82,7 +82,10 @@ addin_render_background <- function() {
   dir.create(job_dir)
   result <- file.path(job_dir, "output.rds")
   script <- file.path(job_dir, "render.R")
+  # The job is another R process, whose temporary directory is removed when
+  # it ends, so it writes to the media folder of this session.
   writeLines(c(
+    sprintf("manimR::manim_config(media_dir = %s)", deparse(normalizePath(cfg("media_dir"), mustWork = FALSE))),
     sprintf("out <- manimR::render_file(%s, %s, quality = %s)", deparse(doc$path), deparse(name),
             deparse(addin_quality())),
     sprintf("saveRDS(unclass(out), %s)", deparse(result))
