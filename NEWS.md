@@ -32,3 +32,31 @@
 * Images are drawn through the homography of their corners with Pillow's
   nearest, bilinear and bicubic filters, and an image seen edge on is
   skipped as upstream.
+* Helpers of `manim.utils` outside `from manim import *` are exported too:
+  the matrices of `manim.utils.opengl` (`orthographic_projection_matrix()`,
+  `view_matrix()` and the rest), `rotation_matrix_transpose()`,
+  `rotation_matrix_from_quaternion()`, `normalize_along_axis()`,
+  `resize_array()`, `resize_preserving_order()`,
+  `resize_with_interpolation()`, `batch_by_property()`, `uniq_chain()`,
+  `get_smooth_closed_cubic_bezier_handle_points()`,
+  `get_smooth_open_cubic_bezier_handle_points()`,
+  `get_quadratic_approximation_of_cubic()`, `remove_invisible_chars()` and
+  `convert_audio()`.
+* `ImplicitFunction()` traces its curve with a port of the adaptive
+  quadtree of the isosurfaces package, and `ConvexHull()` and
+  `ConvexHull3D()` use a port of upstream's QuickHull, so both give
+  upstream's curve points and hull faces.
+* Submobjects are validated and inserted as upstream: a `VMobject` takes
+  only `VMobject`s, `add()`, `add_to_back()` and `insert()` move a mobject
+  that is already a submobject, and `insert()` takes negative positions.
+* A numeric vector of 3 or 4 values is one color wherever a color is taken
+  (`Square(color = c(0.5, 0.5, 0.5))`), and a single number is a hex number
+  (`0xFC6255`); several colors are a character vector or a list.
+* `frame_width`, `frame_height` and `frame_center` of a camera are
+  properties: on a `MovingCamera` they read and move its frame.
+* `SVGMobject()` reads styles and paths as upstream's SVG parser does: a
+  shape with no stroke keeps the stroke color of its class, an opacity
+  property replaces the alpha of its color and has 8 bits, the `opacity`
+  property is not read, and an arc becomes one quadratic piece for every
+  tenth of a turn. `MarkupText()` rejects unknown tags, and `polylabel()`
+  also returns the size `h` of the cell of its pole.

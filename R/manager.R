@@ -15,6 +15,8 @@
 #' only one.
 #'
 #' @param scene The scene to manage.
+#' @return A `Manager`, an R6 object that renders a scene. `ManagerClass` is
+#'   its R6 class generator.
 #' @name Manager
 #' @format NULL
 #' @usage NULL

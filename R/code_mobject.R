@@ -247,11 +247,9 @@ code_guess_language <- function(code, file = NULL) {
 #'   from the style. `alignment`, `width` and `height` are ignored.
 #' @export
 #' @examples
-#' \dontrun{
 #' code <- "f <- function(x) {\n  # square it\n  x^2 + 1\n}"
 #' Code(code_string = code, language = "r", background = "window",
 #'      background_config = list(stroke_color = "maroon"))
-#' }
 CodeClass <- R6::R6Class("Code", inherit = VMobjectClass, lock_objects = FALSE,
   public = list(
     code_string = NULL,
@@ -388,6 +386,9 @@ CodeClass <- R6::R6Class("Code", inherit = VMobjectClass, lock_objects = FALSE,
   )
 )
 
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @rdname CodeClass
 #' @export
 Code <- constructor(CodeClass)

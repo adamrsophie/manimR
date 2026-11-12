@@ -217,13 +217,11 @@ Scene$set("public", "check_interactive_embed_is_valid", function() {
 #' @param fps Redraws per second.
 #' @return The scene, invisibly, when the window closes.
 #' @name interactive_scene
-#' @examples
-#' \dontrun{
+#' @examplesIf interactive()
 #' sc <- ThreeDScene$new()
 #' sc$add(Cube())
 #' sc$set_key_function("c", function() sc$add(Sphere(radius = 0.5)))
 #' sc$interactive_embed()
-#' }
 NULL
 
 Scene$set("public", "interactive_embed", function(fps = 10) {

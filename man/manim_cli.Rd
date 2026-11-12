@@ -10,6 +10,9 @@ manim_cli(args = commandArgs(trailingOnly = TRUE))
 \item{args}{Character vector of arguments; defaults to the trailing
 command line arguments.}
 }
+\value{
+The result of the subcommand, invisibly.
+}
 \description{
 Mirrors \verb{manim render} for use with \code{Rscript}:
 \verb{Rscript -e 'manimR::manim_cli()' scenes.R SceneName -ql -p}. FILE is an

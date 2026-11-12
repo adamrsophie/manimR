@@ -191,10 +191,8 @@ based; dictionaries become lists named by the numeric positions, for
 example \code{list("1" = "a", "2" = "b")}.
 }
 \examples{
-\dontrun{
 ax <- Axes(x_range = c(-3, 3), y_range = c(-2, 2))
 g <- ax$plot(sin, color = BLUE)
 area <- ax$get_area(g, x_range = c(0, 2))
 plane <- NumberPlane()
-}
 }

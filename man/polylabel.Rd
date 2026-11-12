@@ -13,7 +13,8 @@ Extra rings are holes.}
 \item{precision}{Precision of the result.}
 }
 \value{
-A list with \code{c} (the 2D pole) and \code{d} (its distance to the edges).
+A list with \code{c} (the 2D pole), \code{d} (its distance to the edges) and
+\code{h} (half the size of the cell it was found in).
 }
 \description{
 Finds the point inside a polygon (with optional holes) that is farthest

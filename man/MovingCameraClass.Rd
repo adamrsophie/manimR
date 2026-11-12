@@ -24,6 +24,11 @@ default frame, which is invisible by default.}
 
 \item{...}{Passed to \link{CameraClass}.}
 }
+\value{
+A camera: an R6 object of the class named by the function called.
+The objects whose names end in \code{Class} are the R6 class generators that
+these functions call.
+}
 \description{
 A camera that follows and matches the size and position of its
 \code{frame}, a rectangle mobject. Move, scale or animate the frame to pan and

@@ -10,6 +10,10 @@ BackgroundColoredVMobjectDisplayer(camera)
 \arguments{
 \item{camera}{The camera that draws the mobjects.}
 }
+\value{
+A \code{BackgroundColoredVMobjectDisplayer}, an R6 object.
+\code{BackgroundColoredVMobjectDisplayerClass} is its R6 class generator.
+}
 \description{
 Upstream's pixel based helper for mobjects whose colors come from an image
 (\code{vmobject$color_using_background_image()}). The camera draws such

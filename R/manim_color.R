@@ -153,6 +153,11 @@ parse_manim_color_value <- function(value, alpha = 1) {
 #' @param name Method or property name.
 #' @param e1,e2 Operands.
 #' @param ... Ignored.
+#' @return `ManimColor()`, `RGBA()` and `HSV()` return a color object: a hex
+#'   string of class `ManimColor` (and `HSV` for `HSV()`). Its methods return
+#'   colors, numeric vectors or character strings, as described above.
+#'   `ManimColorClass` and `HSVClass` are the R6 class generators behind the
+#'   class methods.
 #' @name ManimColor
 #' @examples
 #' c1 <- ManimColor("#FF0000")
@@ -266,11 +271,13 @@ manim_color_methods <- list(
   contrasting = function(x, threshold = 0.5, light = NULL, dark = NULL) {
     rgb <- attr(x, "rgba")[1:3]
     luminance <- sum(rgb * c(0.3, 0.59, 0.11))
+    # A color given as a name or hex string comes back as a color object.
+    as_color <- function(col) if (inherits(col, "ManimColor")) col else ManimColor(col)
     if (luminance < threshold) {
-      if (!is.null(light)) return(light)
+      if (!is.null(light)) return(as_color(light))
       return(from_internal(class(x)[1], c(1, 1, 1, 1)))
     }
-    if (!is.null(dark)) return(dark)
+    if (!is.null(dark)) return(as_color(dark))
     from_internal(class(x)[1], c(0, 0, 0, 1))
   },
   opacity = function(x, opacity) {
@@ -368,6 +375,8 @@ format.ManimColor <- function(x, ...) manim_color_methods$to_hex(x)
 #'
 #' @param seed `NULL`, or an integer seed.
 #' @param sample_colors Colors to choose from.
+#' @return A `RandomColorGenerator`, an R6 object. `RandomColorGeneratorClass`
+#'   is its R6 class generator.
 #' @name RandomColorGenerator
 #' @format NULL
 #' @usage NULL

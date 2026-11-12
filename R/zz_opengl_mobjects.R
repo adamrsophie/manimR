@@ -13,8 +13,10 @@
 #' unchanged; the GPU pipeline itself (shaders, the OpenGL camera and window)
 #' is not part of manimR.
 #'
-#' Two classes have no Cairo counterpart:
+#' Three classes have no Cairo counterpart:
 #'
+#' * `OpenGLSurfaceGroup(...)` is a surface without faces of its own that
+#'   holds the surfaces it is given.
 #' * `OpenGLSurfaceMesh(uv_surface)` is a [VGroup()] of curves along the
 #'   grid lines of a surface (`resolution` lines in each direction, 21 by
 #'   default), lifted `normal_nudge` along the surface normal so they show
@@ -42,6 +44,9 @@
 #' @param dark_image_file Image for the dark side, stored in `dark_image`.
 #' @param image_mode Mode the image is converted to, as in [ImageMobject()].
 #' @param ... Further arguments for [VGroup()] or [Surface()].
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @name opengl_mobjects
 #' @aliases OpenGLMobject OpenGLGroup OpenGLPoint OpenGLVMobject OpenGLVGroup OpenGLVectorizedPoint
 #' @aliases OpenGLCurvesAsSubmobjects OpenGLDashedVMobject OpenGLTipableVMobject OpenGLArc
@@ -49,7 +54,9 @@
 #' @aliases OpenGLEllipse OpenGLAnnularSector OpenGLSector OpenGLAnnulus OpenGLLine OpenGLDashedLine
 #' @aliases OpenGLTangentLine OpenGLElbow OpenGLArrow OpenGLVector OpenGLDoubleArrow OpenGLCubicBezier
 #' @aliases OpenGLPolygon OpenGLRegularPolygon OpenGLTriangle OpenGLArrowTip OpenGLImageMobject
-#' @aliases OpenGLSurface OpenGLSurfaceMesh OpenGLTexturedSurface
+#' @aliases OpenGLSurface OpenGLSurfaceMesh OpenGLTexturedSurface OpenGLSurfaceGroup
+#' @aliases OpenGLRectangle OpenGLSquare OpenGLRoundedRectangle
+#' @aliases OpenGLRectangleClass OpenGLSquareClass OpenGLRoundedRectangleClass OpenGLSurfaceGroupClass
 #' @aliases OpenGLMobjectClass OpenGLGroupClass OpenGLPointClass OpenGLVMobjectClass OpenGLVGroupClass
 #' @aliases OpenGLVectorizedPointClass OpenGLCurvesAsSubmobjectsClass OpenGLDashedVMobjectClass
 #' @aliases OpenGLTipableVMobjectClass OpenGLArcClass OpenGLArcBetweenPointsClass OpenGLCurvedArrowClass
@@ -63,6 +70,9 @@
 #' @usage NULL
 #' @format NULL
 #' @rawNamespace export(OpenGLMobject, OpenGLGroup, OpenGLPoint, OpenGLVMobject, OpenGLVGroup)
+#' @rawNamespace export(OpenGLRectangle, OpenGLSquare, OpenGLRoundedRectangle, OpenGLSurfaceGroup)
+#' @rawNamespace export(OpenGLRectangleClass, OpenGLSquareClass, OpenGLRoundedRectangleClass)
+#' @rawNamespace export(OpenGLSurfaceGroupClass)
 #' @rawNamespace export(OpenGLVectorizedPoint, OpenGLCurvesAsSubmobjects, OpenGLDashedVMobject)
 #' @rawNamespace export(OpenGLTipableVMobject, OpenGLArc, OpenGLArcBetweenPoints, OpenGLCurvedArrow)
 #' @rawNamespace export(OpenGLCurvedDoubleArrow, OpenGLCircle, OpenGLDot, OpenGLEllipse, OpenGLAnnularSector)
@@ -105,6 +115,7 @@ OPENGL_MOBJECT_CLASSES <- c(
   OpenGLTangentLine = "TangentLine", OpenGLElbow = "Elbow", OpenGLArrow = "Arrow", OpenGLVector = "Vector",
   OpenGLDoubleArrow = "DoubleArrow", OpenGLCubicBezier = "CubicBezier", OpenGLPolygon = "Polygon",
   OpenGLRegularPolygon = "RegularPolygon", OpenGLTriangle = "Triangle", OpenGLArrowTip = "ArrowTip",
+  OpenGLRectangle = "Rectangle", OpenGLSquare = "Square", OpenGLRoundedRectangle = "RoundedRectangle",
   OpenGLImageMobject = "ImageMobject", OpenGLSurface = "Surface"
 )
 
@@ -242,6 +253,20 @@ OpenGLTexturedSurfaceClass <- R6::R6Class("OpenGLTexturedSurface", inherit = Ope
 )
 
 OpenGLSurfaceMesh <- build_constructor(OpenGLSurfaceMeshClass)
+
+# A surface with no faces of its own that groups other surfaces.
+OpenGLSurfaceGroupClass <- R6::R6Class("OpenGLSurfaceGroup", inherit = OpenGLSurfaceClass, lock_objects = FALSE,
+  public = list(
+    initialize = function(..., resolution = NULL) {
+      args <- list(...)
+      nm <- names(args) %||% rep("", length(args))
+      do.call(super$initialize, c(list(func = NULL, resolution = c(0, 0)), args[nm != ""]))
+      self$resolution <- resolution %||% c(0, 0)
+      self$add(args[nm == ""])
+    }
+  )
+)
+OpenGLSurfaceGroup <- build_constructor(OpenGLSurfaceGroupClass)
 OpenGLTexturedSurface <- build_constructor(OpenGLTexturedSurfaceClass)
 
 get_mobject_class <- function() MobjectClass

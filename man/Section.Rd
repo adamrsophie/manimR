@@ -17,6 +17,10 @@ is not saved.}
 
 \item{skip_animations}{Skip rendering the animations of this section.}
 }
+\value{
+A \code{Section}, an R6 object that describes one section of a scene's
+output. \code{SectionClass} is its R6 class generator.
+}
 \description{
 A scene is split into sections with its \code{next_section()} method. Each
 section records the partial movie files of the plays it contains

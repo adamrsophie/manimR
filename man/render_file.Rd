@@ -27,7 +27,16 @@ The script's name is the module name of the output directories
 (\verb{media/videos/<file name>/<quality>/}).
 }
 \examples{
+file <- tempfile(fileext = ".R")
+writeLines(c(
+  "library(manimR)",
+  "SquareToCircle <- manim_scene(function(self) {",
+  "  self$play(Transform(Square(), Circle()))",
+  "})"), file)
+# The last frame as a PNG file in the session's temporary directory.
+render_file(file, "SquareToCircle", quality = "l", format = "png", media_dir = tempdir())
 \dontrun{
-render_file("scenes.R", "SquareToCircle", quality = "l", preview = TRUE)
+# A video in the folder media of the working directory; this needs ffmpeg.
+render_file(file, "SquareToCircle", quality = "l", preview = TRUE)
 }
 }

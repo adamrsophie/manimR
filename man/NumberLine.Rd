@@ -103,8 +103,10 @@ Useful methods: \code{number_to_point(x)} (alias \code{n2p}), \code{point_to_num
 returns a vector.
 }
 \examples{
-\dontrun{
-l <- NumberLine(x_range = c(-5, 5, 1), length = 10, include_numbers = TRUE)
+l <- NumberLine(x_range = c(-5, 5, 1), length = 10)
 l$n2p(2)
+\dontrun{
+# The numbers are typeset with LaTeX.
+NumberLine(x_range = c(-5, 5, 1), length = 10, include_numbers = TRUE)
 }
 }

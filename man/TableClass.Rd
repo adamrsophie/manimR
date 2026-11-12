@@ -74,6 +74,11 @@ lists) of equal length.}
 
 \item{...}{Passed to \code{\link[=VGroup]{VGroup()}}.}
 }
+\value{
+A mobject: an R6 object of the class named by the function called.
+The objects whose names end in \code{Class} are the R6 class generators that
+these functions call.
+}
 \description{
 Displays a table: entries made with \code{element_to_mobject} (by
 default \code{\link[=Paragraph]{Paragraph()}}) arranged in a grid, with optional row and column
@@ -91,8 +96,6 @@ entry. Methods: \code{get_rows()}, \code{get_columns()}, \code{get_entries(pos)}
 and \code{create(...)}, an animation drawing the table.
 }
 \examples{
-\dontrun{
 t <- Table(list(c("This", "is a"), c("simple", "Table in \n Manim.")))
 t$add_highlighted_cell(c(2, 2), color = GREEN)
-}
 }

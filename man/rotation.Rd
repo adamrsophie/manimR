@@ -48,6 +48,11 @@ Rotate(
 \item{path_arc, path_arc_axis}{Arc angle and axis of the path the points
 follow in \code{Rotate()}; default to \code{angle} and \code{axis}.}
 }
+\value{
+An animation: an R6 object of the class named by the function
+called, to pass to a scene's \code{play()}. The objects whose names end in
+\code{Class} are the R6 class generators that these functions call.
+}
 \description{
 \code{Rotate()} turns a mobject by \code{angle} along an arc path. \code{Rotating()}
 spins it continuously with a linear rate by default.

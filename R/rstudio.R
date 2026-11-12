@@ -52,6 +52,8 @@ scene_at_cursor <- function(ctx, scene_names) {
 #' The quality used by the quick addins is `getOption("manimR.addin_quality", "l")`.
 #' Any addin can be bound to a keyboard shortcut with Tools, Modify Keyboard
 #' Shortcuts.
+#' @return The addins are called for their side effects and return nothing
+#'   useful.
 #' @name rstudio_addins
 NULL
 
@@ -214,6 +216,8 @@ manim_gadget <- function() {
 #' ```
 #' ````
 #' @param options knitr chunk options.
+#' @return A character string for knitr: the chunk output with the rendered
+#'   video or image embedded.
 #' @export
 knitr_manim_engine <- function(options) {
   env <- knitr::knit_global()

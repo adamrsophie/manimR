@@ -46,7 +46,6 @@ change_speed_setup <- function(anim) {
 #' @param ... Passed to [Animation()].
 #' @export
 #' @examples
-#' \dontrun{
 #' SpeedModifierExample <- manim_scene(function(self) {
 #'   a <- Dot()$shift(LEFT * 4)
 #'   b <- Dot()$shift(RIGHT * 4)
@@ -57,7 +56,6 @@ change_speed_setup <- function(anim) {
 #'     speedinfo = c("0.3" = 1, "0.4" = 0.1, "0.6" = 0.1, "1" = 1),
 #'     rate_func = linear))
 #' })
-#' }
 ChangeSpeedClass <- R6::R6Class("ChangeSpeed", inherit = AnimationClass, lock_objects = FALSE,
   public = list(
     anim = NULL,
@@ -159,6 +157,9 @@ ChangeSpeedClass <- R6::R6Class("ChangeSpeed", inherit = AnimationClass, lock_ob
   )
 )
 
+#' @return An animation: an R6 object of the class named by the function
+#'   called, to pass to a scene's `play()`. The objects whose names end in
+#'   `Class` are the R6 class generators that these functions call.
 #' @rdname ChangeSpeedClass
 #' @export
 ChangeSpeed <- constructor(ChangeSpeedClass)
@@ -185,7 +186,6 @@ change_speed_f_inv_1 <- function(init_speed, final_speed) 2 / (init_speed + fina
 #' @return The mobject, invisibly.
 #' @export
 #' @examples
-#' \dontrun{
 #' SpeedModifierUpdaterExample <- manim_scene(function(self) {
 #'   a <- Dot()$shift(LEFT * 4)
 #'   self$add(a)
@@ -193,7 +193,6 @@ change_speed_f_inv_1 <- function(init_speed, final_speed) 2 / (init_speed + fina
 #'   self$play(ChangeSpeed(Wait(2), speedinfo = c("0.4" = 1, "0.5" = 0.2, "0.8" = 0.2, "1" = 1),
 #'                         affects_speed_updaters = TRUE))
 #' })
-#' }
 change_speed_add_updater <- function(mobject, update_function, index = NULL, call_updater = FALSE) {
   if (updater_takes_dt(update_function)) {
     mobject$add_updater(function(mob, dt) {

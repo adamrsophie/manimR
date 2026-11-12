@@ -34,6 +34,8 @@
 #'   upstream's `Graph.from_networkx()`; `...` goes to the constructor, for
 #'   example `layout = "spring"`.
 #'
+#' @return The methods return what upstream's class methods of the same names
+#'   return, as the list above describes.
 #' @name class_methods
 #' @examples
 #' CircleClass$from_three_points(LEFT, UP, RIGHT)$radius

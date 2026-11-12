@@ -40,6 +40,11 @@ random_bright_color()
 
 \item{blend}{Amount to blend toward white (\code{lighter_color}) or black (\code{darker_color}).}
 }
+\value{
+A color: a hex string, of class \code{ManimColor} where the function
+computes it from other colors. \code{color_gradient()} returns a character vector
+of \code{length_of_output} colors.
+}
 \description{
 Color arithmetic
 }

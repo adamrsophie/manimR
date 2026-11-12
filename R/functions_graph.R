@@ -24,16 +24,17 @@
 #'   be read as coordinate rows.
 #' @param x_range,y_range Ranges of the variables.
 #' @param color Color.
-#' @param min_depth,max_quads Resolution of the implicit curve sampling grid.
+#' @param min_depth,max_quads The implicit curve is traced on a grid of
+#'   cells that are split `min_depth` times everywhere and then further
+#'   where the function changes sign, up to `max_quads` cells (the adaptive
+#'   method of the `isosurfaces` Python package, as upstream).
 #' @param ... Passed to [VMobject()].
 #' @return A mobject.
 #' @name function_graphs
 #' @examples
-#' \dontrun{
 #' ParametricFunction(function(t) c(sin(2 * t), sin(3 * t), 0), t_range = c(0, TAU))
 #' FunctionGraph(cos, color = RED)
 #' ImplicitFunction(function(x, y) x^2 + y^2 - 4)
-#' }
 NULL
 
 #' @rdname function_graphs
@@ -158,23 +159,15 @@ ImplicitFunctionClass <- R6::R6Class("ImplicitFunction", inherit = VMobjectClass
       super$initialize(...)
     },
     generate_points = function() {
-      # Limitation: uniform grid plus grDevices::contourLines instead of the
-      # adaptive quadtree of the isosurfaces package; raise max_quads for detail.
-      n <- max(2^self$min_depth, ceiling(4 * sqrt(self$max_quads))) + 1
-      xs <- seq(self$x_range[1], self$x_range[2], length.out = n)
-      ys <- seq(self$y_range[1], self$y_range[2], length.out = n)
-      gx <- rep(xs, times = n)
-      gy <- rep(ys, each = n)
-      vals <- tryCatch(as.numeric(self$func(gx, gy)), error = function(e) NULL)
-      if (length(vals) != length(gx)) vals <- mapply(function(x, y) as.numeric(self$func(x, y)), gx, gy)
-      z <- matrix(vals, n, n)
-      z[!is.finite(z)] <- NA
-      # Contour points are unevenly spaced, which makes the smoothing overshoot,
-      # so resample them evenly at about the grid spacing.
-      h <- min(diff(xs[1:2]), diff(ys[1:2]))
-      for (curve in grDevices::contourLines(xs, ys, z, levels = 0)) {
-        pts <- resample_polyline(cbind(curve$x, curve$y, 0), h)
-        if (nrow(pts) < 2) next
+      func <- self$func
+      fn <- function(u) {
+        value <- as.numeric(func(u[1], u[2]))[1]
+        if (is.na(value)) NaN else value
+      }
+      curves <- plot_isoline(fn, c(self$x_range[1], self$y_range[1]), c(self$x_range[2], self$y_range[2]),
+                             min_depth = self$min_depth, max_quads = self$max_quads)
+      for (curve in curves) {
+        pts <- cbind(curve, 0)
         self$start_new_path(pts[1, ])
         self$add_points_as_corners(pts[-1, , drop = FALSE])
       }
@@ -188,13 +181,3 @@ ImplicitFunctionClass <- R6::R6Class("ImplicitFunction", inherit = VMobjectClass
 #' @rdname function_graphs
 #' @export
 ImplicitFunction <- constructor(ImplicitFunctionClass)
-# Resample a polyline at even arc length steps of about h, keeping both ends.
-resample_polyline <- function(pts, h) {
-  seg <- sqrt(rowSums(diff(pts)^2))
-  cum <- c(0, cumsum(seg))
-  total <- cum[length(cum)]
-  keep <- c(TRUE, seg > 0)
-  if (total == 0 || sum(keep) < 2) return(pts[1, , drop = FALSE])
-  s <- seq(0, total, length.out = max(2, ceiling(total / h) + 1))
-  cbind(stats::approx(cum[keep], pts[keep, 1], s)$y, stats::approx(cum[keep], pts[keep, 2], s)$y, 0)
-}

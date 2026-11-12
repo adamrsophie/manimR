@@ -96,6 +96,7 @@ test_that("multi-line text and paragraphs match upstream layout", {
 
 test_that("CLI resolution, range, fps and still output path flags work", {
   skip_if_not(nzchar(Sys.which("ffmpeg")))
+  skip_on_cran()
   dir <- withr_tempdir()
   f <- file.path(dir, "s.R")
   writeLines("Still <- manimR::manim_scene(function(self) { self$add(manimR::Square()); self$play(manimR::FadeIn(manimR::Circle()), run_time = 0.2) }, name = 'Still')", f)
@@ -109,6 +110,7 @@ test_that("CLI resolution, range, fps and still output path flags work", {
 
 test_that("transparent automatic output is a .mov, and output names get its extension", {
   skip_if_not(nzchar(Sys.which("ffmpeg")))
+  skip_on_cran()
   dir <- withr_tempdir()
   out <- suppressMessages(render(function(self) self$play(FadeIn(Square()), run_time = 0.2), quality = "l",
                                  transparent = TRUE, output_file = file.path(dir, "clip")))
@@ -122,6 +124,7 @@ test_that("transparent automatic output is a .mov, and output names get its exte
 
 test_that("a short sound does not cut the movie", {
   skip_if_not(nzchar(Sys.which("ffmpeg")) && nzchar(Sys.which("ffprobe")))
+  skip_on_cran()
   dir <- withr_tempdir()
   wav <- file.path(dir, "click.wav")
   system2(Sys.which("ffmpeg"), c("-y", "-loglevel", "error", "-f", "lavfi", "-i", shQuote("sine=frequency=440:duration=0.1"), shQuote(wav)))
@@ -154,6 +157,7 @@ test_that("override_animation replaces an animation for a class", {
 
 test_that("camera background images and non PNG images load", {
   skip_if_not(nzchar(Sys.which("ffmpeg")))
+  skip_on_cran()
   dir <- withr_tempdir()
   jpg <- file.path(dir, "red.jpg")
   system2(Sys.which("ffmpeg"), c("-y", "-loglevel", "error", "-f", "lavfi", "-i", shQuote("color=c=red:s=40x30"), "-frames:v", "1", shQuote(jpg)))

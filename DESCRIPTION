@@ -13,7 +13,8 @@ Description: Create precise programmatic animations for explanatory math videos,
     Manim Community developers, whose work is gratefully acknowledged.
 License: GPL (>= 3)
 Copyright: See the file inst/COPYRIGHTS for the copyright holders of
-    Manim Community, NetworkX and earcut.hpp, whose code this package ports.
+    Manim Community, NetworkX, earcut.hpp and isosurfaces, whose code this
+    package ports.
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE, r6 = FALSE)
 Depends:

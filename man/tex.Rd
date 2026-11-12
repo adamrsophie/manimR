@@ -61,6 +61,11 @@ Tex(..., arg_separator = "", tex_environment = "center")
 
 \item{tex_to_color_map}{Named list mapping substrings to colors.}
 }
+\value{
+A mobject: an R6 object of the class named by the function called.
+The objects whose names end in \code{Class} are the R6 class generators that
+these functions call.
+}
 \description{
 LaTeX rendered to vectorized mobjects. \code{MathTex()} typesets
 math (in an \verb{align*} environment), \code{Tex()} typesets text mode LaTeX.
@@ -70,6 +75,7 @@ Each string argument becomes one submobject, so
 }
 \examples{
 \dontrun{
+# Needs LaTeX and dvisvgm.
 MathTex("e^{i\\\\pi} + 1 = 0")
 Tex("Hello \\\\LaTeX", color = BLUE)
 }

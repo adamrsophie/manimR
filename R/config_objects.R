@@ -178,6 +178,8 @@ LOG_LEVELS <- c(DEBUG = 10, INFO = 20, WARNING = 30, ERROR = 40, CRITICAL = 50)
 #' `cli_ctx_settings` holds upstream's command line help settings (the
 #' `[CLI_CTX]` section of its configuration file).
 #'
+#' @return `logger`, `console` and `error_console` are lists of functions that
+#'   print messages; `cli_ctx_settings` is a named list of settings.
 #' @format Lists of functions; `cli_ctx_settings` is a named list.
 #' @name logger
 #' @examples

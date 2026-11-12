@@ -129,7 +129,7 @@ aa = angle_axis_from_quaternion(quaternion_from_angle_axis(PI / 3, np.array([1, 
 aa_big = angle_axis_from_quaternion(quaternion_from_angle_axis(3 * PI / 2, np.array([0, 0, 1])))
 cases["angle_axis_from_quaternion"] = {
     "small": [float(aa[0]), r(aa[1])],
-    # 0.20.1 maps angles above PI to TAU - angle without flipping the axis.
+    # An angle above PI: TAU - angle about the flipped axis (0.20.1 did not flip it).
     "big": [float(aa_big[0]), r(aa_big[1])],
 }
 cases["quaternion_conjugate"] = r(quaternion_conjugate([1, 2, 3, 4]))

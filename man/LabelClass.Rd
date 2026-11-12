@@ -59,6 +59,11 @@ ring), then named arguments for \code{\link[=Polygram]{Polygram()}}.}
 
 \item{precision}{Precision of the pole of inaccessibility search.}
 }
+\value{
+A mobject: an R6 object of the class named by the function called.
+The objects whose names end in \code{Class} are the R6 class generators that
+these functions call.
+}
 \description{
 \code{Label()} is a label surrounded by a background box and a
 frame. \code{LabeledLine()} and \code{LabeledArrow()} put such a label at
@@ -68,8 +73,9 @@ the interior point farthest from its edges, stored in \verb{$pole} with the
 distance in \verb{$radius}.
 }
 \examples{
-\dontrun{
 Label(Text("Label Text"), box_config = list(color = BLUE, fill_opacity = 0.75))$scale(3)
+\dontrun{
+# A label given as a string is typeset with LaTeX.
 LabeledLine("0.5", label_position = 0.8, label_config = list(font_size = 20),
             start = LEFT + DOWN, end = RIGHT + UP)
 }

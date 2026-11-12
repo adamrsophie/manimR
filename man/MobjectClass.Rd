@@ -17,6 +17,11 @@ Mobject(color = "#FFFFFF", name = NULL, z_index = 0, ...)
 \item{...}{Fields of the class to set, such as those \code{\link[=set_default]{set_default()}}
 gives; any other name is an error.}
 }
+\value{
+A mobject: an R6 object of the class named by the function called.
+The objects whose names end in \code{Class} are the R6 class generators that
+these functions call.
+}
 \description{
 Base class for mathematical objects. Most users construct
 subclasses such as \code{\link[=Circle]{Circle()}} or \code{\link[=VGroup]{VGroup()}}. All transformation methods

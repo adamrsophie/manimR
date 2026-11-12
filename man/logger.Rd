@@ -18,6 +18,10 @@ error_console
 
 cli_ctx_settings
 }
+\value{
+\code{logger}, \code{console} and \code{error_console} are lists of functions that
+print messages; \code{cli_ctx_settings} is a named list of settings.
+}
 \description{
 \code{logger} mirrors upstream's \code{manim.logger}: \code{logger$info("...")},
 \code{logger$debug()}, \code{logger$warning()}, \code{logger$error()} and

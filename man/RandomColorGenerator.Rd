@@ -12,6 +12,10 @@ RandomColorGenerator(seed = NULL, sample_colors = NULL)
 
 \item{sample_colors}{Colors to choose from.}
 }
+\value{
+A \code{RandomColorGenerator}, an R6 object. \code{RandomColorGeneratorClass}
+is its R6 class generator.
+}
 \description{
 Upstream's \code{RandomColorGenerator}: \verb{$next()} (or \verb{$next_color()}, since
 \code{next} is reserved in R and needs backticks: \code{gen$`next`()}) returns a

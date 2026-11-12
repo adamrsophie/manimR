@@ -5,10 +5,12 @@
 #' Vector helpers used throughout manimR. Points and vectors are length 3
 #' numeric vectors; point sets are n x 3 matrices.
 #'
-#' @param v,v1,v2,vector Numeric vectors. In `find_intersection()`, `v1` is
+#' @param v,v1,v2,vector,vect Numeric vectors. In `find_intersection()`, `v1` is
 #'   the direction of the second line.
 #' @param angle Angle in radians.
-#' @param axis Rotation axis.
+#' @param axis Rotation axis. In `normalize_along_axis()`, the dimension to
+#'   take norms along (1 or 2).
+#' @param homogeneous `TRUE` returns a 4 x 4 homogeneous matrix.
 #' @return See Details for functions whose result is not a plain vector.
 #' @name space_ops
 NULL
@@ -20,10 +22,10 @@ get_norm <- function(v) sqrt(sum(v * v))
 #' @rdname space_ops
 #' @param fall_back Value returned for a zero vector.
 #' @export
-normalize <- function(v, fall_back = NULL) {
-  n <- get_norm(v)
-  if (n > 0) return(v / n)
-  if (is.null(fall_back)) v * 0 else fall_back
+normalize <- function(vect, fall_back = NULL) {
+  n <- get_norm(vect)
+  if (n > 0) return(vect / n)
+  if (is.null(fall_back)) vect * 0 else fall_back
 }
 
 #' @rdname space_ops
@@ -34,16 +36,69 @@ cross <- function(v1, v2) {
 
 #' @rdname space_ops
 #' @export
-rotation_matrix <- function(angle, axis = OUT) {
+rotation_matrix <- function(angle, axis = OUT, homogeneous = FALSE) {
   axis <- normalize(axis)
-  if (all(axis == 0)) return(diag(3))
-  x <- axis[1]; y <- axis[2]; z <- axis[3]
-  c0 <- cos(angle); s <- sin(angle); C <- 1 - c0
-  matrix(c(
-    x * x * C + c0, x * y * C - z * s, x * z * C + y * s,
-    y * x * C + z * s, y * y * C + c0, y * z * C - x * s,
-    z * x * C - y * s, z * y * C + x * s, z * z * C + c0
-  ), 3, 3, byrow = TRUE)
+  m <- if (all(axis == 0)) diag(3) else {
+    x <- axis[1]; y <- axis[2]; z <- axis[3]
+    c0 <- cos(angle); s <- sin(angle); C <- 1 - c0
+    matrix(c(
+      x * x * C + c0, x * y * C - z * s, x * z * C + y * s,
+      y * x * C + z * s, y * y * C + c0, y * z * C - x * s,
+      z * x * C - y * s, z * y * C + x * s, z * z * C + c0
+    ), 3, 3, byrow = TRUE)
+  }
+  if (!isTRUE(homogeneous)) return(m)
+  out <- diag(4)
+  out[1:3, 1:3] <- m
+  out
+}
+
+#' @rdname space_ops
+#' @details `rotation_matrix_transpose()` is the transpose of
+#'   `rotation_matrix()`. `rotation_matrix_transpose_from_quaternion()` returns
+#'   a list of the three rows of that transpose for the rotation a quaternion
+#'   describes, and `rotation_matrix_from_quaternion()` the rotation matrix
+#'   itself.
+#' @export
+rotation_matrix_transpose <- function(angle, axis) {
+  if (all(axis[1:2] == 0)) return(t(rotation_about_z(angle * sign(axis[3]))))
+  t(rotation_matrix(angle, axis))
+}
+
+#' @rdname space_ops
+#' @param quat A quaternion `c(w, x, y, z)`.
+#' @export
+rotation_matrix_transpose_from_quaternion <- function(quat) {
+  quat_inv <- quaternion_conjugate(quat)
+  lapply(list(c(1, 0, 0), c(0, 1, 0), c(0, 0, 1)), function(basis) {
+    quaternion_mult(quat, c(0, basis), quat_inv)[2:4]
+  })
+}
+
+#' @rdname space_ops
+#' @export
+rotation_matrix_from_quaternion <- function(quat) {
+  t(do.call(rbind, rotation_matrix_transpose_from_quaternion(quat)))
+}
+
+#' @rdname space_ops
+#' @details `norm_squared()` is the squared length of a vector.
+#'   `normalize_along_axis()` divides a matrix by the norms taken along
+#'   `axis` (1 sums over rows, 2 over columns, so `axis = 2` gives every row
+#'   length 1); zero norms are left alone.
+#' @export
+norm_squared <- function(v) sum(v * v)
+
+#' @rdname space_ops
+#' @param array A numeric matrix.
+#' @export
+normalize_along_axis <- function(array, axis) {
+  array <- as.matrix(array)
+  norms <- sqrt(apply(array * array, if (axis == 1) 2 else 1, sum))
+  norms[norms == 0] <- 1
+  # As numpy's repeat and reshape: each norm repeated along `axis`, laid out
+  # row by row.
+  array / matrix(rep(norms, each = dim(array)[axis]), nrow(array), ncol(array), byrow = TRUE)
 }
 
 #' @rdname space_ops
@@ -64,7 +119,14 @@ rotate_vector <- function(vector, angle, axis = OUT) {
 
 #' @rdname space_ops
 #' @export
-angle_of_vector <- function(vector) atan2(vector[2], vector[1])
+angle_of_vector <- function(vector) {
+  if (is.matrix(vector)) {
+    # One vector per column, as upstream's (2, n) arrays.
+    if (nrow(vector) < 2) stop("Vector must have the correct dimensions. (2, n)", call. = FALSE)
+    return(atan2(vector[2, ], vector[1, ]))
+  }
+  atan2(vector[2], vector[1])
+}
 
 #' @rdname space_ops
 #' @export
@@ -111,9 +173,9 @@ regular_vertices <- function(n, radius = 1, start_angle = NULL) {
 }
 
 #' @rdname space_ops
-#' @param z A complex number.
+#' @param complex_num A complex number.
 #' @export
-complex_to_R3 <- function(z) c(Re(z), Im(z), 0)
+complex_to_R3 <- function(complex_num) c(Re(complex_num), Im(complex_num), 0)
 
 #' @rdname space_ops
 #' @param point A point.
@@ -121,10 +183,9 @@ complex_to_R3 <- function(z) c(Re(z), Im(z), 0)
 R3_to_complex <- function(point) complex(real = point[1], imaginary = point[2])
 
 #' @rdname space_ops
-#' @param p1,p2 Points. In `find_intersection()`, `p1` is a point of the
-#'   second line.
+#' @param point1,point2 Points.
 #' @export
-midpoint <- function(p1, p2) (p1 + p2) / 2
+midpoint <- function(point1, point2) (point1 + point2) / 2
 
 #' @rdname space_ops
 #' @param line1,line2 Two lines, each a list or 2 x 3 matrix of two points.
@@ -132,6 +193,9 @@ midpoint <- function(p1, p2) (p1 + p2) / 2
 line_intersection <- function(line1, line2) {
   as_rows <- function(l) if (is.matrix(l)) l else do.call(rbind, l)
   l1 <- as_rows(line1); l2 <- as_rows(line2)
+  if ((ncol(l1) > 2 && any(l1[, 3] != 0)) || (ncol(l2) > 2 && any(l2[, 3] != 0))) {
+    stop("Coords must be in the xy-plane.", call. = FALSE)
+  }
   h1 <- cross(c(l1[1, 1:2], 1), c(l1[2, 1:2], 1))
   h2 <- cross(c(l2[1, 1:2], 1), c(l2[2, 1:2], 1))
   p <- cross(h1, h2)

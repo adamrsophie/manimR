@@ -7,6 +7,9 @@
 \alias{guarantee_empty_existence}
 \alias{seek_full_path_from_defaults}
 \alias{get_full_raster_image_path}
+\alias{get_full_vector_image_path}
+\alias{add_version_before_extension}
+\alias{convert_audio}
 \alias{get_full_sound_file_path}
 \alias{modify_atime}
 \alias{open_file}
@@ -22,6 +25,12 @@ guarantee_empty_existence(path)
 seek_full_path_from_defaults(file_name, default_dir, extensions)
 
 get_full_raster_image_path(image_file_name)
+
+get_full_vector_image_path(image_file_name)
+
+add_version_before_extension(file_name)
+
+convert_audio(input_path, output_path, codec_name)
 
 get_full_sound_file_path(
   sound_file_name,
@@ -45,9 +54,20 @@ ensure_executable(path_to_exe)
 
 \item{image_file_name, sound_file_name}{A file name.}
 
+\item{input_path, output_path}{Audio files to read and to write.}
+
+\item{codec_name}{Name of an \code{ffmpeg} audio encoder.}
+
 \item{assets_dir}{Directory to look in.}
 
 \item{in_browser}{Show the file in the file browser instead of opening it.}
+}
+\value{
+A path (a character string) from the functions that find or change
+one; \code{guarantee_existence()} and \code{guarantee_empty_existence()} return the
+normalized path of the directory. \code{convert_audio()} returns \code{output_path}
+invisibly, \code{modify_atime()} and \code{open_file()} return \code{NULL} invisibly, and
+\code{ensure_executable()} returns \code{TRUE} or \code{FALSE}.
 }
 \description{
 Ports of \code{manim.utils.file_ops} and the path lookups of
@@ -63,9 +83,16 @@ absolute path.
 \item \code{seek_full_path_from_defaults(file_name, default_dir, extensions)}
 returns the first existing path among \code{file_name} and \code{file_name} plus
 each extension inside \code{default_dir}, and errors if there is none.
-\code{get_full_raster_image_path()} and \code{get_full_sound_file_path()} look
-for images (\code{.jpg}, \code{.jpeg}, \code{.png}, \code{.gif}, \code{.ico}) and sounds (\code{.wav},
-\code{.mp3}) in the \code{assets_dir} setting (default \code{"./"}).
+\code{get_full_raster_image_path()}, \code{get_full_vector_image_path()} and
+\code{get_full_sound_file_path()} look for images (\code{.jpg}, \code{.jpeg}, \code{.png},
+\code{.gif}, \code{.ico}), vector images (\code{.svg}) and sounds (\code{.wav}, \code{.mp3}) in
+the \code{assets_dir} setting (default \code{"./"}).
+\item \code{add_version_before_extension(file_name)} inserts the package version
+before the extension (\code{"a.png"} gives \code{"a_manimR_v<version>.png"}), as
+the default names of saved images and GIFs do.
+\item \code{convert_audio(input_path, output_path, codec_name)} writes the audio
+of a file in another codec (such as \code{"pcm_s16le"} or \code{"aac"}) with
+\code{ffmpeg}.
 \item \code{modify_atime(file_path)} sets a file's access time to now, keeping its
 modification time.
 \item \code{open_file(file_path, in_browser)} opens a file with the system viewer,

@@ -22,6 +22,10 @@ addin_insert_template()
 
 manim_gadget()
 }
+\value{
+The addins are called for their side effects and return nothing
+useful.
+}
 \description{
 Addins available from the RStudio Addins menu:
 \itemize{

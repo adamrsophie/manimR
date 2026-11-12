@@ -7,16 +7,18 @@
 \usage{
 TexTemplate(
   tex_compiler = "latex",
+  description = "",
   output_format = ".dvi",
   documentclass = "\\\\documentclass[preview]{standalone}",
   preamble = DEFAULT_TEX_PREAMBLE,
   placeholder_text = "YourTextHere",
-  post_doc_commands = "",
-  description = ""
+  post_doc_commands = ""
 )
 }
 \arguments{
 \item{tex_compiler}{Compiler, \code{"latex"} by default (or \code{"xelatex"}, \code{"lualatex"}).}
+
+\item{description}{A description.}
 
 \item{output_format}{\code{".dvi"} (latex), \code{".xdv"} (xelatex) or \code{".pdf"}.}
 
@@ -27,8 +29,10 @@ TexTemplate(
 \item{placeholder_text}{Text replaced by the expression.}
 
 \item{post_doc_commands}{Commands right after \verb{\\begin\{document\}}.}
-
-\item{description}{A description.}
+}
+\value{
+A \code{TexTemplate}, an R6 object. \code{TexTemplateClass} is its R6 class
+generator.
 }
 \description{
 A LaTeX document template used by \code{\link[=Tex]{Tex()}} and \code{\link[=MathTex]{MathTex()}}.

@@ -25,24 +25,23 @@ articles:
   navbar: Basics
   contents:
   - manimR
-  - '`coming-from-python`'
+  - articles/coming-from-python
 - title: Building scenes
   navbar: Building scenes
   contents:
-  - mobjects
-  - animations
-  - updaters
-  - '`text-and-math`'
-  - graphing
-  - '`cameras-and-3d`'
-  - '`colors-images`'
+  - articles/mobjects
+  - articles/animations
+  - articles/updaters
+  - articles/text-and-math
+  - articles/graphing
+  - articles/cameras-and-3d
+  - articles/colors-images
 - title: Output and tools
   navbar: Output and tools
   contents:
-  - rendering
-  - '`rstudio-knitr-shiny`'
-  - utilities
-
+  - articles/rendering
+  - articles/rstudio-knitr-shiny
+  - articles/utilities
 reference:
 - title: Scenes
   desc: Scene classes and the scene manager.
@@ -110,6 +109,7 @@ reference:
   - Paragraph
   - BulletedList
   - register_font
+  - remove_invisible_chars
   - font_constants
   - tex
   - TexTemplateClass
@@ -207,6 +207,8 @@ reference:
   - partial_bezier_points
   - proportions_along_bezier_curve_for_point
   - get_smooth_cubic_bezier_handle_points
+  - get_quadratic_approximation_of_cubic
+  - opengl_matrices
   - is_closed
   - interpolate
   - sigmoid

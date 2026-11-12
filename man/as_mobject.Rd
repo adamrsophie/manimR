@@ -41,11 +41,14 @@ The plot is drawn on a white or transparent background (\code{bg}), at
 scene units.
 }
 \examples{
+\dontshow{if (requireNamespace("ggplot2", quietly = TRUE) && isTRUE(capabilities("cairo"))) withAutoprint(\{ # examplesIf}
+\donttest{
+p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) + ggplot2::geom_point()
+chart <- as_mobject(p)
+}
 \dontrun{
-if (requireNamespace("ggplot2", quietly = TRUE)) {
-  p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) + ggplot2::geom_point()
-  chart <- as_mobject(p)
-  render(function(self) self$play(Create(chart)), quality = "l")
+# A video in the folder media of the working directory; this needs ffmpeg.
+render(function(self) self$play(Create(chart)), quality = "l")
 }
-}
+\dontshow{\}) # examplesIf}
 }

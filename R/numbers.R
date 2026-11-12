@@ -44,6 +44,7 @@ string_to_mob <- function(string, mob_class, font_size, ...) {
 #' @export
 #' @examples
 #' \dontrun{
+#' # Needs LaTeX and dvisvgm.
 #' d <- DecimalNumber(3.14159, num_decimal_places = 3)
 #' d$set_value(2.71828)
 #' }
@@ -165,6 +166,9 @@ DecimalNumberClass <- R6::R6Class("DecimalNumber", inherit = VMobjectClass, lock
   )
 )
 
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @rdname DecimalNumberClass
 #' @export
 DecimalNumber <- constructor(DecimalNumberClass)
@@ -194,7 +198,8 @@ Variable <- function(var, label, var_type = "decimal", num_decimal_places = 2, .
   eq <- MathTex("=")$next_to(lab, RIGHT)
   lab$add(eq)
   tracker <- ValueTracker(var)
-  is_int <- identical(var_type, "integer") || identical(var_type, Integer)
+  is_int <- identical(var_type, "integer") ||
+    (!is.character(var_type) && identical(as_generator(var_type, "var_type"), IntegerClass))
   value <- if (is_int) Integer(tracker$get_value()) else DecimalNumber(tracker$get_value(), num_decimal_places = num_decimal_places)
   value$add_updater(function(v) v$set_value(tracker$get_value()))
   value$next_to(lab, RIGHT)
@@ -236,10 +241,8 @@ BRACE_PATH_TEMPLATE <- paste0(
 #' @param ... Passed to [VMobject()] (for `BraceLabel()`, to the label constructor).
 #' @export
 #' @examples
-#' \dontrun{
 #' sq <- Square()
 #' b <- Brace(sq, DOWN)
-#' }
 BraceClass <- R6::R6Class("Brace", inherit = VMobjectClass, lock_objects = FALSE,
   public = list(
     buff = 0.2,
@@ -302,6 +305,9 @@ BraceClass <- R6::R6Class("Brace", inherit = VMobjectClass, lock_objects = FALSE
   )
 )
 
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @rdname BraceClass
 #' @export
 Brace <- constructor(BraceClass)

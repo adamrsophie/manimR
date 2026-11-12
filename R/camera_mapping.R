@@ -47,6 +47,9 @@ MappingCameraClass <- R6::R6Class("MappingCamera", inherit = CameraClass, lock_o
   )
 )
 
+#' @return A camera: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @rdname MappingCameraClass
 #' @param cameras_with_start_positions Lists of `list(camera, c(start_y, start_x))` in pixels.
 #' @format NULL

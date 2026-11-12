@@ -5,6 +5,13 @@
 
 CameraClass$set("public", "pixel_array", NULL)
 CameraClass$set("public", "background", NULL)
+# The largest value of an unsigned integer pixel type, as numpy's iinfo().
+pixel_dtype_max <- function(dtype) {
+  bits <- suppressWarnings(as.numeric(sub("^u?int", "", dtype)))
+  if (!grepl("^u?int(8|16|32|64)$", dtype)) stop("pixel_array_dtype must be an integer type such as \"uint8\", not ", dtype, call. = FALSE)
+  if (startsWith(dtype, "u")) 2^bits - 1 else 2^(bits - 1) - 1
+}
+
 CameraClass$set("public", "rgb_max_val", 255)
 CameraClass$set("public", "n_channels", 4)
 CameraClass$set("public", "image_mode", "RGBA")

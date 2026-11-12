@@ -17,6 +17,9 @@
 #' @param ... Arguments passed to the camera.
 #' @param settings The settings a scene resolves for its file writer: the
 #'   output plan, the video encoder and the cache settings.
+#' @return `CairoRenderer()` returns a renderer and `SceneFileWriter()` a file
+#'   writer, both R6 objects that a scene creates for itself. The objects whose
+#'   names end in `Class` are the R6 class generators that these functions call.
 #' @name CairoRenderer
 #' @format NULL
 #' @usage NULL
@@ -71,7 +74,8 @@ RendererClass <- R6::R6Class("Renderer", lock_objects = FALSE,
       invisible(self)
     },
     # Draw mobjects onto the offscreen device.
-    update_frame = function(scene, mobjects = NULL, include_submobjects = TRUE) {
+    update_frame = function(scene, mobjects = NULL, include_submobjects = TRUE, ignore_skipping = TRUE, ...) {
+      if (isTRUE(self$skip_animations) && !isTRUE(ignore_skipping)) return(invisible(self))
       # With a cached static frame, an empty list means nothing moves; drawing
       # everything again would double the alpha of translucent shapes.
       if (length(mobjects) == 0 && is.null(self$static_image)) {

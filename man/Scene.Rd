@@ -3,6 +3,10 @@
 \name{Scene}
 \alias{Scene}
 \title{Scene}
+\value{
+An R6 class generator. A scene class inherits from it, and \verb{$new()}
+creates a scene.
+}
 \description{
 The canvas on which animations play. Subclass it and define
 \code{construct()}, then pass the class to \code{\link[=render]{render()}}:

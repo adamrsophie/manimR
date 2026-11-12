@@ -60,6 +60,13 @@ property.}
 
 \item{...}{Ignored.}
 }
+\value{
+\code{ManimColor()}, \code{RGBA()} and \code{HSV()} return a color object: a hex
+string of class \code{ManimColor} (and \code{HSV} for \code{HSV()}). Its methods return
+colors, numeric vectors or character strings, as described above.
+\code{ManimColorClass} and \code{HSVClass} are the R6 class generators behind the
+class methods.
+}
 \description{
 \code{ManimColor()} is upstream's color class. Colors in manimR are hex
 strings, so a \code{ManimColor} is a hex string that also carries its exact

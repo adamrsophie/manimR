@@ -3,12 +3,15 @@
 \name{MovingCameraScene}
 \alias{MovingCameraScene}
 \title{MovingCameraScene}
+\value{
+An R6 class generator. A scene class inherits from it, and \verb{$new()}
+creates a scene.
+}
 \description{
 A \link{Scene} whose camera is a \link{MovingCameraClass}. Animate
 \code{self$camera$frame} to pan and zoom.
 }
 \examples{
-\dontrun{
 Zoom <- R6::R6Class("Zoom", inherit = MovingCameraScene, public = list(
   construct = function() {
     dot <- Dot(2 * RIGHT)
@@ -17,6 +20,10 @@ Zoom <- R6::R6Class("Zoom", inherit = MovingCameraScene, public = list(
     self$play(self$camera$frame$animate$scale(0.5)$move_to(dot))
     self$play(Restore(self$camera$frame))
   }))
+# The last frame as a PNG file in the session's temporary directory.
+render(Zoom, quality = "l", format = "png", media_dir = tempdir())
+\dontrun{
+# A video in the folder media of the working directory; this needs ffmpeg.
 render(Zoom, quality = "l")
 }
 }

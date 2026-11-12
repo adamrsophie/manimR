@@ -43,6 +43,10 @@ animation is cleaned up from it.}
 
 \item{...}{Ignored.}
 }
+\value{
+An \code{Animation}, an R6 object to pass to a scene's \code{play()}.
+\code{AnimationClass} is its R6 class generator.
+}
 \description{
 Base class for animations. An animation changes its
 \code{mobject} over \code{run_time} seconds, mapping time through \code{rate_func}.

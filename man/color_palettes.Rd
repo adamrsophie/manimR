@@ -22,6 +22,10 @@ AS2700
 
 BS381
 }
+\value{
+Named lists of colors (hex strings), one entry for each color name
+of the palette.
+}
 \description{
 Named lists of colors from Manim's color modules: \code{X11_COLORS} (Manim's \code{X11}), \code{XKCD}, \code{SVGNAMES},
 \code{DVIPSNAMES}, \code{AS2700} and \code{BS381}. Use them like \code{XKCD$AVOCADO}.

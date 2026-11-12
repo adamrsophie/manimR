@@ -19,8 +19,7 @@
 #'   (the default) or `format = "gif"`.
 #' @return `manimOutput()` returns UI; `renderManim()` a render function.
 #' @export
-#' @examples
-#' \dontrun{
+#' @examplesIf interactive() && requireNamespace("shiny", quietly = TRUE)
 #' ui <- shiny::fluidPage(
 #'   shiny::sliderInput("n", "Sides", 3, 10, 5),
 #'   manimOutput("scene")
@@ -32,7 +31,6 @@
 #'   })
 #' }
 #' shiny::shinyApp(ui, server)
-#' }
 manimOutput <- function(outputId, width = "100%") {
   if (!requireNamespace("shiny", quietly = TRUE)) stop("manimOutput() needs the shiny package.", call. = FALSE)
   shiny::div(style = paste0("width:", width), shiny::uiOutput(outputId))

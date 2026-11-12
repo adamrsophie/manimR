@@ -6,6 +6,9 @@
 \usage{
 RESAMPLING_ALGORITHMS
 }
+\value{
+A named character vector of resampling algorithm names.
+}
 \description{
 Names accepted by \code{ImageMobject$set_resampling_algorithm()}, mapped to
 their canonical names. Images are drawn with the filters Pillow's

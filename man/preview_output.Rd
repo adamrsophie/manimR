@@ -9,6 +9,9 @@ preview_output(path)
 \arguments{
 \item{path}{Path to a rendered file.}
 }
+\value{
+\code{path}, invisibly.
+}
 \description{
 Shows a video, GIF or PNG in the RStudio Viewer pane when available,
 otherwise opens it with the system viewer.

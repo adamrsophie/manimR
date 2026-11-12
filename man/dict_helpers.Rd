@@ -20,6 +20,11 @@ DictAsObject(dictin)
 
 \item{dictin}{A named list.}
 }
+\value{
+\code{merge_dicts_recursively()} and \code{update_dict_recursively()} return
+the merged list. \code{DictAsObject()} returns an environment that holds the
+entries of the list.
+}
 \description{
 Ports of \code{manim.utils.config_ops} for named lists.
 }

@@ -26,6 +26,9 @@ stretch_array_to_length <- function(nparray, length) {
 #' @param location Position of the point.
 #' @param ... Further named arguments passed to [MobjectClass], or for
 #'   `PGroup()` the point cloud mobjects to group.
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @name point_cloud
 #' @examples
 #' cloud <- PointCloudDot(radius = 1, density = 20, color = BLUE)

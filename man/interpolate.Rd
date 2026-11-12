@@ -28,6 +28,11 @@ returns.}
 
 \item{new_start, new_end, old_start, old_end, old_value}{Ranges for \code{match_interpolate()}.}
 }
+\value{
+A number, or a numeric vector or matrix when the arguments are.
+\code{integer_interpolate()} returns a list with the integer \code{index} and the
+\code{residue}.
+}
 \description{
 \code{interpolate()} returns \code{(1 - alpha) * start + alpha * end}, as upstream
 computes it, and works on numbers, vectors and matrices.

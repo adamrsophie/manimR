@@ -9,6 +9,9 @@ prepare_animation(anim)
 \arguments{
 \item{anim}{An animation or animation builder.}
 }
+\value{
+An animation, an R6 object.
+}
 \description{
 Turns \code{mob$animate} builders into animations; animations pass through.
 }

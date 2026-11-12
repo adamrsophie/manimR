@@ -59,8 +59,17 @@ find_scenes <- function(file = NULL, envir = NULL) {
 #' @return Output paths, invisibly.
 #' @export
 #' @examples
+#' file <- tempfile(fileext = ".R")
+#' writeLines(c(
+#'   "library(manimR)",
+#'   "SquareToCircle <- manim_scene(function(self) {",
+#'   "  self$play(Transform(Square(), Circle()))",
+#'   "})"), file)
+#' # The last frame as a PNG file in the session's temporary directory.
+#' render_file(file, "SquareToCircle", quality = "l", format = "png", media_dir = tempdir())
 #' \dontrun{
-#' render_file("scenes.R", "SquareToCircle", quality = "l", preview = TRUE)
+#' # A video in the folder media of the working directory; this needs ffmpeg.
+#' render_file(file, "SquareToCircle", quality = "l", preview = TRUE)
 #' }
 render_file <- function(file, scenes = NULL, ..., found = NULL) {
   found <- found %||% find_scenes(file)
@@ -206,6 +215,7 @@ prompt_scene_choice <- function(names, input = NULL) {
 #'
 #' @param args Character vector of arguments; defaults to the trailing
 #'   command line arguments.
+#' @return The result of the subcommand, invisibly.
 #' @export
 manim_cli <- function(args = commandArgs(trailingOnly = TRUE)) {
   usage <- paste("Usage: Rscript -e 'manimR::manim_cli()' FILE [SCENE ...] [OPTIONS]",

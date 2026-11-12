@@ -6,6 +6,7 @@
 #' The standard Manim palette as hex strings. Shades run from `_A` (lightest)
 #' to `_E` (darkest); the unsuffixed name equals the `_C` shade.
 #'
+#' @return Colors as hex strings such as `"#FC6255"`.
 #' @name manim_colors
 #' @keywords datasets
 #' @examples

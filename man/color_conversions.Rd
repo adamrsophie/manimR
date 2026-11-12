@@ -16,7 +16,7 @@ color_to_int_rgba(color, alpha = 1)
 
 rgb_to_hex(rgb)
 
-hex_to_rgb(hex)
+hex_to_rgb(hex_code)
 
 color_to_hsv(color)
 
@@ -29,9 +29,16 @@ color_from_hsv(h, s, v)
 
 \item{rgb}{A numeric vector in \verb{[0, 1]}.}
 
-\item{hex}{A hex string.}
+\item{hex_code}{A hex string.}
 
 \item{h, s, v}{Hue, saturation and value in \verb{[0, 1]}.}
+}
+\value{
+\code{color_to_int_rgb()} and \code{color_to_int_rgba()} return integer
+vectors of 3 and 4 values from 0 to 255, \code{hex_to_rgb()} a numeric vector of
+3 values from 0 to 1, \code{rgb_to_hex()} and \code{color_from_hsv()} a color (a hex
+string of class \code{ManimColor}), and \code{color_to_hsv()} a numeric vector named
+\code{h}, \code{s} and \code{v}.
 }
 \description{
 Ports of the remaining helpers in \code{manim.utils.color.core}:

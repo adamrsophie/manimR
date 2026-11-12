@@ -25,7 +25,7 @@ videos:
   [RStudio, knitr, Quarto and Shiny](https://adamrsophie.github.io/manimR/articles/rstudio-knitr-shiny.html),
   [Math and utility functions](https://adamrsophie.github.io/manimR/articles/utilities.html)
 
-The same articles are installed with the package; see `browseVignettes("manimR")`.
+The introduction is also installed with the package: `vignette("manimR")`.
 
 ## Installation
 

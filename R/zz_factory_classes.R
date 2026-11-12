@@ -14,6 +14,8 @@
 #' `inherits(x, "MathTable")` is `TRUE`, a scene can subclass the generator,
 #' and [set_default()] changes the defaults of that class alone.
 #'
+#' @return R6 class generators. `FooClass$new()` takes the arguments of the
+#'   constructor `Foo()` and returns the same object.
 #' @name factory_classes
 #' @aliases AddTextWordByWordClass AnnotationDotClass ApplyComplexFunctionClass ApplyPointwiseFunctionClass ApplyWaveClass ArcBraceClass
 #' @aliases ArcPolygonClass ArcPolygonFromArcsClass BlinkClass BraceBetweenPointsClass BraceTextClass BroadcastClass

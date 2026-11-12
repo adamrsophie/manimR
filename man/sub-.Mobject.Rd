@@ -27,6 +27,13 @@
 
 \item{value}{A mobject to store under key \code{i} of a \link{VDict}.}
 }
+\value{
+\code{[} returns a submobject, or a group of them for a vector index.
+\code{[[} returns a submobject, a field or an entry. \code{length()} returns the
+number of submobjects, plus one when the mobject has points of its own.
+The assignment forms return the changed mobject; \code{mob[[i]] <- value} with
+a position does what \code{mob[i] <- value} does.
+}
 \description{
 \code{mob[i]} returns the i-th submobject (1 based). A vector index returns a
 group of the selected submobjects.

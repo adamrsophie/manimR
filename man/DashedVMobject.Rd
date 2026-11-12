@@ -29,6 +29,9 @@ DashedVMobject(
 
 \item{...}{Passed to \code{\link[=VMobject]{VMobject()}}.}
 }
+\value{
+A \code{DashedVMobject}, an R6 mobject.
+}
 \description{
 A dashed copy of a VMobject.
 }

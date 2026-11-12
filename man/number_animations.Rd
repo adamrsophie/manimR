@@ -27,6 +27,11 @@ ChangeDecimalToValue(decimal_mob, target_number, ...)
 
 \item{target_number}{Final number.}
 }
+\value{
+An animation: an R6 object of the class named by the function
+called, to pass to a scene's \code{play()}. The objects whose names end in
+\code{Class} are the R6 class generators that these functions call.
+}
 \description{
 \code{ChangingDecimal()} sets a \code{\link[=DecimalNumber]{DecimalNumber()}} to \code{number_update_func(alpha)};
 \code{ChangeDecimalToValue()} counts it to a target.

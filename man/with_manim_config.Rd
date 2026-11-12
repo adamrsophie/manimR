@@ -11,6 +11,9 @@ with_manim_config(settings, code)
 
 \item{code}{Code to evaluate.}
 }
+\value{
+The value of \code{code}.
+}
 \description{
 Run code with a temporary configuration
 }

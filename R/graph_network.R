@@ -477,10 +477,8 @@ graph_determine_layout <- function(graph, layout = "spring", layout_scale = 2, l
 #'   (globally or per edge) styles the tips.
 #' @export
 #' @examples
-#' \dontrun{
 #' g <- Graph(1:4, list(c(1, 2), c(2, 3), c(3, 4), c(1, 3), c(1, 4)), layout = "circular")
 #' g$get(1)$move_to(c(1, 1, 0))
-#' }
 GenericGraphClass <- R6::R6Class("GenericGraph", inherit = VMobjectClass, lock_objects = FALSE,
   public = list(
     directed = FALSE,
@@ -783,6 +781,9 @@ graph_animation_group <- function(mobjects, anim_args, default, ...) {
   do.call(AnimationGroup, c(anims, list(...)))
 }
 
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @rdname GenericGraphClass
 #' @format NULL
 #' @usage NULL

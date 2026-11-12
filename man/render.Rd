@@ -60,7 +60,11 @@ The path of the artifact, invisibly, with class \code{manim_output};
 Renders a scene to a video or image file, like \verb{manim render} does.
 }
 \examples{
+# The last frame as a PNG file in the session's temporary directory.
+render(function(self) self$play(Create(Circle())), quality = "l", format = "png",
+       media_dir = tempdir())
 \dontrun{
+# A video in the folder media of the working directory; this needs ffmpeg.
 render(function(self) self$play(Create(Circle())), quality = "l")
 }
 }

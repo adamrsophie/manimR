@@ -45,7 +45,13 @@ default is \verb{fill_opacity = 0.5, shade_in_3d = TRUE}.}
 \item{...}{For \code{ConvexHull3D()}, the points (then named arguments for
 \code{Polyhedron()}); otherwise passed to \code{Polyhedron()}.}
 
-\item{tolerance}{Coplanarity tolerance of the hull.}
+\item{tolerance}{A point closer than this to a face of the hull is not
+one of its vertices.}
+}
+\value{
+A mobject: an R6 object of the class named by the function called.
+The objects whose names end in \code{Class} are the R6 class generators that
+these functions call.
 }
 \description{
 \code{Polyhedron(vertex_coords, faces_list)} builds a polyhedron
@@ -57,7 +63,9 @@ vertex \code{i}, a \code{\link[=Dot3D]{Dot3D()}}. Moving a vertex moves the face
 (through an updater).
 
 \code{Tetrahedron()}, \code{Octahedron()}, \code{Icosahedron()} and \code{Dodecahedron()} are
-the platonic solids; \code{ConvexHull3D()} is the convex hull of points.
+the platonic solids; \code{ConvexHull3D()} is the convex hull of points, with
+triangular faces (as upstream's QuickHull: a flat face through more
+than three points is made of several triangles).
 }
 \examples{
 pyramid <- Polyhedron(

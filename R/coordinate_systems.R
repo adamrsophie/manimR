@@ -104,12 +104,10 @@ add_points <- function(a, b) {
 #' @return A coordinate system mobject.
 #' @name coordinate_systems
 #' @examples
-#' \dontrun{
 #' ax <- Axes(x_range = c(-3, 3), y_range = c(-2, 2))
 #' g <- ax$plot(sin, color = BLUE)
 #' area <- ax$get_area(g, x_range = c(0, 2))
 #' plane <- NumberPlane()
-#' }
 NULL
 
 #' @rdname coordinate_systems

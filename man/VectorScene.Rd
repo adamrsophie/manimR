@@ -14,6 +14,11 @@ Y_COLOR
 
 Z_COLOR
 }
+\value{
+\code{VectorScene} and \code{LinearTransformationScene} are R6 class
+generators: a scene class inherits from one of them, and \verb{$new()} creates a
+scene. \code{X_COLOR}, \code{Y_COLOR} and \code{Z_COLOR} are colors.
+}
 \description{
 Scenes for linear algebra. \code{VectorScene} adds helpers to draw
 planes, vectors, labels and coordinates. \code{LinearTransformationScene}

@@ -22,7 +22,6 @@
 #' @usage NULL
 #' @export
 #' @examples
-#' \dontrun{
 #' Spin <- R6::R6Class("Spin", inherit = ThreeDScene, public = list(
 #'   construct = function() {
 #'     self$set_camera_orientation(phi = 75 * DEGREES, theta = 30 * DEGREES)
@@ -30,17 +29,20 @@
 #'     self$begin_ambient_camera_rotation(rate = 0.5)
 #'     self$wait(2)
 #'   }))
+#' \dontrun{
+#' # A video in the folder media of the working directory; this needs ffmpeg.
 #' render(Spin, quality = "l")
 #' }
 ThreeDScene <- R6::R6Class("ThreeDScene", inherit = Scene, lock_objects = FALSE,
   public = list(
     ambient_camera_rotation = NULL,
     default_angled_camera_orientation_kwargs = NULL,
-    initialize = function(ambient_camera_rotation = NULL, default_angled_camera_orientation_kwargs = NULL, ...) {
+    initialize = function(camera_class = NULL, ambient_camera_rotation = NULL,
+                          default_angled_camera_orientation_kwargs = NULL, ...) {
       self$ambient_camera_rotation <- ambient_camera_rotation
       self$default_angled_camera_orientation_kwargs <- default_angled_camera_orientation_kwargs %||%
         list(phi = 70 * DEGREES, theta = -135 * DEGREES)
-      super$initialize(...)
+      super$initialize(camera_class = camera_class, ...)
     },
     default_camera_class = function() ThreeDCameraClass,
     set_camera_orientation = function(phi = NULL, theta = NULL, gamma = NULL, zoom = NULL, focal_distance = NULL,
@@ -119,8 +121,8 @@ ThreeDScene <- R6::R6Class("ThreeDScene", inherit = Scene, lock_objects = FALSE,
       if (!is.null(frame_center)) self$remove(cam$frame_center_mob)
       invisible(self)
     },
-    get_moving_mobjects = function(animations) {
-      moving <- super$get_moving_mobjects(animations)
+    get_moving_mobjects = function(...) {
+      moving <- super$get_moving_mobjects(...)
       cam_ids <- vapply(c(self$camera$get_value_trackers(), list(self$camera$frame_center_mob)),
                         function(m) m$mob_id, "")
       ids <- vapply(moving, function(m) m$mob_id, "")
@@ -153,6 +155,8 @@ ThreeDScene <- R6::R6Class("ThreeDScene", inherit = Scene, lock_objects = FALSE,
   )
 )
 
+#' @return R6 class generators. A scene class inherits from one of them, and
+#'   `$new()` creates a scene.
 #' @rdname ThreeDScene
 #' @format NULL
 #' @usage NULL

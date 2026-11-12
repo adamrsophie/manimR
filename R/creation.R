@@ -9,6 +9,9 @@
 #'   `Unwrite()` the default depends on the number of submobjects.
 #' @param introducer Add the mobject to the scene at the start.
 #' @param ... Passed to [Animation()].
+#' @return An animation: an R6 object of the class named by the function
+#'   called, to pass to a scene's `play()`. The objects whose names end in
+#'   `Class` are the R6 class generators that these functions call.
 #' @name creation
 NULL
 

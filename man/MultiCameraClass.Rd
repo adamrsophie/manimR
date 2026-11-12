@@ -20,6 +20,11 @@ include its own display mobject.}
 
 \item{...}{Passed to \link{MovingCameraClass}.}
 }
+\value{
+A camera: an R6 object of the class named by the function called.
+The objects whose names end in \code{Class} are the R6 class generators that
+these functions call.
+}
 \description{
 A \link{MovingCameraClass} that also draws the views of other
 cameras into \code{\link[=ImageMobjectFromCamera]{ImageMobjectFromCamera()}} mobjects. Each view is drawn as

@@ -20,6 +20,11 @@ drag_pixels(frames)
 
 \item{frames}{A list of image arrays of equal size.}
 }
+\value{
+\code{change_to_rgba_array()} returns an array of height by width by 4
+channels, \code{invert_image()} the image array with its colors inverted, and
+\code{drag_pixels()} a list of frames.
+}
 \description{
 Ports of \code{manim.utils.images}, on image arrays of values 0 to 255
 (\verb{height x width x channels}, as \code{\link[=ImageMobject]{ImageMobject()}} stores them).

@@ -13,6 +13,9 @@ Paragraph(..., line_spacing = -1, alignment = NULL)
 
 \item{alignment}{\code{"left"}, \code{"center"} or \code{"right"}.}
 }
+\value{
+A \code{Paragraph}, an R6 mobject.
+}
 \description{
 Several lines of text, each a \code{\link[=Text]{Text()}} in a VGroup.
 }

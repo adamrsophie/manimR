@@ -66,6 +66,11 @@ ArcBrace(arc = NULL, direction = RIGHT, ...)
 
 \item{arc}{An \code{\link[=Arc]{Arc()}}.}
 }
+\value{
+A mobject: an R6 object of the class named by the function called.
+The objects whose names end in \code{Class} are the R6 class generators that
+these functions call.
+}
 \description{
 A curly brace spanning a mobject on the side given by
 \code{direction}. \code{BraceLabel()} adds a label at its tip, \code{BraceText()} uses
@@ -73,8 +78,6 @@ A curly brace spanning a mobject on the side given by
 \code{ArcBrace()} follows an arc.
 }
 \examples{
-\dontrun{
 sq <- Square()
 b <- Brace(sq, DOWN)
-}
 }

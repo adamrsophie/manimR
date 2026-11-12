@@ -89,6 +89,7 @@ test_that("output plans name every artifact as upstream", {
 
 test_that("renders write the artifact of each format", {
   skip_if_not(nzchar(Sys.which("ffmpeg")))
+  skip_on_cran()
   dir <- withr_tempdir()
   sc <- function(self) self$play(Create(Square()), run_time = 0.2)
   png_out <- render(sc, quality = "l", format = "png", media_dir = dir)
@@ -172,7 +173,7 @@ test_that("upstream fixes: vectors, curves, colors, families", {
   col <- rgba_to_color(c(1, 0, 0, 0.25))
   expect_equal(ManimColor(col)$to_rgba(), c(1, 0, 0, 0.25))
   expect_equal(color_to_rgb(rgb_to_color(c(0.1, 0.2, 0.3))), c(0.1, 0.2, 0.3))
-  expect_equal(color_to_rgba(interpolate_color(rgba_to_color(c(0, 0, 0, 0)), WHITE, 0.5)), c(0.5, 0.5, 0.5, 0.5))
+  expect_equal(ManimColor(interpolate_color(rgba_to_color(c(0, 0, 0, 0)), WHITE, 0.5))$to_rgba(), c(0.5, 0.5, 0.5, 0.5))
   a <- Group()
   b <- Group(a)
   a$add(b)
@@ -195,6 +196,7 @@ test_that("VDict adds, removes and replaces by key", {
   expect_length(d$submobjects, 1)
   expect_error(VDict(list(a = Mobject())), "VMobject")
   skip_if_not(nzchar(Sys.which("latex")) && nzchar(Sys.which("dvisvgm")))
+  skip_on_cran()
   k <- VDict(list(s = Square()), show_keys = TRUE)
   expect_true(any(vapply(k[["s"]]$submobjects, function(m) inherits(m, "Tex"), NA)))
 })

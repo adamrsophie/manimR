@@ -17,6 +17,11 @@ FullScreenRectangle(...)
 
 \item{...}{Passed to \code{\link[=Rectangle]{Rectangle()}}.}
 }
+\value{
+A mobject: an R6 object of the class named by the function called.
+The objects whose names end in \code{Class} are the R6 class generators that
+these functions call.
+}
 \description{
 Rectangles with the aspect ratio of the screen.
 }

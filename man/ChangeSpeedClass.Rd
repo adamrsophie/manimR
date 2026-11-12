@@ -30,6 +30,11 @@ animation can play at a time.}
 
 \item{...}{Passed to \code{\link[=Animation]{Animation()}}.}
 }
+\value{
+An animation: an R6 object of the class named by the function
+called, to pass to a scene's \code{play()}. The objects whose names end in
+\code{Class} are the R6 class generators that these functions call.
+}
 \description{
 Modifies the speed of an animation. \code{speedinfo} maps nodes
 (proportions of the animation's \code{run_time}) to speed factors; between two
@@ -41,7 +46,6 @@ Updaters added with \code{\link[=change_speed_add_updater]{change_speed_add_upda
 speed while a \code{ChangeSpeed} with \code{affects_speed_updaters = TRUE} plays.
 }
 \examples{
-\dontrun{
 SpeedModifierExample <- manim_scene(function(self) {
   a <- Dot()$shift(LEFT * 4)
   b <- Dot()$shift(RIGHT * 4)
@@ -52,5 +56,4 @@ SpeedModifierExample <- manim_scene(function(self) {
     speedinfo = c("0.3" = 1, "0.4" = 0.1, "0.6" = 0.1, "1" = 1),
     rate_func = linear))
 })
-}
 }

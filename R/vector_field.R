@@ -1,5 +1,11 @@
 # Mobjects representing vector fields. Ported from manim/mobject/vector_field.py.
 
+#' @return The constructors return mobjects: R6 objects of the class named by
+#'   the function called. `vector_field_shift_func()` and
+#'   `vector_field_scale_func()` return functions, and
+#'   `DEFAULT_SCALAR_FIELD_COLORS` is a character vector of colors. The objects
+#'   whose names end in `Class` are the R6 class generators that these functions
+#'   call.
 #' @rdname VectorFieldClass
 #' @export
 DEFAULT_SCALAR_FIELD_COLORS <- c(BLUE_E, GREEN, YELLOW, RED)
@@ -79,10 +85,11 @@ vf_with_seed <- function(seed, expr) {
 #'   get a stroke gradient from the colors at their anchors.
 #' @export
 #' @examples
-#' \dontrun{
 #' func <- function(pos) ((pos[1] * UR + pos[2] * LEFT) - pos) / 3
-#' ArrowVectorField(func)
-#' StreamLines(func)
+#' ArrowVectorField(func, x_range = c(-3, 3, 1), y_range = c(-2, 2, 1))
+#' \donttest{
+#' # Tracing stream lines takes a few seconds.
+#' StreamLines(func, x_range = c(-3, 3, 1), y_range = c(-2, 2, 1))
 #' }
 VectorFieldClass <- R6::R6Class("VectorField", inherit = VGroupClass, lock_objects = FALSE,
   public = list(

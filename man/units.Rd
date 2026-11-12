@@ -19,6 +19,11 @@ Munits
 \arguments{
 \item{axis}{\code{X_AXIS} or \code{Y_AXIS}.}
 }
+\value{
+\code{Pixels}, \code{Degrees} and \code{Munits} are units to multiply a number by,
+and \code{Percent()} returns such a unit for an axis; the product is a length in
+scene units or an angle in radians.
+}
 \description{
 Unit helpers from \code{manim.utils.unit}: \code{Pixels} converts pixels to scene
 units at the current resolution, \code{Percent(X_AXIS)} converts a percentage

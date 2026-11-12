@@ -15,6 +15,11 @@ VDict(mapping_or_iterable = list(), show_keys = FALSE, ...)
 
 \item{...}{Passed to \code{\link[=VGroup]{VGroup()}}.}
 }
+\value{
+A mobject: an R6 object of the class named by the function called.
+The objects whose names end in \code{Class} are the R6 class generators that
+these functions call.
+}
 \description{
 A VGroup whose submobjects are addressed by key, as
 upstream's \code{VDict}: \code{d$add(list(s = Square()))} adds pairs,

@@ -25,13 +25,14 @@
 #' @param ... Passed to [SVGMobject()].
 #' @return An [SVGMobject()].
 #' @export
-#' @examples
-#' \dontrun{
-#' if (requireNamespace("ggplot2", quietly = TRUE)) {
-#'   p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) + ggplot2::geom_point()
-#'   chart <- as_mobject(p)
-#'   render(function(self) self$play(Create(chart)), quality = "l")
+#' @examplesIf requireNamespace("ggplot2", quietly = TRUE) && isTRUE(capabilities("cairo"))
+#' \donttest{
+#' p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) + ggplot2::geom_point()
+#' chart <- as_mobject(p)
 #' }
+#' \dontrun{
+#' # A video in the folder media of the working directory; this needs ffmpeg.
+#' render(function(self) self$play(Create(chart)), quality = "l")
 #' }
 as_mobject <- function(x, width = 7, height = 5, bg = "transparent", height_units = 6, ...) {
   UseMethod("as_mobject")
@@ -81,10 +82,8 @@ as_mobject.default <- function(x, width = 7, height = 5, bg = "transparent", hei
 #' @return `scene_frame()` returns a `manim_frame_image`, a native raster.
 #' @export
 #' @examples
-#' \dontrun{
 #' f <- scene_frame(function(self) self$play(Create(Circle()), run_time = 2), t = 1)
 #' plot(f)
-#' }
 scene_frame <- function(scene, t = Inf, quality = "l", ...) {
   settings <- c(list(quality = quality, format = "none", progress_bar = FALSE), list(...))
   with_manim_config(settings, {

@@ -34,6 +34,7 @@ installed faces are used.
 }
 \examples{
 \dontrun{
+# Needs a font file of your own.
 family <- register_font("fonts/MyFont-Regular.ttf")
 Text("Hello", font = family)
 }

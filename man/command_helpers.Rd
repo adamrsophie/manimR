@@ -24,6 +24,13 @@ get_video_metadata(path_to_video)
 
 \item{path_to_video}{A video file.}
 }
+\value{
+\code{capture()} returns a list with the output \code{out}, the error output
+\code{err} and the exit status \code{returncode}. \code{get_dir_layout()} returns a
+character vector of the paths below \code{dirpath}. \code{get_video_metadata()}
+returns a list with \code{width}, \code{height}, \code{nb_frames}, \code{duration},
+\code{avg_frame_rate}, \code{codec_name} and \code{pix_fmt}.
+}
 \description{
 Ports of \code{manim.utils.commands}.
 }

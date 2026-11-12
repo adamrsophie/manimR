@@ -48,6 +48,11 @@ MathTypst(math_expression, typst_preamble = "", font_paths = NULL, ...)
 \item{math_expression}{Typst math without the \code{$} delimiters; may contain
 \code{{{ ... }}} groups.}
 }
+\value{
+A mobject: an R6 object of the class named by the function called.
+The objects whose names end in \code{Class} are the R6 class generators that
+these functions call.
+}
 \description{
 Text and formulas typeset by the \href{https://typst.app}{Typst}
 compiler and imported as vectorized mobjects. \code{Typst()} takes general
@@ -78,6 +83,7 @@ per unit).
 }
 \examples{
 \dontrun{
+# Needs the typst compiler.
 Typst("*Hello* from _Typst!_", font_size = 72)
 eq <- MathTypst("{{ a^2 + b^2 : lhs }} = {{ c^2 }}")
 eq$select("lhs")$set_color(BLUE)

@@ -42,6 +42,11 @@ radians.}
 
 \item{...}{Passed to \link{CameraClass}.}
 }
+\value{
+A camera: an R6 object of the class named by the function called.
+The objects whose names end in \code{Class} are the R6 class generators that
+these functions call.
+}
 \description{
 A camera looking at the scene from spherical angles \code{phi}
 (polar, off the z axis) and \code{theta} (azimuth), rotated by \code{gamma} about

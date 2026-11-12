@@ -32,7 +32,11 @@
 #'   `NULL` when nothing is written (`format = "none"` or `dry_run`).
 #' @export
 #' @examples
+#' # The last frame as a PNG file in the session's temporary directory.
+#' render(function(self) self$play(Create(Circle())), quality = "l", format = "png",
+#'        media_dir = tempdir())
 #' \dontrun{
+#' # A video in the folder media of the working directory; this needs ffmpeg.
 #' render(function(self) self$play(Create(Circle())), quality = "l")
 #' }
 render <- function(scene, quality = NULL, format = NULL, output_file = NULL, save_last_frame = NULL,
@@ -132,6 +136,7 @@ knit_print.manim_output <- function(x, options = list(), ...) {
 #' otherwise opens it with the system viewer.
 #'
 #' @param path Path to a rendered file.
+#' @return `path`, invisibly.
 #' @export
 preview_output <- function(path) {
   path <- unclass(path)
@@ -192,6 +197,7 @@ write_mobject_png <- function(mobject, file, ...) {
 #' @param x A mobject.
 #' @param background_color Background color.
 #' @param ... Ignored.
+#' @return `x`, invisibly.
 #' @export
 plot.Mobject <- function(x, background_color = cfg("background_color"), ...) {
   cam <- CameraClass$new(background_color = background_color)

@@ -37,6 +37,14 @@
 \alias{OpenGLSurface}
 \alias{OpenGLSurfaceMesh}
 \alias{OpenGLTexturedSurface}
+\alias{OpenGLSurfaceGroup}
+\alias{OpenGLRectangle}
+\alias{OpenGLSquare}
+\alias{OpenGLRoundedRectangle}
+\alias{OpenGLRectangleClass}
+\alias{OpenGLSquareClass}
+\alias{OpenGLRoundedRectangleClass}
+\alias{OpenGLSurfaceGroupClass}
 \alias{OpenGLMobjectClass}
 \alias{OpenGLGroupClass}
 \alias{OpenGLPointClass}
@@ -97,6 +105,11 @@ shaders, kept but not used.}
 
 \item{...}{Further arguments for \code{\link[=VGroup]{VGroup()}} or \code{\link[=Surface]{Surface()}}.}
 }
+\value{
+A mobject: an R6 object of the class named by the function called.
+The objects whose names end in \code{Class} are the R6 class generators that
+these functions call.
+}
 \description{
 Upstream's OpenGL renderer has its own mobject classes, such as
 \code{OpenGLCircle} or \code{OpenGLVGroup}. manimR draws every mobject with grid, so
@@ -106,8 +119,10 @@ unchanged; the GPU pipeline itself (shaders, the OpenGL camera and window)
 is not part of manimR.
 }
 \details{
-Two classes have no Cairo counterpart:
+Three classes have no Cairo counterpart:
 \itemize{
+\item \code{OpenGLSurfaceGroup(...)} is a surface without faces of its own that
+holds the surfaces it is given.
 \item \code{OpenGLSurfaceMesh(uv_surface)} is a \code{\link[=VGroup]{VGroup()}} of curves along the
 grid lines of a surface (\code{resolution} lines in each direction, 21 by
 default), lifted \code{normal_nudge} along the surface normal so they show

@@ -18,6 +18,9 @@ DEFAULT_LAGGED_START_LAG_RATIO <- 0.05
 #' @param animation_class An animation constructor such as `FadeIn`.
 #' @param mobject Mobject whose submobjects are animated.
 #' @param arg_creator Function mapping a submobject to a list of arguments.
+#' @return An animation: an R6 object of the class named by the function
+#'   called, to pass to a scene's `play()`. The objects whose names end in
+#'   `Class` are the R6 class generators that these functions call.
 #' @name composition
 NULL
 
@@ -222,6 +225,9 @@ LaggedStartMap <- function(animation_class, mobject, arg_creator = NULL, run_tim
 #' @param stroke_width Stroke width.
 #' @param time_on,time_off,blinks,hide_at_end Blink settings.
 #' @param ... Passed on to the underlying animation.
+#' @return An animation: an R6 object of the class named by the function
+#'   called, to pass to a scene's `play()`. The objects whose names end in
+#'   `Class` are the R6 class generators that these functions call.
 #' @name indication
 NULL
 

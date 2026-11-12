@@ -36,14 +36,22 @@ manim_color <- function(color) {
 color_to_rgb <- function(color) color_to_rgba(color)[1:3]
 
 #' @rdname manim_color
-#' @param alpha Opacity.
+#' @param alpha Opacity of the result, 1 by default as upstream; `NULL` keeps
+#'   the opacity the color carries.
 #' @export
-color_to_rgba <- function(color, alpha = NULL) {
+color_to_rgba <- function(color, alpha = 1) {
+  v <- color_rgba(color)
+  if (!is.null(alpha)) v[4] <- alpha
+  v
+}
+
+# The RGBA values of a color, keeping the opacity the color carries.
+color_rgba <- function(color) {
   if (inherits(color, "ManimColor")) {
     v <- attr(color, "rgba")
   } else if (is.numeric(color)) {
-    v <- if (max(color) > 1) color / 255 else color
-    if (length(v) == 3) v <- c(v, 1)
+    # A hex number, or 3 or 4 channel values, as ManimColor() takes them.
+    v <- parse_manim_color_value(color)
   } else {
     if (is.null(color) || length(color) == 0 || is.na(color)) color <- "#000000"
     # Hex written as 0xRRGGBB, as upstream's ManimColor accepts.
@@ -53,18 +61,17 @@ color_to_rgba <- function(color, alpha = NULL) {
     if (key %in% names(tab)) color <- tab[[key]]
     v <- as.numeric(grDevices::col2rgb(color, alpha = TRUE)) / 255
   }
-  if (!is.null(alpha)) v[4] <- alpha
   v
 }
 
 #' @rdname manim_color
 #' @param rgb,rgba Numeric vectors in `[0, 1]`.
 #' @export
-rgb_to_color <- function(rgb) new_manim_color(c(rgb[1:3], 1))
+rgb_to_color <- function(rgb) new_manim_color(parse_manim_color_value(rgb[1:3]))
 
 #' @rdname manim_color
 #' @export
-rgba_to_color <- function(rgba) new_manim_color(if (length(rgba) == 3) c(rgba, 1) else rgba[1:4])
+rgba_to_color <- function(rgba) new_manim_color(parse_manim_color_value(rgba))
 
 # The hex string of RGB values in [0, 1], as ManimColor.to_hex(): it
 # truncates int(x * 255); the epsilon keeps exact channel values such as
@@ -85,9 +92,12 @@ rgb_hex <- function(rgb) {
 #' color_gradient(c(RED, YELLOW, GREEN), 5)
 interpolate_color <- function(color1, color2, alpha) {
   # All four channels, as upstream's ManimColor.interpolate().
-  new_manim_color(interpolate(color_to_rgba(color1), color_to_rgba(color2), alpha))
+  new_manim_color(interpolate(color_rgba(color1), color_rgba(color2), alpha))
 }
 
+#' @return A color: a hex string, of class `ManimColor` where the function
+#'   computes it from other colors. `color_gradient()` returns a character vector
+#'   of `length_of_output` colors.
 #' @rdname interpolate_color
 #' @param reference_colors Colors to pass through.
 #' @param length_of_output Number of colors to return.
@@ -118,7 +128,10 @@ average_color <- function(...) {
 
 #' @rdname interpolate_color
 #' @export
-invert_color <- function(color) rgb_to_color(1 - color_to_rgb(color))
+invert_color <- function(color) {
+  v <- color_rgba(color)
+  new_manim_color(c(1 - v[1:3], v[4]))
+}
 
 #' @rdname interpolate_color
 #' @param blend Amount to blend toward white (`lighter_color`) or black (`darker_color`).
@@ -140,9 +153,19 @@ random_color <- function() {
 #' @export
 random_bright_color <- function() interpolate_color(random_color(), "#FFFFFF", 0.5)
 
+# The colors of an argument that takes one color or several: a numeric
+# vector is one color (RGB or RGBA), a character vector or a list is one
+# color per element.
+color_items <- function(color) {
+  if (is.null(color)) return(list(NULL))
+  if (is.list(color) && !inherits(color, "ManimColor")) return(unlist(lapply(color, color_items), recursive = FALSE))
+  if (is.numeric(color) || length(color) == 1) return(list(color))
+  as.list(color)
+}
+
 # k x 4 matrix of rgba rows from colors and opacities, recycled to equal length.
 rgbas_from <- function(color, opacity) {
-  cols <- if (is.null(color)) list(NULL) else as.list(unlist(color))
+  cols <- color_items(color)
   ops <- if (is.null(opacity)) list(NULL) else as.list(unlist(opacity))
   n <- max(length(cols), length(ops))
   cols <- rep_len(cols, n)
@@ -179,8 +202,13 @@ stretch_list <- function(x, n) {
 #' @param color A color.
 #' @param alpha Opacity.
 #' @param rgb A numeric vector in `[0, 1]`.
-#' @param hex A hex string.
+#' @param hex_code A hex string.
 #' @param h,s,v Hue, saturation and value in `[0, 1]`.
+#' @return `color_to_int_rgb()` and `color_to_int_rgba()` return integer
+#'   vectors of 3 and 4 values from 0 to 255, `hex_to_rgb()` a numeric vector of
+#'   3 values from 0 to 1, `rgb_to_hex()` and `color_from_hsv()` a color (a hex
+#'   string of class `ManimColor`), and `color_to_hsv()` a numeric vector named
+#'   `h`, `s` and `v`.
 #' @name color_conversions
 #' @examples
 #' color_to_int_rgb(BLUE)
@@ -201,7 +229,7 @@ rgb_to_hex <- function(rgb) rgb_to_color(rgb)
 
 #' @rdname color_conversions
 #' @export
-hex_to_rgb <- function(hex) color_to_rgb(hex)
+hex_to_rgb <- function(hex_code) color_to_rgb(hex_code)
 
 #' @rdname color_conversions
 #' @export

@@ -25,9 +25,11 @@
 #'   animations, for example `path_arc` or `run_time`.
 #' @param use_override `FALSE` ignores an animation override set with
 #'   [override_animation()] on the class of `mobject`.
+#' @return An animation: an R6 object of the class named by the function
+#'   called, to pass to a scene's `play()`. The objects whose names end in
+#'   `Class` are the R6 class generators that these functions call.
 #' @name transform_matching
 #' @examples
-#' \dontrun{
 #' Anagram <- manim_scene(function(self) {
 #'   src <- Text("the morse code")
 #'   tar <- Text("here come dots")
@@ -36,7 +38,6 @@
 #'   self$play(TransformMatchingShapes(src, tar, path_arc = PI / 2))
 #'   self$wait(0.5)
 #' })
-#' }
 NULL
 
 #' @rdname transform_matching

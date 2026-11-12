@@ -4,6 +4,10 @@
 \alias{ThreeDScene}
 \alias{SpecialThreeDScene}
 \title{ThreeDScene}
+\value{
+R6 class generators. A scene class inherits from one of them, and
+\verb{$new()} creates a scene.
+}
 \description{
 A \link{Scene} with a \link{ThreeDCameraClass}. Set the view with
 \code{set_camera_orientation(phi, theta, gamma, zoom, focal_distance, frame_center)}, animate it with \code{move_camera()}, and spin it with
@@ -23,7 +27,6 @@ and on to the camera, for example \code{should_apply_shading = FALSE}.
 \code{low_quality_config} (used when rendering at low quality).
 }
 \examples{
-\dontrun{
 Spin <- R6::R6Class("Spin", inherit = ThreeDScene, public = list(
   construct = function() {
     self$set_camera_orientation(phi = 75 * DEGREES, theta = 30 * DEGREES)
@@ -31,6 +34,8 @@ Spin <- R6::R6Class("Spin", inherit = ThreeDScene, public = list(
     self$begin_ambient_camera_rotation(rate = 0.5)
     self$wait(2)
   }))
+\dontrun{
+# A video in the folder media of the working directory; this needs ffmpeg.
 render(Spin, quality = "l")
 }
 }

@@ -271,6 +271,9 @@ LOGO_RED
 
 LOGO_BLACK
 }
+\value{
+Colors as hex strings such as \code{"#FC6255"}.
+}
 \description{
 The standard Manim palette as hex strings. Shades run from \verb{_A} (lightest)
 to \verb{_E} (darkest); the unsuffixed name equals the \verb{_C} shade.

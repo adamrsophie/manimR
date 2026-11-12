@@ -57,12 +57,20 @@ list with \code{color}, \code{opacity}, \code{fill_color}, \code{fill_opacity},
 \item{long_lines, should_subdivide_sharp_curves, should_remove_null_curves}{Upstream's options for the OpenGL renderer's triangulation; kept for
 compatibility.}
 }
+\value{
+A mobject: an R6 object of the class named by the function called.
+The objects whose names end in \code{Class} are the R6 class generators that
+these functions call.
+}
 \description{
 Import an SVG file as vectorized mobjects. Paths, rectangles,
 circles, ellipses, lines, polylines, polygons, groups, \verb{<use>}
 references, transforms, CSS and fill/stroke styles are supported; text
 elements are skipped with a warning, as upstream does (convert them to
-paths first).
+paths first). Styles are read as upstream's parser reads them: a shape
+with no stroke keeps the stroke color of its class with a width of 0, a
+\code{fill-opacity} or \code{stroke-opacity} replaces the alpha of its color, and
+the \code{opacity} property is not read.
 
 The import follows upstream's steps, each a method:
 \code{get_file_path()} finds the file (also in the \code{assets_dir} setting, with
@@ -78,7 +86,11 @@ then \code{apply_style_to_mobject()} and \code{handle_transform()};
 result under \code{hash_seed()}. \code{move_into_position()} centers and sizes it.
 }
 \examples{
-\dontrun{
-SVGMobject("logo.svg")
-}
+file <- tempfile(fileext = ".svg")
+writeLines(c(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">',
+  '<circle cx="5" cy="5" r="4" fill="#58C4DD"/>',
+  '<path d="M 2 5 L 8 5" stroke="#FFFFFF"/>',
+  '</svg>'), file)
+SVGMobject(file)
 }

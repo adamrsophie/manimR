@@ -29,6 +29,11 @@ animations, for example \code{path_arc} or \code{run_time}.}
 \item{use_override}{\code{FALSE} ignores an animation override set with
 \code{\link[=override_animation]{override_animation()}} on the class of \code{mobject}.}
 }
+\value{
+An animation: an R6 object of the class named by the function
+called, to pass to a scene's \code{play()}. The objects whose names end in
+\code{Class} are the R6 class generators that these functions call.
+}
 \description{
 These animations map the parts of \code{mobject} and \code{target_mobject} to keys
 and transform parts with equal keys into each other.
@@ -43,7 +48,6 @@ unmatched parts of the source fade out toward the unmatched target parts,
 and unmatched target parts fade in from there.
 }
 \examples{
-\dontrun{
 Anagram <- manim_scene(function(self) {
   src <- Text("the morse code")
   tar <- Text("here come dots")
@@ -52,5 +56,4 @@ Anagram <- manim_scene(function(self) {
   self$play(TransformMatchingShapes(src, tar, path_arc = PI / 2))
   self$wait(0.5)
 })
-}
 }

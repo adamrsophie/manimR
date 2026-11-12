@@ -6,6 +6,11 @@
 \alias{normalize}
 \alias{cross}
 \alias{rotation_matrix}
+\alias{rotation_matrix_transpose}
+\alias{rotation_matrix_transpose_from_quaternion}
+\alias{rotation_matrix_from_quaternion}
+\alias{norm_squared}
+\alias{normalize_along_axis}
 \alias{rotation_about_z}
 \alias{rotate_vector}
 \alias{angle_of_vector}
@@ -33,11 +38,21 @@
 \usage{
 get_norm(v)
 
-normalize(v, fall_back = NULL)
+normalize(vect, fall_back = NULL)
 
 cross(v1, v2)
 
-rotation_matrix(angle, axis = OUT)
+rotation_matrix(angle, axis = OUT, homogeneous = FALSE)
+
+rotation_matrix_transpose(angle, axis)
+
+rotation_matrix_transpose_from_quaternion(quat)
+
+rotation_matrix_from_quaternion(quat)
+
+norm_squared(v)
+
+normalize_along_axis(array, axis)
 
 rotation_about_z(angle)
 
@@ -53,11 +68,11 @@ compass_directions(n = 4, start_vect = RIGHT)
 
 regular_vertices(n, radius = 1, start_angle = NULL)
 
-complex_to_R3(z)
+complex_to_R3(complex_num)
 
 R3_to_complex(point)
 
-midpoint(p1, p2)
+midpoint(point1, point2)
 
 line_intersection(line1, line2)
 
@@ -86,14 +101,21 @@ perpendicular_bisector(line, norm_vector = OUT)
 thick_diagonal(dim, thickness = 2)
 }
 \arguments{
-\item{v, v1, v2, vector}{Numeric vectors. In \code{find_intersection()}, \code{v1} is
+\item{v, v1, v2, vector, vect}{Numeric vectors. In \code{find_intersection()}, \code{v1} is
 the direction of the second line.}
 
 \item{fall_back}{Value returned for a zero vector.}
 
 \item{angle}{Angle in radians.}
 
-\item{axis}{Rotation axis.}
+\item{axis}{Rotation axis. In \code{normalize_along_axis()}, the dimension to
+take norms along (1 or 2).}
+
+\item{homogeneous}{\code{TRUE} returns a 4 x 4 homogeneous matrix.}
+
+\item{quat}{A quaternion \code{c(w, x, y, z)}.}
+
+\item{array}{A numeric matrix.}
 
 \item{n}{Number of directions (\code{compass_directions()}) or vertices
 (\code{regular_vertices()}).}
@@ -105,12 +127,11 @@ the direction of the second line.}
 \item{start_angle}{Angle of the first vertex; by default 0 for even \code{n}
 and \code{TAU / 4} for odd \code{n}.}
 
-\item{z}{A complex number.}
+\item{complex_num}{A complex number.}
 
 \item{point}{A point.}
 
-\item{p1, p2}{Points. In \code{find_intersection()}, \code{p1} is a point of the
-second line.}
+\item{point1, point2}{Points.}
 
 \item{line1, line2}{Two lines, each a list or 2 x 3 matrix of two points.}
 
@@ -156,6 +177,17 @@ Vector helpers used throughout manimR. Points and vectors are length 3
 numeric vectors; point sets are n x 3 matrices.
 }
 \details{
+\code{rotation_matrix_transpose()} is the transpose of
+\code{rotation_matrix()}. \code{rotation_matrix_transpose_from_quaternion()} returns
+a list of the three rows of that transpose for the rotation a quaternion
+describes, and \code{rotation_matrix_from_quaternion()} the rotation matrix
+itself.
+
+\code{norm_squared()} is the squared length of a vector.
+\code{normalize_along_axis()} divides a matrix by the norms taken along
+\code{axis} (1 sums over rows, 2 over columns, so \code{axis = 2} gives every row
+length 1); zero norms are left alone.
+
 \code{z_to_vector()} returns a 3 x 3 rotation matrix taking the z
 axis to the direction of \code{vector}.
 

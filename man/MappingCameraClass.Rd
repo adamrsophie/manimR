@@ -33,6 +33,11 @@ SplitScreenCamera(left_camera, right_camera, ...)
 
 \item{left_camera, right_camera}{Cameras for each half.}
 }
+\value{
+A camera: an R6 object of the class named by the function called.
+The objects whose names end in \code{Class} are the R6 class generators that
+these functions call.
+}
 \description{
 \code{MappingCameraClass} draws every point through
 \code{mapping_func} (curves are subdivided first so the image bends smoothly).

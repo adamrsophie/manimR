@@ -18,6 +18,11 @@ along while fading; \code{target_position}, a point or mobject to fade toward
 or from; \code{scale}, the scale factor of the faded state; and any argument
 of \code{\link[=Transform]{Transform()}}.}
 }
+\value{
+An animation: an R6 object of the class named by the function
+called, to pass to a scene's \code{play()}. The objects whose names end in
+\code{Class} are the R6 class generators that these functions call.
+}
 \description{
 \code{FadeIn()} and \code{FadeOut()} fade mobjects in or out, optionally moving them
 by \code{shift}, toward \code{target_position}, or scaling by \code{scale}.

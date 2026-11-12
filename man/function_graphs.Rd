@@ -59,7 +59,10 @@ be read as coordinate rows.}
 
 \item{color}{Color.}
 
-\item{min_depth, max_quads}{Resolution of the implicit curve sampling grid.}
+\item{min_depth, max_quads}{The implicit curve is traced on a grid of
+cells that are split \code{min_depth} times everywhere and then further
+where the function changes sign, up to \code{max_quads} cells (the adaptive
+method of the \code{isosurfaces} Python package, as upstream).}
 }
 \value{
 A mobject.
@@ -74,9 +77,7 @@ The point function of a graph is stored in the field \code{func} (upstream
 calls it \code{function}, a reserved word in R); \code{get_function()} returns it.
 }
 \examples{
-\dontrun{
 ParametricFunction(function(t) c(sin(2 * t), sin(3 * t), 0), t_range = c(0, TAU))
 FunctionGraph(cos, color = RED)
 ImplicitFunction(function(x, y) x^2 + y^2 - 4)
-}
 }

@@ -13,6 +13,10 @@ rate_functions
 
 color
 }
+\value{
+Named lists: \code{rate_functions} of the rate functions, and \code{color} of
+the colors, the palettes and the color functions.
+}
 \description{
 Upstream code often reaches rate functions and colors through their
 modules, as in \code{rate_functions.ease_in_sine} or \code{color.BLUE_C}. These

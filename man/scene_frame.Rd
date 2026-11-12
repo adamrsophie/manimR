@@ -39,8 +39,6 @@ make scenes: it saves the frame as a PNG snapshot (see
 \code{\link[testthat:expect_snapshot_file]{testthat::expect_snapshot_file()}}) and fails when it changes.
 }
 \examples{
-\dontrun{
 f <- scene_frame(function(self) self$play(Create(Circle()), run_time = 2), t = 1)
 plot(f)
-}
 }

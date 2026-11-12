@@ -11,6 +11,9 @@
 #'   along while fading; `target_position`, a point or mobject to fade toward
 #'   or from; `scale`, the scale factor of the faded state; and any argument
 #'   of [Transform()].
+#' @return An animation: an R6 object of the class named by the function
+#'   called, to pass to a scene's `play()`. The objects whose names end in
+#'   `Class` are the R6 class generators that these functions call.
 #' @name fading
 NULL
 
@@ -93,6 +96,9 @@ FadeOut <- constructor(FadeOutClass)
 #' @param point_color Initial color.
 #' @param angle Spin angle for `SpinInFromNothing()`.
 #' @param ... Passed to [Transform()].
+#' @return An animation: an R6 object of the class named by the function
+#'   called, to pass to a scene's `play()`. The objects whose names end in
+#'   `Class` are the R6 class generators that these functions call.
 #' @name growing
 NULL
 
@@ -183,6 +189,9 @@ SpinInFromNothing <- function(mobject, angle = PI / 2, point_color = NULL, ...) 
 #' @param suspend_mobject_updating Pause updaters while running.
 #' @param rate_func Rate function.
 #' @param ... Passed to [Animation()].
+#' @return An animation: an R6 object of the class named by the function
+#'   called, to pass to a scene's `play()`. The objects whose names end in
+#'   `Class` are the R6 class generators that these functions call.
 #' @name movement
 NULL
 
@@ -305,6 +314,9 @@ MoveAlongPath <- constructor(MoveAlongPathClass)
 #' @param path_arc,path_arc_axis Arc angle and axis of the path the points
 #'   follow in `Rotate()`; default to `angle` and `axis`.
 #' @param ... Passed to [Animation()] or [Transform()].
+#' @return An animation: an R6 object of the class named by the function
+#'   called, to pass to a scene's `play()`. The objects whose names end in
+#'   `Class` are the R6 class generators that these functions call.
 #' @name rotation
 NULL
 
@@ -377,6 +389,9 @@ Rotate <- constructor(RotateClass)
 #' @param tracked_mobject Mobject to follow.
 #' @param suspend_mobject_updating Pause other updaters while running.
 #' @param ... Passed to [Animation()].
+#' @return An animation: an R6 object of the class named by the function
+#'   called, to pass to a scene's `play()`. The objects whose names end in
+#'   `Class` are the R6 class generators that these functions call.
 #' @name update_animations
 NULL
 

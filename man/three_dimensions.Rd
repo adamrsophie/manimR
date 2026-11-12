@@ -192,6 +192,11 @@ mobjects.}
 \item{major_radius, minor_radius}{Distance from the center of the torus to
 the center of its tube, and the radius of the tube.}
 }
+\value{
+A mobject: an R6 object of the class named by the function called.
+The objects whose names end in \code{Class} are the R6 class generators that
+these functions call.
+}
 \description{
 \itemize{
 \item \code{ThreeDVMobject()}: a \code{\link[=VMobject]{VMobject()}} with \code{shade_in_3d = TRUE}.

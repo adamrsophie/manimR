@@ -22,6 +22,8 @@
 #'   another array.
 #'
 #' @param camera The camera that draws the mobjects.
+#' @return A `BackgroundColoredVMobjectDisplayer`, an R6 object.
+#'   `BackgroundColoredVMobjectDisplayerClass` is its R6 class generator.
 #' @name BackgroundColoredVMobjectDisplayer
 #' @format NULL
 #' @usage NULL
@@ -123,18 +125,23 @@ BackgroundColoredVMobjectDisplayer <- constructor(BackgroundColoredVMobjectDispl
 #' @examples
 #' list_plugins()
 get_plugins <- function() {
-  ip <- utils::installed.packages(fields = "Config/manimR/plugin")
-  flag <- ip[, "Config/manimR/plugin"]
-  pkgs <- unique(ip[!is.na(flag) & tolower(flag) %in% c("true", "yes"), "Package"])
+  pkgs <- plugin_packages()
   stats::setNames(lapply(pkgs, loadNamespace), pkgs)
+}
+
+# Names of the installed packages that declare themselves manimR plugins.
+plugin_packages <- function() {
+  pkgs <- unique(.packages(all.available = TRUE))
+  flag <- vapply(pkgs, function(p) {
+    as.character(suppressWarnings(utils::packageDescription(p, fields = "Config/manimR/plugin")))[1]
+  }, "")
+  unname(pkgs[!is.na(flag) & tolower(flag) %in% c("true", "yes")])
 }
 
 #' @rdname get_plugins
 #' @export
 list_plugins <- function() {
-  ip <- utils::installed.packages(fields = "Config/manimR/plugin")
-  flag <- ip[, "Config/manimR/plugin"]
-  pkgs <- unique(ip[!is.na(flag) & tolower(flag) %in% c("true", "yes"), "Package"])
+  pkgs <- plugin_packages()
   console$print("Plugins:")
   for (p in pkgs) console$print(paste0(" \u2022 ", p))
   invisible(pkgs)

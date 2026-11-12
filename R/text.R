@@ -196,9 +196,9 @@ TextClass <- R6::R6Class("Text", inherit = VMobjectClass, lock_objects = FALSE,
     font = "",
     initialize = function(text, fill_opacity = 1, stroke_width = 0, color = "#FFFFFF", font_size = DEFAULT_FONT_SIZE,
                           line_spacing = -1, font = "", slant = "NORMAL", weight = "NORMAL", t2c = NULL, t2f = NULL,
-                          t2g = NULL, t2s = NULL, t2w = NULL, gradient = NULL, tab_width = 4, height = NULL,
-                          width = NULL, should_center = TRUE, disable_ligatures = FALSE, markup = FALSE,
-                          warn_missing_font = TRUE, use_svg_cache = FALSE, justify = FALSE, ...) {
+                          t2g = NULL, t2s = NULL, t2w = NULL, gradient = NULL, tab_width = 4,
+                          warn_missing_font = TRUE, height = NULL, width = NULL, should_center = TRUE,
+                          disable_ligatures = FALSE, use_svg_cache = FALSE, markup = FALSE, justify = FALSE, ...) {
       text <- paste(text, collapse = "")
       if (nzchar(font) && warn_missing_font && !font_available(font)) {
         logger$warning("Font %s is not installed; the default font is used instead.", font)
@@ -322,12 +322,18 @@ TextClass <- R6::R6Class("Text", inherit = VMobjectClass, lock_objects = FALSE,
   )
 )
 
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @rdname TextClass
 #' @export
 Text <- constructor(TextClass)
 # Parse a Pango style markup subset into styled runs.
 PANGO_SIZE_KEYWORDS <- c(`xx-small` = 1 / 1.2^3, `x-small` = 1 / 1.2^2, small = 1 / 1.2, medium = 1,
                          large = 1.2, `x-large` = 1.2^2, `xx-large` = 1.2^3)
+
+# Pango's tags, Manim's color and gradient, and HTML's strong and em.
+MARKUP_TAGS <- c("b", "big", "i", "s", "sub", "sup", "small", "tt", "u", "span", "color", "gradient", "strong", "em")
 
 parse_markup <- function(markup, font, weight, slant, font_size = DEFAULT_FONT_SIZE) {
   doc <- xml2::read_xml(paste0("<markup>", markup, "</markup>"), options = "HUGE")
@@ -345,6 +351,9 @@ parse_markup <- function(markup, font, weight, slant, font_size = DEFAULT_FONT_S
       }
       s <- style
       tag <- tolower(xml2::xml_name(ch))
+      if (!tag %in% MARKUP_TAGS) {
+        stop("Cannot parse the markup in ", markup, ". Error: Unknown tag '", tag, "'", call. = FALSE)
+      }
       a <- xml2::xml_attrs(ch)
       if (tag %in% c("b", "strong")) s$weight <- "BOLD"
       if (tag %in% c("i", "em")) s$italic <- TRUE
@@ -431,19 +440,59 @@ text_decorations <- function(glyphs) {
 #'   `<i>`, `<tt>`, `<big>`, `<small>`, `<sup>`, `<sub>`, and `<span>` with
 #'   `foreground`/`color`, `font`/`font_family`, `weight`, `style`, `fgalpha`.
 #' @param text Markup string.
+#' @param fill_opacity,stroke_width,color,font_size,line_spacing,font,slant,weight,justify,gradient,tab_width,height,width,should_center,disable_ligatures,warn_missing_font
+#'   As for [Text()], in upstream's order for `MarkupText`.
 #' @param ... Passed to [Text()].
 #' @export
 #' @examples
 #' MarkupText("<b>bold</b> and <span foreground='red'>red</span>")
 MarkupText <- constructor(MarkupTextClass)
 
+#' Remove the invisible characters of a text mobject
+#'
+#' With `disable_ligatures = TRUE`, [Text()] keeps an invisible dot for every
+#' space, so that its submobjects match its characters. This returns the
+#' visible ones. Ported from `manim.mobject.text.text_mobject`.
+#'
+#' @param mobject A [Text()] or [Code()] style mobject: a group of
+#'   characters, or a group of lines of characters.
+#' @return A [VGroup()] of the characters that are not dots; for a group of
+#'   lines, a [VGroup()] with one [VGroup()] per line.
+#' @export
+#' @examples
+#' length(remove_invisible_chars(Text("a b c", disable_ligatures = TRUE))$submobjects)
+remove_invisible_chars <- function(mobject) {
+  visible <- function(m) Filter(function(k) !inherits(k, "Dot"), m$submobjects)
+  out <- VGroup()
+  subs <- mobject$submobjects
+  if (length(subs) && inherits(subs[[1]], "VGroup")) {
+    for (s in subs) out$add(do.call(VGroup, visible(s)))
+  } else {
+    do.call(out$add, visible(mobject))
+  }
+  out
+}
+
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @rdname MarkupText
 #' @format NULL
 #' @usage NULL
 #' @export
 MarkupTextClass <- R6::R6Class("MarkupText", inherit = TextClass, lock_objects = FALSE,
   public = list(
-    initialize = function(text, ...) super$initialize(text, markup = TRUE, ...)
+    initialize = function(text, fill_opacity = 1, stroke_width = 0, color = NULL, font_size = DEFAULT_FONT_SIZE,
+                          line_spacing = -1, font = "", slant = "NORMAL", weight = "NORMAL", justify = FALSE,
+                          gradient = NULL, tab_width = 4, height = NULL, width = NULL, should_center = TRUE,
+                          disable_ligatures = FALSE, warn_missing_font = TRUE, ...) {
+      super$initialize(text, fill_opacity = fill_opacity, stroke_width = stroke_width, color = color %||% "#FFFFFF",
+                       font_size = font_size, line_spacing = line_spacing, font = font, slant = slant,
+                       weight = weight, justify = justify, gradient = gradient, tab_width = tab_width,
+                       height = height, width = width, should_center = should_center,
+                       disable_ligatures = disable_ligatures, warn_missing_font = warn_missing_font,
+                       markup = TRUE, ...)
+    }
   )
 )
 
@@ -452,6 +501,7 @@ MarkupTextClass <- R6::R6Class("MarkupText", inherit = TextClass, lock_objects =
 #' @param ... Strings, one per line, then named arguments for [Text()].
 #' @param line_spacing Line spacing multiplier.
 #' @param alignment `"left"`, `"center"` or `"right"`.
+#' @return A `Paragraph`, an R6 mobject.
 #' @export
 #' @examples
 #' Paragraph("first line", "second line", alignment = "center")
@@ -494,7 +544,7 @@ paragraph_align_line <- function(g, alignment, line_no) {
 # TRUE when a font family is installed, registered with register_font(), or
 # one of the generic families.
 font_available <- function(font) {
-  if (tolower(font) %in% c("sans", "sans-serif", "serif", "mono", "monospace", "symbol", "emoji")) return(TRUE)
+  if (tolower(font) %in% c("sans", "sans-serif", "serif", "mono", "monospace", "system-ui", "symbol", "emoji")) return(TRUE)
   fams <- unique(c(systemfonts::system_fonts()$family, systemfonts::registry_fonts()$family))
   font %in% fams || tolower(font) %in% tolower(fams)
 }

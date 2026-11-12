@@ -6,7 +6,6 @@
 \title{VMobject}
 \usage{
 VMobject(
-  color = "#FFFFFF",
   fill_color = NULL,
   fill_opacity = 0,
   stroke_color = NULL,
@@ -16,18 +15,21 @@ VMobject(
   background_stroke_opacity = 1,
   background_stroke_width = 0,
   sheen_factor = 0,
-  sheen_direction = UL,
   joint_type = "auto",
-  cap_style = "auto",
+  sheen_direction = UL,
   close_new_points = FALSE,
+  pre_function_handle_to_anchor_scale_factor = 0.01,
   make_smooth_after_applying_functions = FALSE,
+  background_image = NULL,
   shade_in_3d = FALSE,
+  tolerance_for_point_equality = 1e-06,
+  n_points_per_cubic_curve = 4,
+  cap_style = "auto",
+  color = "#FFFFFF",
   ...
 )
 }
 \arguments{
-\item{color}{Color used for fill and stroke when they are not given.}
-
 \item{fill_color, fill_opacity}{Fill color and opacity.}
 
 \item{stroke_color, stroke_opacity, stroke_width}{Stroke color, opacity and
@@ -41,17 +43,35 @@ gradient across the fill.}
 \item{joint_type}{How stroke segments are joined: \code{"auto"}, \code{"round"},
 \code{"bevel"} or \code{"miter"}.}
 
-\item{cap_style}{Shape of the stroke ends: \code{"auto"}, \code{"round"}, \code{"butt"}
-or \code{"square"}.}
-
 \item{close_new_points}{Close the path when new points are added.}
+
+\item{pre_function_handle_to_anchor_scale_factor}{How far the handles are
+pulled toward their anchors before \code{apply_function()}.}
 
 \item{make_smooth_after_applying_functions}{Smooth the curve after
 \code{apply_function()}.}
 
+\item{background_image}{An image whose colors fill the mobject (see
+\verb{$color_using_background_image()}).}
+
 \item{shade_in_3d}{Shade the mobject by its orientation in a 3D scene.}
 
+\item{tolerance_for_point_equality}{Distance below which two points count
+as the same.}
+
+\item{n_points_per_cubic_curve}{Points per Bezier curve, 4.}
+
+\item{cap_style}{Shape of the stroke ends: \code{"auto"}, \code{"round"}, \code{"butt"}
+or \code{"square"}.}
+
+\item{color}{Color used for fill and stroke when they are not given.}
+
 \item{...}{Passed to \link{MobjectClass}, for example \code{z_index} or \code{name}.}
+}
+\value{
+A mobject: an R6 object of the class named by the function called.
+The objects whose names end in \code{Class} are the R6 class generators that
+these functions call.
 }
 \description{
 Vectorized mobject: a path of cubic Bezier curves with fill

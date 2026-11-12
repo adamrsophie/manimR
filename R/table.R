@@ -33,10 +33,8 @@
 #' @param ... Passed to [VGroup()].
 #' @export
 #' @examples
-#' \dontrun{
 #' t <- Table(list(c("This", "is a"), c("simple", "Table in \n Manim.")))
 #' t$add_highlighted_cell(c(2, 2), color = GREEN)
-#' }
 TableClass <- R6::R6Class("Table", inherit = VGroupClass, lock_objects = FALSE,
   public = list(
     row_labels = NULL,
@@ -276,6 +274,9 @@ TableClass <- R6::R6Class("Table", inherit = VGroupClass, lock_objects = FALSE,
   )
 )
 
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @rdname TableClass
 #' @export
 Table <- constructor(TableClass)

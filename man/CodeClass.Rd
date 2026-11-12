@@ -47,6 +47,11 @@ font size, as upstream), \code{disable_ligatures}, and any other \code{\link[=Te
 option such as \code{weight} or \code{slant}. \code{color} is ignored; colors come
 from the style. \code{alignment}, \code{width} and \code{height} are ignored.}
 }
+\value{
+A mobject: an R6 object of the class named by the function called.
+The objects whose names end in \code{Class} are the R6 class generators that
+these functions call.
+}
 \description{
 A highlighted source code listing: monospaced \code{\link[=Text]{Text()}}
 lines colored by token kind, optional line numbers, and a rounded
@@ -70,9 +75,7 @@ Fields: \code{code_lines} (a VGroup of \code{\link[=Text]{Text()}} lines), \code
 \code{background}.
 }
 \examples{
-\dontrun{
 code <- "f <- function(x) {\n  # square it\n  x^2 + 1\n}"
 Code(code_string = code, language = "r", background = "window",
      background_config = list(stroke_color = "maroon"))
-}
 }

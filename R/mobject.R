@@ -79,39 +79,74 @@ MobjectClass <- R6::R6Class("Mobject",
     },
 
     # Submobject management ------------------------------------------------
-    add = function(...) {
-      mobs <- flatten_mobjects(list(...))
-      for (m in mobs) {
-        if (!is_mobject(m)) stop("Only Mobjects can be added, got ", class(m)[1], call. = FALSE)
-        if (identical(m$mob_id, self$mob_id)) stop("Cannot add a Mobject as a submobject of itself.", call. = FALSE)
+    # The kind of mobject this one takes as a submobject: VMobject overrides
+    # it, as upstream's _assert_valid_submobjects().
+    assert_valid_submobjects = function(submobjects) {
+      self$assert_valid_submobjects_internal(submobjects, "Mobject")
+    },
+    assert_valid_submobjects_internal = function(submobjects, mob_class) {
+      for (i in seq_along(submobjects)) {
+        m <- submobjects[[i]]
+        if (!inherits(m, mob_class)) {
+          msg <- sprintf("Only values of type %s can be added as submobjects of %s, but the value at index %d is of type %s.",
+                         mob_class, class(self)[1], i, class(m)[1])
+          if (is_mobject(m)) msg <- paste(msg, "You can try adding this value into a Group instead.")
+          stop(msg, call. = FALSE)
+        }
+        if (identical(m$mob_id, self$mob_id)) {
+          stop(sprintf("Cannot add %s as a submobject of itself (at index %d).", class(self)[1], i), call. = FALSE)
+        }
       }
-      ids <- vapply(mobs, function(m) m$mob_id, "")
-      mobs <- mobs[!duplicated(ids, fromLast = TRUE)]
-      ids <- ids[!duplicated(ids, fromLast = TRUE)]
-      cur_ids <- self$submobject_ids()
-      self$submobjects <- c(self$submobjects[!cur_ids %in% ids], mobs)
       invisible(self)
     },
-    insert = function(index, mobject) {
-      if (!is_mobject(mobject)) stop("Only Mobjects can be inserted, got ", class(mobject)[1], call. = FALSE)
-      if (identical(mobject$mob_id, self$mob_id)) stop("Cannot add a Mobject as a submobject of itself.", call. = FALSE)
-      ids <- self$submobject_ids()
-      old <- match(mobject$mob_id, ids)
-      if (!is.na(old)) {
-        self$submobjects <- self$submobjects[-old]
-        if (old < index) index <- index - 1
+    # Upstream's _insert_submobjects(): `index` counts from 0 and follows
+    # Python's list.insert (negative values count from the end). Mobjects
+    # that are already submobjects move to the new position.
+    insert_submobjects = function(index, mobjects) {
+      self$assert_valid_submobjects(mobjects)
+      if (!length(mobjects)) return(invisible(self))
+      ids <- vapply(mobjects, function(m) m$mob_id, "")
+      keep <- !duplicated(ids, fromLast = TRUE)
+      if (!all(keep)) {
+        logger$warning("Attempted adding some Mobject as a child more than once, this is not possible. Repetitions are ignored.")
       }
+      mobjects <- mobjects[keep]
+      ids <- ids[keep]
       n <- length(self$submobjects)
-      index <- max(1, min(index, n + 1))
-      self$submobjects <- append(self$submobjects, list(mobject), after = index - 1)
+      if (!n) {
+        self$submobjects <- mobjects
+        return(invisible(self))
+      }
+      norm_index <- max(0, min(if (index >= 0) index else n + index, n))
+      cur_ids <- self$submobject_ids()
+      if (length(mobjects) == 1) {
+        # Nothing to do when the mobject is already at or next to the index.
+        near <- c(norm_index, norm_index + 1)
+        if (any(cur_ids[near[near >= 1 & near <= n]] == ids)) return(invisible(self))
+        old <- match(ids, cur_ids)
+        if (is.na(old)) {
+          self$submobjects <- append(self$submobjects, mobjects, after = norm_index)
+        } else {
+          new_index <- if (norm_index < old - 1) norm_index else norm_index - 1
+          self$submobjects <- append(self$submobjects[-old], mobjects, after = new_index)
+        }
+        return(invisible(self))
+      }
+      before <- seq_len(n) <= norm_index
+      fresh <- !cur_ids %in% ids
+      self$submobjects <- c(self$submobjects[before & fresh], mobjects, self$submobjects[!before & fresh])
       invisible(self)
+    },
+    add = function(...) {
+      self$insert_submobjects(length(self$submobjects), flatten_mobjects(list(...)))
+    },
+    # `index` counts from 1; a negative index counts from the end, so that
+    # insert(-1, m) puts m before the last submobject.
+    insert = function(index, mobject) {
+      self$insert_submobjects(if (index >= 1) index - 1 else index, list(mobject))
     },
     add_to_back = function(...) {
-      mobs <- flatten_mobjects(list(...))
-      ids <- vapply(mobs, function(m) m$mob_id, "")
-      self$remove(mobs)
-      self$submobjects <- c(mobs[!duplicated(ids)], self$submobjects)
-      invisible(self)
+      self$insert_submobjects(0, flatten_mobjects(list(...)))
     },
     remove = function(...) {
       mobs <- flatten_mobjects(list(...))
@@ -894,6 +929,9 @@ GroupClass <-R6::R6Class("Group", inherit = MobjectClass, lock_objects = FALSE,
   )
 )
 
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @rdname GroupClass
 #' @export
 Group <- constructor(GroupClass)
@@ -929,6 +967,11 @@ Group <- constructor(GroupClass)
   do.call(gen, sel)
 }
 
+#' @return `[` returns a submobject, or a group of them for a vector index.
+#'   `[[` returns a submobject, a field or an entry. `length()` returns the
+#'   number of submobjects, plus one when the mobject has points of its own.
+#'   The assignment forms return the changed mobject; `mob[[i]] <- value` with
+#'   a position does what `mob[i] <- value` does.
 #' @rdname sub-.Mobject
 #' @param value A mobject to store under key `i` of a [VDict].
 #' @export
@@ -952,6 +995,7 @@ Group <- constructor(GroupClass)
 #' @rdname sub-.Mobject
 #' @export
 `[[<-.Mobject` <- function(x, i, value) {
+  if (is.numeric(i)) return(`[<-.Mobject`(x, i, value))
   if (inherits(x, "VDict") && is.character(i) && length(i) == 1 && !exists(i, envir = x, inherits = FALSE)) {
     if (x$has_key(i)) x$remove(i)
     x$add_key_value_pair(i, value)

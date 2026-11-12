@@ -91,6 +91,7 @@ the field \code{bars}.
 }
 \examples{
 \dontrun{
+# Needs LaTeX and dvisvgm.
 s <- SampleSpace()$divide_vertically(c(0.3, 0.7))
 chart <- BarChart(c(1, 3, 2), bar_names = c("a", "b", "c"))
 }

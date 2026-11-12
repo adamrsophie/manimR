@@ -9,6 +9,7 @@
 #' Pillow's bicubic filter for enlarged, sheared or perspective images. Pillow
 #' cannot transform with `"lanczos"`, `"box"` or `"hamming"`; manimR draws
 #' them as `"bilinear"`.
+#' @return A named character vector of resampling algorithm names.
 #' @export
 RESAMPLING_ALGORITHMS <- c(
   nearest = "nearest", none = "nearest",
@@ -101,6 +102,9 @@ array_to_native_raster <- function(a) {
 #' @param default_display_frame_config List of style arguments for the frame
 #'   added by `add_display_frame()`.
 #' @param ... Further arguments for [MobjectClass].
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @name image_mobject
 #' @examples
 #' img <- ImageMobject(matrix(c(0, 100, 30, 200, 255, 0, 5, 33), 2, byrow = TRUE))

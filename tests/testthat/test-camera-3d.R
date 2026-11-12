@@ -181,15 +181,18 @@ test_that("Cube, Prism, Cone, Cylinder, Line3D and Arrow3D are built right", {
 test_that("polyhedra have the right faces, edges and vertices", {
   tet <- Tetrahedron(edge_length = 2)
   expect_length(tet$faces$submobjects, 4)
-  expect_length(tet$graph$edges, 6)
+  # As upstream, an edge shared by two faces that run along it in opposite
+  # directions is in the graph once per direction.
+  expect_length(tet$edges, 12)
+  expect_length(tet$graph$edges, 8)
   v <- tet$vertex_coords
   expect_equal(get_norm(v[1, ] - v[2, ]), 2)
   oct <- Octahedron()
   expect_length(oct$faces$submobjects, 8)
-  expect_length(oct$graph$edges, 12)
+  expect_length(oct$graph$edges, 20)
   expect_length(Icosahedron()$faces$submobjects, 20)
   dod <- Dodecahedron()
-  expect_length(dod$graph$edges, 30)
+  expect_length(dod$graph$edges, 49)
   expect_identical(oct$graph[1]$mob_id, oct$graph$vertices[[1]]$mob_id)
   oct$graph$vertices[[5]]$shift(OUT)
   oct$update(0)
@@ -197,7 +200,8 @@ test_that("polyhedra have the right faces, edges and vertices", {
   cube_pts <- as.matrix(expand.grid(c(0, 1), c(0, 1), c(0, 1)))
   hull <- ConvexHull3D(rbind(cube_pts, c(0.5, 0.5, 0.5)))
   expect_equal(nrow(hull$vertex_coords), 8)
-  expect_equal(sort(lengths(hull$faces_list)), rep(4, 6))
+  # Triangles, two per side of the cube, as upstream's QuickHull.
+  expect_equal(sort(lengths(hull$faces_list)), rep(3, 12))
 })
 
 test_that("ThreeDScene camera controls and ambient rotation", {

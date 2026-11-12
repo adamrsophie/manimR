@@ -55,6 +55,10 @@ LineJointType
 
 CapStyleType
 }
+\value{
+Character strings that name font slants and weights. \code{LineJointType}
+and \code{CapStyleType} are named lists of stroke styles.
+}
 \description{
 Upstream's string constants for \code{Text(slant = , weight = )}, such as
 \code{Text("Hi", weight = BOLD)}, and its \code{LineJointType} and \code{CapStyleType}

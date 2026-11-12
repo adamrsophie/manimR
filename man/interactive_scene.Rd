@@ -35,10 +35,10 @@ window can be opened (an interactive session with shiny and miniUI
 installed, and no video being written).
 }
 \examples{
-\dontrun{
+\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 sc <- ThreeDScene$new()
 sc$add(Cube())
 sc$set_key_function("c", function() sc$add(Sphere(radius = 0.5)))
 sc$interactive_embed()
-}
+\dontshow{\}) # examplesIf}
 }

@@ -55,6 +55,11 @@ added by \code{add_display_frame()}.}
 \item{resampling_algorithm}{How the image is sampled when drawn: a name
 in \link{RESAMPLING_ALGORITHMS}, \code{"bicubic"} by default.}
 }
+\value{
+A mobject: an R6 object of the class named by the function called.
+The objects whose names end in \code{Class} are the R6 class generators that
+these functions call.
+}
 \description{
 \code{ImageMobject()} displays a raster image from a PNG file or a
 numeric array with values from 0 to 255 (a matrix for grayscale, or an

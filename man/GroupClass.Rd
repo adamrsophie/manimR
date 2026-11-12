@@ -16,6 +16,11 @@ Group(..., color = "#FFFFFF", name = NULL, z_index = 0)
 
 \item{z_index}{Drawing order; higher values are drawn on top.}
 }
+\value{
+A mobject: an R6 object of the class named by the function called.
+The objects whose names end in \code{Class} are the R6 class generators that
+these functions call.
+}
 \description{
 \code{Group()} groups any mobjects; \code{\link[=VGroup]{VGroup()}} groups vectorized mobjects.
 }

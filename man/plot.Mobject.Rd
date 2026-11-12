@@ -13,6 +13,9 @@
 
 \item{...}{Ignored.}
 }
+\value{
+\code{x}, invisibly.
+}
 \description{
 Draws a mobject on the current graphics device, framed like a scene, so it
 shows in the RStudio Plots pane.

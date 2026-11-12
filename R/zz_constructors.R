@@ -2,10 +2,14 @@
 # options, so that Mobject(), Camera() or tip_shape = ArrowSquareTip work as
 # in upstream code.
 
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @rdname MobjectClass
 #' @export
 Mobject <- constructor(MobjectClass)
 
+#' @return A `Camera`, an R6 object. `CameraClass` is its R6 class generator.
 #' @rdname CameraClass
 #' @export
 Camera <- constructor(CameraClass)

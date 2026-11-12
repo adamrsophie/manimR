@@ -14,6 +14,9 @@
 #' @param path_arc_centers Centers of the arcs.
 #' @param replace_mobject_with_target_in_scene Replace `mobject` by the target at the end.
 #' @param ... Passed to [Animation()].
+#' @return An animation: an R6 object of the class named by the function
+#'   called, to pass to a scene's `play()`. The objects whose names end in
+#'   `Class` are the R6 class generators that these functions call.
 #' @name transform
 NULL
 

@@ -2,9 +2,15 @@
 % Please edit documentation in R/bezier.R
 \name{get_smooth_cubic_bezier_handle_points}
 \alias{get_smooth_cubic_bezier_handle_points}
+\alias{get_smooth_closed_cubic_bezier_handle_points}
+\alias{get_smooth_open_cubic_bezier_handle_points}
 \title{Smooth cubic Bezier handles}
 \usage{
 get_smooth_cubic_bezier_handle_points(anchors)
+
+get_smooth_closed_cubic_bezier_handle_points(anchors)
+
+get_smooth_open_cubic_bezier_handle_points(anchors)
 }
 \arguments{
 \item{anchors}{Anchors, an n x 3 matrix.}
@@ -18,6 +24,12 @@ Given the anchors of a cubic spline, computes the first and second handle
 of every curve so that the spline is smooth (continuous first and second
 derivatives). A closed spline (see \code{\link[=is_closed]{is_closed()}}) is smoothed across its
 start point too.
+}
+\details{
+\code{get_smooth_closed_cubic_bezier_handle_points()} and
+\code{get_smooth_open_cubic_bezier_handle_points()} are the two cases it
+chooses between, for at least three anchors: a closed curve (whose last
+anchor repeats the first) and an open one.
 }
 \examples{
 anchors <- rbind(c(0, 0, 0), c(1, 1, 0), c(2, 0, 0), c(3, 2, 0))

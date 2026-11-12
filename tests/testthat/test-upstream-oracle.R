@@ -47,13 +47,9 @@ test_that("smooth curves match upstream handles", {
   o <- read_oracle()
   v <- VMobject()$set_points_smoothly(rbind(LEFT * 2, UP, RIGHT, DOWN * 0.5 + RIGHT * 2))
   expect_points(v$points, o$smooth_open)
-  # This closed curve starts at a negative x, which manim 0.20.1 smoothed as
-  # open (its is_closed bug, fixed upstream since); closed smoothing commutes
-  # with translation, so compare with the curve moved to positive x.
+  # A closed curve that starts at a negative x.
   v <- VMobject()$set_points_smoothly(rbind(LEFT, UP, RIGHT, DOWN, LEFT))
-  w <- VMobject()$set_points_smoothly(rbind(LEFT, UP, RIGHT, DOWN, LEFT) + 5)
-  expect_equal(v$points, w$points - 5, tolerance = 1e-9)
-  expect_false(isTRUE(all.equal(unname(v$points), unname(as_mat(o$smooth_closed)))))
+  expect_points(v$points, o$smooth_closed)
 })
 
 test_that("alignment and transforms match upstream", {
@@ -102,6 +98,7 @@ test_that("positioning matches upstream", {
 
 test_that("LaTeX output matches upstream", {
   skip_if(!nzchar(Sys.which("latex")) || !nzchar(Sys.which("dvisvgm")), "LaTeX not available")
+  skip_on_cran()
   o <- read_oracle()
   old <- manim_config(media_dir = file.path(tempdir(), "manimR-test-media"))
   on.exit(.manim$config <- old)
@@ -152,6 +149,7 @@ test_that("animations match upstream at intermediate alphas", {
 
 test_that("Write on MathTex matches upstream", {
   skip_if(!nzchar(Sys.which("latex")) || !nzchar(Sys.which("dvisvgm")), "LaTeX not available")
+  skip_on_cran()
   o <- read_oracle()
   old <- manim_config(media_dir = file.path(tempdir(), "manimR-test-media"))
   on.exit(.manim$config <- old)

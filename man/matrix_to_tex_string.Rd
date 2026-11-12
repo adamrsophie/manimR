@@ -12,6 +12,10 @@ matrix_to_mobject(matrix)
 \arguments{
 \item{matrix}{A matrix or vector.}
 }
+\value{
+\code{matrix_to_tex_string()} returns a LaTeX string, and
+\code{matrix_to_mobject()} a \code{MathTex} mobject of it.
+}
 \description{
 \code{matrix_to_tex_string()} writes a matrix as a LaTeX \code{array} in square
 brackets and \code{matrix_to_mobject()} renders it with \code{\link[=MathTex]{MathTex()}}. A vector

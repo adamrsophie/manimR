@@ -68,6 +68,9 @@ sigmoid <- function(x) 1 / (1 + exp(-x))
 #' @param func A rate function.
 #' @param proportion Final proportion reached.
 #' @param a,b Interval to squish the rate function into.
+#' @return A rate function returns a number: the progress of an animation at
+#'   the proportion `t` of its run time. The functions that take a rate function
+#'   return a new rate function.
 #' @name rate_funcs
 #' @examples
 #' smooth_rate(0.5)

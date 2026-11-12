@@ -48,6 +48,11 @@ LaggedStartMap(
 
 \item{arg_creator}{Function mapping a submobject to a list of arguments.}
 }
+\value{
+An animation: an R6 object of the class named by the function
+called, to pass to a scene's \code{play()}. The objects whose names end in
+\code{Class} are the R6 class generators that these functions call.
+}
 \description{
 \code{AnimationGroup()} plays animations together, offset by \code{lag_ratio}
 times each run time. \code{Succession()} plays them one after another.

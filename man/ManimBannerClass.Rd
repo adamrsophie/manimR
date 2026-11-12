@@ -11,6 +11,11 @@ ManimBanner(dark_theme = TRUE)
 \item{dark_theme}{Light letters for dark backgrounds (default) or dark
 letters for light ones.}
 }
+\value{
+A mobject: an R6 object of the class named by the function called.
+The objects whose names end in \code{Class} are the R6 class generators that
+these functions call.
+}
 \description{
 The banner of manim's logo: a circle, a square and a
 triangle next to the letter M. \code{banner$create()} draws it and
@@ -19,7 +24,6 @@ name. As upstream, the expanded letters (\code{banner$anim}) only become
 submobjects during \code{expand()}.
 }
 \examples{
-\dontrun{
 DarkThemeBanner <- manim_scene(function(self) {
   banner <- ManimBanner()
   self$play(banner$create())
@@ -27,5 +31,4 @@ DarkThemeBanner <- manim_scene(function(self) {
   self$wait()
   self$play(Unwrite(banner))
 })
-}
 }

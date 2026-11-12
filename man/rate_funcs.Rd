@@ -164,6 +164,11 @@ functions take none.}
 
 \item{a, b}{Interval to squish the rate function into.}
 }
+\value{
+A rate function returns a number: the progress of an animation at
+the proportion \code{t} of its run time. The functions that take a rate function
+return a new rate function.
+}
 \description{
 Functions that map animation progress \code{t} in \verb{[0, 1]} to an eased value.
 Pass one as \code{rate_func} to any animation or to \code{Scene$play()}. Manim's

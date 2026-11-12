@@ -69,6 +69,14 @@ svg_path_to_points <- function(d) {
   start <- c(0, 0)
   last_c2 <- NULL
   last_q <- NULL
+  # Upstream draws from its pen, which an arc with no pieces does not move,
+  # while the path's current point does move.
+  pen <- NULL
+  from <- function() {
+    s <- pen %||% cur
+    pen <<- NULL
+    s
+  }
   is_cmd <- function(t) grepl("^[A-Za-z]$", t)
   num <- function() {
     v <- as.numeric(tokens[i])
@@ -89,7 +97,8 @@ svg_path_to_points <- function(d) {
       cmd <- tokens[i]
       i <- i + 1L
       if (cmd %in% c("Z", "z")) {
-        if (sqrt(sum((cur - start)^2)) > 1e-4) add_line(cur, start)
+        s <- from()
+        if (sqrt(sum((s - start)^2)) > 1e-4) add_line(s, start)
         cur <- start
         last_c2 <- NULL
         last_q <- NULL
@@ -104,38 +113,49 @@ svg_path_to_points <- function(d) {
       p <- base + c(num(), num())
       cur <- p
       start <- p
+      pen <- NULL
       cmd <- if (rel) "l" else "L"
       last_c2 <- NULL; last_q <- NULL
     } else if (up == "L") {
       p <- base + c(num(), num())
-      add_line(cur, p); cur <- p
+      add_line(from(), p); cur <- p
       last_c2 <- NULL; last_q <- NULL
     } else if (up == "H") {
       x <- num() + (if (rel) cur[1] else 0)
-      p <- c(x, cur[2]); add_line(cur, p); cur <- p
+      p <- c(x, cur[2]); add_line(from(), p); cur <- p
       last_c2 <- NULL; last_q <- NULL
     } else if (up == "V") {
       y <- num() + (if (rel) cur[2] else 0)
-      p <- c(cur[1], y); add_line(cur, p); cur <- p
+      p <- c(cur[1], y); add_line(from(), p); cur <- p
       last_c2 <- NULL; last_q <- NULL
     } else if (up == "C") {
       c1 <- base + c(num(), num()); c2 <- base + c(num(), num()); p <- base + c(num(), num())
-      add_cubic(cur, c1, c2, p); cur <- p; last_c2 <- c2; last_q <- NULL
+      add_cubic(from(), c1, c2, p); cur <- p; last_c2 <- c2; last_q <- NULL
     } else if (up == "S") {
-      c1 <- if (is.null(last_c2)) cur else 2 * cur - last_c2
+      # As svgelements: the control point of the last curve is reflected,
+      # whether that curve was cubic or quadratic.
+      ctrl <- last_c2 %||% last_q
+      c1 <- if (is.null(ctrl)) cur else 2 * cur - ctrl
       c2 <- base + c(num(), num()); p <- base + c(num(), num())
-      add_cubic(cur, c1, c2, p); cur <- p; last_c2 <- c2; last_q <- NULL
+      add_cubic(from(), c1, c2, p); cur <- p; last_c2 <- c2; last_q <- NULL
     } else if (up == "Q") {
       q <- base + c(num(), num()); p <- base + c(num(), num())
-      add_quad(cur, q, p); cur <- p; last_q <- q; last_c2 <- NULL
+      add_quad(from(), q, p); cur <- p; last_q <- q; last_c2 <- NULL
     } else if (up == "T") {
-      q <- if (is.null(last_q)) cur else 2 * cur - last_q
+      ctrl <- last_q %||% last_c2
+      q <- if (is.null(ctrl)) cur else 2 * cur - ctrl
       p <- base + c(num(), num())
-      add_quad(cur, q, p); cur <- p; last_q <- q; last_c2 <- NULL
+      add_quad(from(), q, p); cur <- p; last_q <- q; last_c2 <- NULL
     } else if (up == "A") {
       rx <- num(); ry <- num(); phi <- num(); fa <- flag(); fs <- flag()
       p <- base + c(num(), num())
-      for (cb in svg_arc_to_cubics(cur, rx, ry, phi, fa, fs, p)) add_cubic(cb[[1]], cb[[2]], cb[[3]], cb[[4]])
+      pieces <- svg_arc_to_cubics(cur, rx, ry, phi, fa, fs, p)
+      if (length(pieces)) {
+        pieces[[1]][[1]] <- from()
+        for (cb in pieces) add_cubic(cb[[1]], cb[[2]], cb[[3]], cb[[4]])
+      } else {
+        pen <- pen %||% cur
+      }
       cur <- p; last_c2 <- NULL; last_q <- NULL
     } else {
       i <- i + 1L
@@ -146,11 +166,13 @@ svg_path_to_points <- function(d) {
   cbind(m, 0)
 }
 
-# Endpoint parameterized elliptical arc to cubic Bezier segments.
+# Endpoint parameterized elliptical arc to cubic Bezier segments, as
+# svgelements' Arc (the SVG implementation notes) followed by
+# Path.approximate_arcs_with_quads(): one quadratic piece for every tenth of
+# a turn, raised to a cubic. An arc with a zero radius or equal end points
+# has no pieces.
 svg_arc_to_cubics <- function(p0, rx, ry, phi_deg, fa, fs, p1) {
-  if (rx == 0 || ry == 0 || all(p0 == p1)) {
-    return(list(list(p0, (2 * p0 + p1) / 3, (p0 + 2 * p1) / 3, p1)))
-  }
+  if (rx == 0 || ry == 0 || all(p0 == p1)) return(list())
   rx <- abs(rx); ry <- abs(ry)
   phi <- phi_deg * pi / 180
   cp <- cos(phi); sp <- sin(phi)
@@ -158,40 +180,44 @@ svg_arc_to_cubics <- function(p0, rx, ry, phi_deg, fa, fs, p1) {
   x1 <- cp * dx + sp * dy; y1 <- -sp * dx + cp * dy
   lam <- x1^2 / rx^2 + y1^2 / ry^2
   if (lam > 1) { rx <- rx * sqrt(lam); ry <- ry * sqrt(lam) }
-  num <- rx^2 * ry^2 - rx^2 * y1^2 - ry^2 * x1^2
-  den <- rx^2 * y1^2 + ry^2 * x1^2
-  co <- sqrt(max(0, num / den)) * (if (fa == fs) -1 else 1)
+  t1 <- rx^2 * y1^2; t2 <- ry^2 * x1^2
+  co <- sqrt(abs((rx^2 * ry^2 - t1 - t2) / (t1 + t2))) * (if (fa == fs) -1 else 1)
   cxp <- co * rx * y1 / ry; cyp <- -co * ry * x1 / rx
   cx <- cp * cxp - sp * cyp + (p0[1] + p1[1]) / 2
   cy <- sp * cxp + cp * cyp + (p0[2] + p1[2]) / 2
-  ang <- function(ux, uy, vx, vy) {
-    a <- atan2(ux * vy - uy * vx, ux * vx + uy * vy)
-    a
+  ux <- (x1 - cxp) / rx; uy <- (y1 - cyp) / ry
+  vx <- (-x1 - cxp) / rx; vy <- (-y1 - cyp) / ry
+  d <- min(1, max(-1, (ux * vx + uy * vy) / sqrt((ux^2 + uy^2) * (vx^2 + vy^2))))
+  delta <- acos(d) * (180 / pi)
+  if (ux * vy - uy * vx < 0) delta <- -delta
+  delta <- delta %% 360
+  if (!fs) delta <- delta - 360
+  sweep <- 2 * pi * delta / 360
+  nseg <- ceiling(abs(sweep) / (2 * pi * 0.1))
+  if (nseg == 0) return(list())
+  step <- sweep / nseg
+  alpha <- (4 - cos(step)) / 3
+  pt <- function(t, k = 1) {
+    c(cx + k * (rx * cos(t) * cp - ry * sin(t) * sp), cy + k * (rx * cos(t) * sp + ry * sin(t) * cp))
   }
-  t1 <- ang(1, 0, (x1 - cxp) / rx, (y1 - cyp) / ry)
-  dt <- ang((x1 - cxp) / rx, (y1 - cyp) / ry, (-x1 - cxp) / rx, (-y1 - cyp) / ry)
-  if (fs == 0 && dt > 0) dt <- dt - 2 * pi
-  if (fs == 1 && dt < 0) dt <- dt + 2 * pi
-  nseg <- max(1, ceiling(abs(dt) / (pi / 2) - 1e-9))
-  d <- dt / nseg
-  kappa <- 4 / 3 * tan(d / 4)
-  pt <- function(t) c(cx + rx * cos(t) * cp - ry * sin(t) * sp, cy + rx * cos(t) * sp + ry * sin(t) * cp)
-  der <- function(t) c(-rx * sin(t) * cp - ry * cos(t) * sp, -rx * sin(t) * sp + ry * cos(t) * cp)
-  lapply(seq_len(nseg), function(j) {
-    a <- t1 + (j - 1) * d
-    b <- a + d
-    s <- if (j == 1) p0 else pt(a)
-    e <- if (j == nseg) p1 else pt(b)
-    list(s, s + kappa * der(a), e - kappa * der(b), e)
-  })
+  t <- atan2(uy, ux)
+  s <- p0
+  out <- vector("list", nseg)
+  for (j in seq_len(nseg)) {
+    e <- if (j == nseg) p1 else pt(t + step)
+    q <- pt(t + step / 2, alpha)
+    out[[j]] <- list(s, (s + 2 * q) / 3, (2 * q + e) / 3, e)
+    s <- e
+    t <- t + step
+  }
+  out
 }
 
-svg_style_props <- c("fill", "fill-opacity", "stroke", "stroke-opacity", "stroke-width", "opacity", "color",
+svg_style_props <- c("fill", "fill-opacity", "stroke", "stroke-opacity", "stroke-width", "color",
                      "display", "visibility")
 
 svg_node_style <- function(node, inherited) {
   st <- inherited
-  st$opacity <- 1
   a <- xml2::xml_attrs(node)
   for (nm in intersect(names(a), svg_style_props)) st[[nm]] <- a[[nm]]
   if ("style" %in% names(a)) {
@@ -204,7 +230,6 @@ svg_node_style <- function(node, inherited) {
       }
     }
   }
-  if (!is.null(st$opacity)) st$group_opacity <- (inherited$group_opacity %||% 1) * as.numeric(st$opacity)
   st
 }
 
@@ -239,11 +264,14 @@ css_color <- function(value, current_color = NULL) {
     a <- if (length(parts) >= 4) { p <- parts[4]; if (grepl("%", p)) as.numeric(sub("%", "", p)) / 100 else as.numeric(p) } else 1
     q <- if (l < 0.5) l * (1 + sat) else l + sat - l * sat
     pp <- 2 * l - q
+    # As svgelements: the channels are truncated.
     f <- function(t) {
-      t <- t %% 1
-      if (t < 1 / 6) pp + (q - pp) * 6 * t else if (t < 1 / 2) q else if (t < 2 / 3) pp + (q - pp) * (2 / 3 - t) * 6 else pp
+      if (t < 0) t <- t + 1
+      if (t > 1) t <- t - 1
+      if (6 * t < 1) pp + (q - pp) * 6 * t else if (2 * t < 1) q else if (3 * t < 2) pp + (q - pp) * (2 / 3 - t) * 6 else pp
     }
-    return(list(color = hex(255 * f(h + 1 / 3), 255 * f(h), 255 * f(h - 1 / 3)), alpha = a))
+    ch <- if (sat == 0) rep(255 * l, 3) else 255 * c(f(h + 1 / 3), f(h), f(h - 1 / 3))
+    return(list(color = hex(trunc(ch[1]), trunc(ch[2]), trunc(ch[3])), alpha = a))
   }
   if (grepl("^#[0-9a-f]{3,4}$", lv)) {
     ch <- strsplit(substring(lv, 2), "")[[1]]
@@ -260,27 +288,40 @@ css_color <- function(value, current_color = NULL) {
   list(color = hex(rgb[1], rgb[2], rgb[3]), alpha = 1)
 }
 
+# A paint as svgelements reads it: NA for "none", black for anything it
+# cannot parse, and transparent as black with no opacity.
 svg_paint <- function(value, current_color) {
   if (is.null(value)) return(NULL)
+  lv <- tolower(trimws(value))
+  if (lv == "transparent") return(list(color = "#000000", alpha = 0))
+  if (grepl("^url\\(", lv)) return(list(color = "#000000", alpha = 1))
   css_color(value, current_color) %||% list(color = "#000000", alpha = 1)
 }
 
+# Opacities have 8 bits in svgelements. An opacity property replaces the
+# alpha of its color.
+svg_alpha <- function(paint, opacity) {
+  o <- suppressWarnings(as.numeric(opacity %||% NA))
+  if (is.na(o)) o <- paint$alpha
+  round(min(1, max(0, o)) * 255) / 255
+}
+
+# As SVGMobject.apply_style_to_mobject: a paint of "none" leaves the color
+# and the opacity of the converted mobject as they are. The opacity property
+# is not read, as upstream.
 apply_svg_style <- function(mob, st, M = svg_identity()) {
-  op <- st$group_opacity %||% 1
-  fill <- svg_paint(st$fill %||% "#000000", st$color)
-  stroke <- svg_paint(st$stroke %||% "none", st$color)
-  fo <- as.numeric(st[["fill-opacity"]] %||% 1) * op
-  so <- as.numeric(st[["stroke-opacity"]] %||% 1) * op
-  # Upstream wraps the document in a default style with stroke-width 0, and
+  # Exact names: `$` would match "stroke" to "stroke-width".
+  fill <- svg_paint(st[["fill"]] %||% "#000000", st[["color"]])
+  stroke <- svg_paint(st[["stroke"]] %||% "none", st[["color"]])
   # svgelements scales stroke widths with the element transform.
-  sw <- svg_length_px(st[["stroke-width"]] %||% "0") * sqrt(abs(det(M[1:2, 1:2])))
+  sw <- svg_length_px(st[["stroke-width"]] %||% "1") * sqrt(abs(det(M[1:2, 1:2])))
   no_fill <- identical(fill, NA)
   no_stroke <- identical(stroke, NA)
   mob$set_style(
     fill_color = if (no_fill) NULL else fill$color,
-    fill_opacity = if (no_fill) 0 else fo * fill$alpha,
+    fill_opacity = if (no_fill) NULL else svg_alpha(fill, st[["fill-opacity"]]),
     stroke_color = if (no_stroke) NULL else stroke$color,
-    stroke_opacity = if (no_stroke) so else so * stroke$alpha,
+    stroke_opacity = if (no_stroke) NULL else svg_alpha(stroke, st[["stroke-opacity"]]),
     stroke_width = if (no_stroke) 0 else sw
   )
   mob
@@ -394,7 +435,10 @@ svg_apply_css <- function(node, st, rules) {
 #'   circles, ellipses, lines, polylines, polygons, groups, `<use>`
 #'   references, transforms, CSS and fill/stroke styles are supported; text
 #'   elements are skipped with a warning, as upstream does (convert them to
-#'   paths first).
+#'   paths first). Styles are read as upstream's parser reads them: a shape
+#'   with no stroke keeps the stroke color of its class with a width of 0, a
+#'   `fill-opacity` or `stroke-opacity` replaces the alpha of its color, and
+#'   the `opacity` property is not read.
 #'
 #'   The import follows upstream's steps, each a method:
 #'   `get_file_path()` finds the file (also in the `assets_dir` setting, with
@@ -421,9 +465,13 @@ svg_apply_css <- function(node, st, rules) {
 #' @param ... Passed to [VMobject()].
 #' @export
 #' @examples
-#' \dontrun{
-#' SVGMobject("logo.svg")
-#' }
+#' file <- tempfile(fileext = ".svg")
+#' writeLines(c(
+#'   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">',
+#'   '<circle cx="5" cy="5" r="4" fill="#58C4DD"/>',
+#'   '<path d="M 2 5 L 8 5" stroke="#FFFFFF"/>',
+#'   '</svg>'), file)
+#' SVGMobject(file)
 SVGMobjectClass <- R6::R6Class("SVGMobject", inherit = VMobjectClass, lock_objects = FALSE,
   public = list(
     file_name = NULL,
@@ -445,11 +493,13 @@ SVGMobjectClass <- R6::R6Class("SVGMobject", inherit = VMobjectClass, lock_objec
       self$svg_default <- svg_default %||% list(color = NULL, opacity = NULL, fill_color = NULL, fill_opacity = NULL,
                                                 stroke_width = 0, stroke_color = NULL, stroke_opacity = NULL)
       self$path_string_config <- path_string_config %||% list()
-      if (!is.null(file_name)) self$init_svg_mobject(file_name, use_svg_cache = use_svg_cache)
-      # Upstream only records color and opacity here; the imported shapes keep
-      # their own style unless fill_color, stroke_color and so on are given.
-      if (!is.null(color)) self$color <- manim_color(color)
+      # As upstream, color (black when not given) styles this mobject before
+      # the shapes are imported: they keep their own style unless fill_color,
+      # stroke_color and so on are given.
+      self$set_color(color %||% BLACK)
       self$opacity <- opacity
+      self$stroke_width <- stroke_width %||% 0
+      if (!is.null(file_name)) self$init_svg_mobject(file_name, use_svg_cache = use_svg_cache)
       self$set_style(fill_color = fill_color, fill_opacity = fill_opacity, stroke_color = stroke_color,
                      stroke_opacity = stroke_opacity, stroke_width = stroke_width)
       self$move_into_position()
@@ -593,7 +643,7 @@ SVGMobjectClass <- R6::R6Class("SVGMobject", inherit = VMobjectClass, lock_objec
         }
         invisible(NULL)
       }
-      for (ch in xml2::xml_children(root)) walk(ch, svg_identity(), svg_node_style(root, list(group_opacity = 1)), "root")
+      for (ch in xml2::xml_children(root)) walk(ch, svg_identity(), svg_node_style(root, list()), "root")
       list(mobjects = mobs, groups = groups)
     },
     get_mob_from_shape_element = function(shape) {
@@ -643,6 +693,9 @@ SVGMobjectClass <- R6::R6Class("SVGMobject", inherit = VMobjectClass, lock_objec
   )
 )
 
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @rdname SVGMobjectClass
 #' @export
 SVGMobject <- constructor(SVGMobjectClass)

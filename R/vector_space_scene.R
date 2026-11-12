@@ -43,6 +43,9 @@ Z_COLOR <- BLUE_D
 #'
 #'   `X_COLOR`, `Y_COLOR` and `Z_COLOR` are the default colors of the x, y
 #'   and z basis vectors.
+#' @return `VectorScene` and `LinearTransformationScene` are R6 class
+#'   generators: a scene class inherits from one of them, and `$new()` creates a
+#'   scene. `X_COLOR`, `Y_COLOR` and `Z_COLOR` are colors.
 #' @name VectorScene
 NULL
 

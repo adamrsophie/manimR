@@ -35,7 +35,7 @@ partial movie cache; each output of each session is shown its own copy
 of the file, served from a folder that is removed when the session ends.
 }
 \examples{
-\dontrun{
+\dontshow{if (interactive() && requireNamespace("shiny", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 ui <- shiny::fluidPage(
   shiny::sliderInput("n", "Sides", 3, 10, 5),
   manimOutput("scene")
@@ -47,5 +47,5 @@ server <- function(input, output) {
   })
 }
 shiny::shinyApp(ui, server)
-}
+\dontshow{\}) # examplesIf}
 }

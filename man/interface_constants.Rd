@@ -40,6 +40,10 @@ START_Y
 
 RendererType
 }
+\value{
+Character strings and numbers used by the command line and the
+interactive window. \code{CONTEXT_SETTINGS} and \code{RendererType} are named lists.
+}
 \description{
 Upstream's command line messages (\code{SCENE_NOT_FOUND_MESSAGE} and so on,
 with \code{{}} where upstream formats in a scene name), the help epilog and

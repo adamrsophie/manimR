@@ -9,6 +9,10 @@ knitr_manim_engine(options)
 \arguments{
 \item{options}{knitr chunk options.}
 }
+\value{
+A character string for knitr: the chunk output with the rendered
+video or image embedded.
+}
 \description{
 Registered automatically when knitr is installed. A chunk with engine
 \code{manim} evaluates its R code, renders the scene named by the chunk option

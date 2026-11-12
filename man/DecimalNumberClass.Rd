@@ -65,6 +65,11 @@ Variable(var, label, var_type = "decimal", num_decimal_places = 2, ...)
 
 \item{var_type}{\code{"decimal"} or \code{"integer"} (or the constructors \code{DecimalNumber} / \code{Integer}).}
 }
+\value{
+A mobject: an R6 object of the class named by the function called.
+The objects whose names end in \code{Class} are the R6 class generators that
+these functions call.
+}
 \description{
 A number typeset digit by digit (with LaTeX by default) that
 can be updated with \code{set_value()}, for example in an updater or with
@@ -73,6 +78,7 @@ can be updated with \code{set_value()}, for example in an updater or with
 }
 \examples{
 \dontrun{
+# Needs LaTeX and dvisvgm.
 d <- DecimalNumber(3.14159, num_decimal_places = 3)
 d$set_value(2.71828)
 }

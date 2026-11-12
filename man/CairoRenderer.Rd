@@ -29,6 +29,11 @@ creates for each scene.}
 
 \item{...}{Arguments passed to the camera.}
 }
+\value{
+\code{CairoRenderer()} returns a renderer and \code{SceneFileWriter()} a file
+writer, both R6 objects that a scene creates for itself. The objects whose
+names end in \code{Class} are the R6 class generators that these functions call.
+}
 \description{
 \code{CairoRenderer} is the renderer every \link{Scene} uses, the counterpart of
 upstream's \code{CairoRenderer}: it draws frames with the scene's camera on an

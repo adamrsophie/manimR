@@ -106,7 +106,6 @@ logo_path_mobject <- function(d) {
 #'   letters for light ones.
 #' @export
 #' @examples
-#' \dontrun{
 #' DarkThemeBanner <- manim_scene(function(self) {
 #'   banner <- ManimBanner()
 #'   self$play(banner$create())
@@ -114,7 +113,6 @@ logo_path_mobject <- function(d) {
 #'   self$wait()
 #'   self$play(Unwrite(banner))
 #' })
-#' }
 ManimBannerClass <- R6::R6Class("ManimBanner", inherit = VGroupClass, lock_objects = FALSE,
   public = list(
     font_color = NULL,
@@ -239,6 +237,9 @@ ManimBannerClass <- R6::R6Class("ManimBanner", inherit = VGroupClass, lock_objec
   )
 )
 
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @rdname ManimBannerClass
 #' @export
 ManimBanner <- constructor(ManimBannerClass)

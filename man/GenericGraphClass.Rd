@@ -86,6 +86,11 @@ escape each \code{-} and each backslash with a backslash when the plain form
 would name several edges. For \code{DiGraph()}, a \code{tip_config} entry
 (globally or per edge) styles the tips.}
 }
+\value{
+A mobject: an R6 object of the class named by the function called.
+The objects whose names end in \code{Class} are the R6 class generators that
+these functions call.
+}
 \description{
 \code{Graph()} displays an undirected graph and \code{DiGraph()} a
 directed one: vertices (by default \code{\link[=Dot]{Dot()}}s) joined by edges (by default
@@ -104,8 +109,6 @@ return \code{\link[=Create]{Create()}} animations of the new mobjects, and
 with \code{g$animate(animation = FadeIn)}.
 }
 \examples{
-\dontrun{
 g <- Graph(1:4, list(c(1, 2), c(2, 3), c(3, 4), c(1, 3), c(1, 4)), layout = "circular")
 g$get(1)$move_to(c(1, 1, 0))
-}
 }

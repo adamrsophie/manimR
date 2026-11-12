@@ -17,6 +17,8 @@
 #' ```
 #'
 #' Or use the functional form [manim_scene()].
+#' @return An R6 class generator. A scene class inherits from it, and `$new()`
+#'   creates a scene.
 #' @export
 Scene <- R6::R6Class("Scene", lock_objects = FALSE,
   public = list(
@@ -39,8 +41,8 @@ Scene <- R6::R6Class("Scene", lock_objects = FALSE,
     session_spec = NULL,
     output_plan = NULL,
     file_writer_settings = NULL,
-    initialize = function(camera_class = NULL, always_update_mobjects = FALSE, random_seed = NULL,
-                          skip_animations = FALSE, renderer = NULL, ...) {
+    initialize = function(renderer = NULL, camera_class = NULL, always_update_mobjects = FALSE,
+                          random_seed = NULL, skip_animations = FALSE, ...) {
       self$camera_class <- camera_class %||% self$default_camera_class()
       self$always_update_mobjects <- always_update_mobjects
       self$random_seed <- random_seed %||% cfg("seed")
@@ -137,28 +139,36 @@ Scene <- R6::R6Class("Scene", lock_objects = FALSE,
       invisible(self)
     },
     replace = function(old_mobject, new_mobject) {
-      replace_in <- function(lst) {
-        for (i in seq_along(lst)) {
-          if (identical(lst[[i]]$mob_id, old_mobject$mob_id)) {
-            lst[[i]] <- new_mobject
-            return(list(lst, TRUE))
+      if (is.null(old_mobject) || is.null(new_mobject)) stop("Specified mobjects cannot be None", call. = FALSE)
+      # Replaces in the list `get()` returns and stores the result with
+      # `set()`; an earlier reference to the replacement is dropped first.
+      replace_in <- function(get, set) {
+        lst <- get()
+        ids <- vapply(lst, function(m) m$mob_id, "")
+        at <- match(new_mobject$mob_id, ids)
+        if (!is.na(at)) {
+          if (identical(old_mobject$mob_id, new_mobject$mob_id)) {
+            logger$warning(paste0("Attempted to replace ", class(old_mobject)[1], " with itself in Scene.mobjects."))
+            return(TRUE)
           }
-          r <- replace_in(lst[[i]]$submobjects)
-          if (r[[2]]) {
-            lst[[i]]$submobjects <- r[[1]]
-            return(list(lst, TRUE))
-          }
+          lst <- lst[-at]
+          ids <- ids[-at]
+          set(lst)
         }
-        list(lst, FALSE)
+        at <- match(old_mobject$mob_id, ids)
+        if (!is.na(at)) {
+          lst[[at]] <- new_mobject
+          set(lst)
+          return(TRUE)
+        }
+        for (mob in lst) {
+          if (replace_in(function() mob$submobjects, function(v) mob$submobjects <- v)) return(TRUE)
+        }
+        FALSE
       }
-      r <- replace_in(self$mobjects)
-      if (r[[2]]) {
-        self$mobjects <- r[[1]]
-      } else {
-        r <- replace_in(self$foreground_mobjects)
-        if (!r[[2]]) stop("Could not find ", class(old_mobject)[1], " in scene", call. = FALSE)
-        self$foreground_mobjects <- r[[1]]
-      }
+      replaced <- replace_in(function() self$mobjects, function(v) self$mobjects <- v) ||
+        replace_in(function() self$foreground_mobjects, function(v) self$foreground_mobjects <- v)
+      if (!replaced) stop("Could not find ", class(old_mobject)[1], " in scene", call. = FALSE)
       invisible(self)
     },
     restructure_mobjects = function(to_remove, mobject_list_name = "mobjects", extract_families = TRUE) {
@@ -227,7 +237,10 @@ Scene <- R6::R6Class("Scene", lock_objects = FALSE,
     },
 
     # Animations -----------------------------------------------------------
-    get_moving_mobjects = function(animations) {
+    get_moving_mobjects = function(...) {
+      # The animations, given one by one as upstream or as one list.
+      animations <- list(...)
+      if (length(animations) == 1 && is.list(animations[[1]])) animations <- animations[[1]]
       # Families of every animation's mobject, recursing into animation
       # groups, so a mobject animated inside an AnimationGroup is never
       # frozen into the static frame cache (as upstream).

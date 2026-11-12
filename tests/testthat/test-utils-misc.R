@@ -102,6 +102,7 @@ test_that("commands and video metadata work", {
   expect_equal(r$err, "err")
   expect_equal(r$returncode, 3L)
   skip_if_not(nzchar(Sys.which("ffmpeg")))
+  skip_on_cran()
   dir <- withr_tempdir()
   out <- render(function(self) self$play(FadeIn(Square()), run_time = 0.4), quality = "l", media_dir = dir)
   meta <- get_video_metadata(out)

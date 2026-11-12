@@ -16,6 +16,11 @@ ComplexValueTracker(value = 0, ...)
 
 \item{...}{Passed to the Mobject initializer.}
 }
+\value{
+A mobject: an R6 object of the class named by the function called.
+The objects whose names end in \code{Class} are the R6 class generators that
+these functions call.
+}
 \description{
 A \code{ValueTracker} stores a number that can be animated, for example with
 \code{tracker$animate$set_value(5)}, and read in updaters with \code{get_value()}.

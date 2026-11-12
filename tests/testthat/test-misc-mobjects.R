@@ -15,6 +15,7 @@ misc_bbox <- function(m) c(m$get_left()[1], m$get_right()[1], m$get_bottom()[2],
 # directory until the calling test ends.
 skip_if_no_latex <- function(env = parent.frame()) {
   skip_if(Sys.which("latex") == "" || Sys.which("dvisvgm") == "", "LaTeX or dvisvgm not available")
+  skip_on_cran()
   old <- manim_config(media_dir = file.path(tempdir(), "manimR-test-media"))
   do.call(on.exit, list(substitute(.manim$config <- old, list(old = old)), add = TRUE), envir = env)
 }

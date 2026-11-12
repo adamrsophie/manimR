@@ -15,7 +15,11 @@ interleave_curves <- function(a1, h1, h2, a2) {
   out
 }
 
-points_close <- function(p0, p1, atol = 1e-6, rtol = 1e-5) all(abs(p0 - p1) <= atol + rtol * abs(p1))
+# As numpy.allclose: equal infinities are close, NaN is close to nothing.
+points_close <- function(p0, p1, atol = 1e-6, rtol = 1e-5) {
+  d <- abs(p0 - p1)
+  all((is.finite(d) & d <= atol + rtol * abs(p1)) | (!is.na(p0) & !is.na(p1) & p0 == p1))
+}
 
 #' @title VMobject
 #' @description Vectorized mobject: a path of cubic Bezier curves with fill
@@ -37,6 +41,13 @@ points_close <- function(p0, p1, atol = 1e-6, rtol = 1e-5) all(abs(p0 - p1) <= a
 #' @param make_smooth_after_applying_functions Smooth the curve after
 #'   `apply_function()`.
 #' @param shade_in_3d Shade the mobject by its orientation in a 3D scene.
+#' @param pre_function_handle_to_anchor_scale_factor How far the handles are
+#'   pulled toward their anchors before `apply_function()`.
+#' @param background_image An image whose colors fill the mobject (see
+#'   `$color_using_background_image()`).
+#' @param tolerance_for_point_equality Distance below which two points count
+#'   as the same.
+#' @param n_points_per_cubic_curve Points per Bezier curve, 4.
 #' @param ... Passed to [MobjectClass], for example `z_index` or `name`.
 #' @export
 VMobjectClass <- R6::R6Class("VMobject", inherit = MobjectClass, lock_objects = FALSE,
@@ -63,13 +74,20 @@ VMobjectClass <- R6::R6Class("VMobject", inherit = MobjectClass, lock_objects = 
     init_stroke_color = NULL,
     init_background_stroke_color = NULL,
 
-    initialize = function(color = "#FFFFFF", fill_color = NULL, fill_opacity = 0, stroke_color = NULL,
+    initialize = function(fill_color = NULL, fill_opacity = 0, stroke_color = NULL,
                           stroke_opacity = 1, stroke_width = DEFAULT_STROKE_WIDTH,
                           background_stroke_color = "#000000", background_stroke_opacity = 1,
-                          background_stroke_width = 0, sheen_factor = 0, sheen_direction = UL,
-                          joint_type = "auto", cap_style = "auto", close_new_points = FALSE,
-                          make_smooth_after_applying_functions = FALSE, shade_in_3d = FALSE, ...) {
+                          background_stroke_width = 0, sheen_factor = 0, joint_type = "auto",
+                          sheen_direction = UL, close_new_points = FALSE,
+                          pre_function_handle_to_anchor_scale_factor = 0.01,
+                          make_smooth_after_applying_functions = FALSE, background_image = NULL,
+                          shade_in_3d = FALSE, tolerance_for_point_equality = 1e-6,
+                          n_points_per_cubic_curve = 4, cap_style = "auto", color = "#FFFFFF", ...) {
       if (is.null(color)) color <- "#FFFFFF"
+      self$pre_function_handle_to_anchor_scale_factor <- pre_function_handle_to_anchor_scale_factor
+      self$background_image <- background_image
+      self$tolerance_for_point_equality <- tolerance_for_point_equality
+      self$n_points_per_cubic_curve <- n_points_per_cubic_curve
       self$init_fill_color <- fill_color %||% color
       self$init_stroke_color <- stroke_color %||% color
       self$init_background_stroke_color <- background_stroke_color
@@ -80,12 +98,12 @@ VMobjectClass <- R6::R6Class("VMobject", inherit = MobjectClass, lock_objects = 
       self$background_stroke_width <- background_stroke_width
       self$sheen_factor <- sheen_factor
       self$sheen_direction <- as_point(sheen_direction)
-      self$joint_type <- joint_type
+      self$joint_type <- joint_type %||% "auto"
       self$cap_style <- cap_style
       self$close_new_points <- close_new_points
       self$make_smooth_after_applying_functions <- make_smooth_after_applying_functions
       self$shade_in_3d <- shade_in_3d
-      super$initialize(color = if (length(color) > 1) color[1] else color, ...)
+      super$initialize(color = color_items(color)[[1]], ...)
     },
 
     get_group_class = function() VGroup,
@@ -208,7 +226,7 @@ VMobjectClass <- R6::R6Class("VMobject", inherit = MobjectClass, lock_objects = 
     set_color = function(color = "#FFFF00", family = TRUE) {
       self$set_fill(color, family = family)
       self$set_stroke(color, family = family)
-      self$color <- manim_color(unlist(color)[1])
+      self$color <- manim_color(color_items(color)[[1]])
       invisible(self)
     },
     set_opacity = function(opacity, family = TRUE) {
@@ -328,12 +346,9 @@ VMobjectClass <- R6::R6Class("VMobject", inherit = MobjectClass, lock_objects = 
       self$points <- as_points(points)
       invisible(self)
     },
-    resize_points = function(new_length) {
-      n <- nrow(self$points)
-      if (new_length != n) {
-        self$points <- if (new_length == 0) matrix(0, 0, 3)
-          else if (n == 0) matrix(0, new_length, 3)
-          else self$points[rep(seq_len(n), length.out = new_length), , drop = FALSE]
+    resize_points = function(new_length, resize_func = resize_array) {
+      if (new_length != nrow(self$points)) {
+        self$points <- if (new_length == 0) matrix(0, 0, 3) else resize_func(self$points, new_length)
       }
       invisible(self)
     },
@@ -518,7 +533,19 @@ VMobjectClass <- R6::R6Class("VMobject", inherit = MobjectClass, lock_objects = 
       points_close(p0, p1, atol = self$tolerance_for_point_equality)
     },
     consider_points_equals_2d = function(p0, p1) {
-      points_close(p0[1:2], p1[1:2], atol = self$tolerance_for_point_equality)
+      rtol <- 1e-5
+      atol <- self$tolerance_for_point_equality
+      if (!isTRUE(p0[1] == p1[1])) {
+        x_diff <- abs(p0[1] - p1[1])
+        if (!(is.finite(x_diff) && x_diff <= atol + rtol * abs(p1[1]))) return(FALSE)
+      }
+      if (isTRUE(p0[2] == p1[2])) return(TRUE)
+      y_diff <- abs(p0[2] - p1[2])
+      is.finite(y_diff) && y_diff <= atol + rtol * abs(p1[2])
+    },
+    # A VMobject takes only VMobjects as submobjects.
+    assert_valid_submobjects = function(submobjects) {
+      self$assert_valid_submobjects_internal(submobjects, "VMobject")
     },
 
     # Curves and subpaths --------------------------------------------------
@@ -793,6 +820,20 @@ VMobjectClass <- R6::R6Class("VMobject", inherit = MobjectClass, lock_objects = 
   )
 )
 
+# Upstream's fill_color and stroke_color properties: reading gives the
+# current color, assigning sets it (as set_fill() and set_stroke()).
+VMobjectClass$set("active", "fill_color", function(value) {
+  if (missing(value)) return(self$get_fill_color())
+  self$set_fill(value)
+})
+VMobjectClass$set("active", "stroke_color", function(value) {
+  if (missing(value)) return(self$get_stroke_color())
+  self$set_stroke(value)
+})
+
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @rdname VMobjectClass
 #' @export
 VMobject <- constructor(VMobjectClass)
@@ -814,10 +855,10 @@ VGroupClass <- R6::R6Class("VGroup", inherit = VMobjectClass, lock_objects = FAL
     },
     add = function(...) {
       mobs <- flatten_mobjects(list(...))
-      for (m in mobs) {
-        if (!is_vmobject(m)) {
-          stop("Only VMobjects can be added to a VGroup, got ", class(m)[1],
-               ". You can try adding this value into a Group instead.", call. = FALSE)
+      for (i in seq_along(mobs)) {
+        if (!is_vmobject(mobs[[i]])) {
+          stop(sprintf("Only values of type VMobject can be added as submobjects of VGroup, but the value at index %d is of type %s. You can try adding this value into a Group instead.",
+                       i, class(mobs[[i]])[1]), call. = FALSE)
         }
       }
       super$add(mobs)
@@ -825,6 +866,9 @@ VGroupClass <- R6::R6Class("VGroup", inherit = VMobjectClass, lock_objects = FAL
   )
 )
 
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @rdname VGroupClass
 #' @export
 VGroup <- constructor(VGroupClass)
@@ -910,6 +954,9 @@ vdict_pairs <- function(x) {
   stop("A VDict takes a named list of VMobjects or a list of list(key, mobject) pairs.", call. = FALSE)
 }
 
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @rdname VDictClass
 #' @export
 VDict <- constructor(VDictClass)
@@ -948,6 +995,9 @@ VectorizedPointClass <- R6::R6Class("VectorizedPoint", inherit = VMobjectClass, 
   )
 )
 
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @rdname VectorizedPointClass
 #' @export
 VectorizedPoint <- constructor(VectorizedPointClass)
@@ -957,6 +1007,9 @@ VectorizedPoint <- constructor(VectorizedPointClass)
 #' @param ... Passed to [VGroup()].
 #' @details `$point_from_proportion(alpha)` measures `alpha` along the total
 #'   arc length of the curves, as upstream.
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @name CurvesAsSubmobjects
 #' @format NULL
 #' @usage NULL
@@ -1007,6 +1060,7 @@ CurvesAsSubmobjects <- constructor(CurvesAsSubmobjectsClass)
 #' @param color Color.
 #' @param equal_lengths Whether dashes have equal arc lengths.
 #' @param ... Passed to [VMobject()].
+#' @return A `DashedVMobject`, an R6 mobject.
 #' @export
 DashedVMobject <- function(vmobject, num_dashes = 15, dashed_ratio = 0.5, dash_offset = 0,
                            color = "#FFFFFF", equal_lengths = TRUE, ...) {

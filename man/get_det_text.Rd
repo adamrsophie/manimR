@@ -29,6 +29,7 @@ given, "= determinant" after it. Add the matrix to the scene separately.
 }
 \examples{
 \dontrun{
+# Needs LaTeX and dvisvgm.
 m <- Matrix(rbind(c(2, 0), c(-1, 1)))
 det <- get_det_text(m, determinant = 3, initial_scale_factor = 1)
 }

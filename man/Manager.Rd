@@ -10,6 +10,10 @@ Manager(scene)
 \arguments{
 \item{scene}{The scene to manage.}
 }
+\value{
+A \code{Manager}, an R6 object that renders a scene. \code{ManagerClass} is
+its R6 class generator.
+}
 \description{
 A \code{Manager} coordinates the render of one scene, as upstream's
 \code{manim.manager.Manager} does: \verb{$render()} runs the scene's \code{setup()},

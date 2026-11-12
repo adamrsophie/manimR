@@ -12,6 +12,9 @@
 #' @export
 interpolate <- function(start, end, alpha) (1 - alpha) * start + alpha * end
 
+#' @return A number, or a numeric vector or matrix when the arguments are.
+#'   `integer_interpolate()` returns a list with the integer `index` and the
+#'   `residue`.
 #' @rdname interpolate
 #' @param value Value whose interpolation parameter `inverse_interpolate()`
 #'   returns.
@@ -258,6 +261,51 @@ get_smooth_cubic_bezier_handle_points <- function(anchors) {
     ))
   }
   if (is_closed(anchors)) smooth_closed_handles(anchors) else smooth_open_handles(anchors)
+}
+
+#' @rdname get_smooth_cubic_bezier_handle_points
+#' @details `get_smooth_closed_cubic_bezier_handle_points()` and
+#'   `get_smooth_open_cubic_bezier_handle_points()` are the two cases it
+#'   chooses between, for at least three anchors: a closed curve (whose last
+#'   anchor repeats the first) and an open one.
+#' @export
+get_smooth_closed_cubic_bezier_handle_points <- function(anchors) smooth_closed_handles(as.matrix(anchors))
+
+#' @rdname get_smooth_cubic_bezier_handle_points
+#' @export
+get_smooth_open_cubic_bezier_handle_points <- function(anchors) smooth_open_handles(as.matrix(anchors))
+
+#' Quadratic approximation of cubic Bezier curves
+#'
+#' Splits each cubic Bezier curve into two quadratic ones that approximate
+#' it. Ported from `manim.utils.bezier`.
+#'
+#' @param a0,h0,h1,a1 The start anchors, first handles, second handles and
+#'   end anchors: four points, or four matrices with one curve per row.
+#' @return A matrix with six rows per curve: the three control points of
+#'   each of its two quadratic curves.
+#' @export
+#' @examples
+#' get_quadratic_approximation_of_cubic(c(0, 0, 0), c(1, 2, 0), c(3, 2, 0), c(4, 0, 0))
+get_quadratic_approximation_of_cubic <- function(a0, h0, h1, a1) {
+  args <- list(a0, h0, h1, a1)
+  is_mat <- vapply(args, is.matrix, NA)
+  if (any(is_mat) && !all(is_mat)) stop("All arguments must be points or matrices of points.", call. = FALSE)
+  if (!all(is_mat)) args <- lapply(args, function(p) matrix(p, 1))
+  a0 <- args[[1]]; h0 <- args[[2]]; h1 <- args[[3]]; a1 <- args[[4]]
+  m0 <- 0.25 * (3 * h0 + a0)
+  m1 <- 0.25 * (3 * h1 + a1)
+  k <- 0.5 * (m0 + m1)
+  n <- nrow(a0)
+  result <- matrix(0, 6 * n, ncol(a0))
+  rows <- (seq_len(n) - 1) * 6
+  result[rows + 1, ] <- a0
+  result[rows + 2, ] <- m0
+  result[rows + 3, ] <- k
+  result[rows + 4, ] <- k
+  result[rows + 5, ] <- m1
+  result[rows + 6, ] <- a1
+  result
 }
 
 smooth_open_handles <- function(A) {

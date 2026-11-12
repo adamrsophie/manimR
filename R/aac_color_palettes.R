@@ -6,6 +6,8 @@
 #' Named lists of colors from Manim's color modules: `X11_COLORS` (Manim's `X11`), `XKCD`, `SVGNAMES`,
 #' `DVIPSNAMES`, `AS2700` and `BS381`. Use them like `XKCD$AVOCADO`.
 #'
+#' @return Named lists of colors (hex strings), one entry for each color name
+#'   of the palette.
 #' @name color_palettes
 #' @examples
 #' Circle(color = XKCD$AVOCADO)

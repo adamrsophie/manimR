@@ -12,7 +12,7 @@ manim_color(color)
 
 color_to_rgb(color)
 
-color_to_rgba(color, alpha = NULL)
+color_to_rgba(color, alpha = 1)
 
 rgb_to_color(rgb)
 
@@ -21,7 +21,8 @@ rgba_to_color(rgba)
 \arguments{
 \item{color}{A color.}
 
-\item{alpha}{Opacity.}
+\item{alpha}{Opacity of the result, 1 by default as upstream; \code{NULL} keeps
+the opacity the color carries.}
 
 \item{rgb, rgba}{Numeric vectors in \verb{[0, 1]}.}
 }

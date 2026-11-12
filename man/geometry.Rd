@@ -151,6 +151,7 @@ Annulus(
   fill_opacity = 1,
   stroke_width = 0,
   color = "#FFFFFF",
+  mark_paths_closed = FALSE,
   ...
 )
 
@@ -351,6 +352,9 @@ fill opacity and stroke opacity of the shape.}
 
 \item{outer_radius, inner_radius}{Radii.}
 
+\item{mark_paths_closed, close_new_points}{Treat the outline as a closed
+path.}
+
 \item{start_anchor, start_handle, end_handle, end_anchor}{Bezier control points.}
 
 \item{arc_config}{List of argument lists, one per arc.}
@@ -398,17 +402,14 @@ of the radius, and its color.}
 \item{grid_xstep, grid_ystep}{Spacing of optional grid lines drawn inside
 the rectangle; \code{NULL} draws none.}
 
-\item{mark_paths_closed, close_new_points}{Treat the outline as a closed
-path.}
-
 \item{side_length}{Side length of the square.}
 
 \item{corner_radius}{Radius of the rounded corners.}
 
 \item{main_shape}{Shape to cut holes into.}
 
-\item{tolerance}{Tolerance for nearly collinear points; accepted for
-compatibility with Manim.}
+\item{tolerance}{For \code{ConvexHull()}: a point closer than this to an edge
+of the hull is not one of its vertices.}
 
 \item{mobject}{A mobject.}
 

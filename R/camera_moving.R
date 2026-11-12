@@ -34,18 +34,22 @@ MovingCameraClass <- R6::R6Class("MovingCamera", inherit = CameraClass, lock_obj
       }
       self$frame <- frame
     },
-    get_frame_width = function() self$frame$width,
-    get_frame_height = function() self$frame$height,
-    get_frame_center = function() self$frame$get_center(),
+    # The frame mobject holds the view once it exists.
+    get_frame_width = function() if (is.null(self$frame)) super$get_frame_width() else self$frame$width,
+    get_frame_height = function() if (is.null(self$frame)) super$get_frame_height() else self$frame$height,
+    get_frame_center = function() if (is.null(self$frame)) super$get_frame_center() else self$frame$get_center(),
     set_frame_width = function(frame_width) {
+      if (is.null(self$frame)) return(super$set_frame_width(frame_width))
       self$frame$stretch_to_fit_width(frame_width)
       invisible(self)
     },
     set_frame_height = function(frame_height) {
+      if (is.null(self$frame)) return(super$set_frame_height(frame_height))
       self$frame$stretch_to_fit_height(frame_height)
       invisible(self)
     },
     set_frame_center = function(frame_center) {
+      if (is.null(self$frame)) return(super$set_frame_center(frame_center))
       self$frame$move_to(frame_center)
       invisible(self)
     },
@@ -90,17 +94,21 @@ MovingCameraClass <- R6::R6Class("MovingCamera", inherit = CameraClass, lock_obj
   )
 )
 
+#' @return A camera: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @rdname MovingCameraClass
 #' @export
 MovingCamera <- constructor(MovingCameraClass)
 #' @title MovingCameraScene
 #' @description A [Scene] whose camera is a [MovingCameraClass]. Animate
 #'   `self$camera$frame` to pan and zoom.
+#' @return An R6 class generator. A scene class inherits from it, and `$new()`
+#'   creates a scene.
 #' @format NULL
 #' @usage NULL
 #' @export
 #' @examples
-#' \dontrun{
 #' Zoom <- R6::R6Class("Zoom", inherit = MovingCameraScene, public = list(
 #'   construct = function() {
 #'     dot <- Dot(2 * RIGHT)
@@ -109,13 +117,18 @@ MovingCamera <- constructor(MovingCameraClass)
 #'     self$play(self$camera$frame$animate$scale(0.5)$move_to(dot))
 #'     self$play(Restore(self$camera$frame))
 #'   }))
+#' # The last frame as a PNG file in the session's temporary directory.
+#' render(Zoom, quality = "l", format = "png", media_dir = tempdir())
+#' \dontrun{
+#' # A video in the folder media of the working directory; this needs ffmpeg.
 #' render(Zoom, quality = "l")
 #' }
 MovingCameraScene <- R6::R6Class("MovingCameraScene", inherit = Scene, lock_objects = FALSE,
   public = list(
+    initialize = function(camera_class = NULL, ...) super$initialize(camera_class = camera_class, ...),
     default_camera_class = function() MovingCameraClass,
-    get_moving_mobjects = function(animations) {
-      moving <- super$get_moving_mobjects(animations)
+    get_moving_mobjects = function(...) {
+      moving <- super$get_moving_mobjects(...)
       ids <- vapply(extract_mobject_family_members(moving), function(m) m$mob_id, "")
       for (ind in self$camera$get_mobjects_indicating_movement()) {
         # When one of these moves, everything on screen moves.
@@ -225,6 +238,9 @@ MultiCameraClass <- R6::R6Class("MultiCamera", inherit = MovingCameraClass, lock
   )
 )
 
+#' @return A camera: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @rdname MultiCameraClass
 #' @export
 MultiCamera <- constructor(MultiCameraClass)
@@ -241,11 +257,12 @@ MultiCamera <- constructor(MultiCameraClass)
 #'   [MovingCameraClass] arguments), `zoomed_camera_image_mobject_config`,
 #'   `zoomed_camera_frame_starting_position`, `zoom_factor` (zoomed frame size
 #'   over display size, 0.15), `image_frame_stroke_width` and `zoom_activated`.
+#' @return An R6 class generator. A scene class inherits from it, and `$new()`
+#'   creates a scene.
 #' @format NULL
 #' @usage NULL
 #' @export
 #' @examples
-#' \dontrun{
 #' UseZoomedScene <- R6::R6Class("UseZoomedScene", inherit = ZoomedScene, public = list(
 #'   construct = function() {
 #'     dot <- Dot()$set_color(GREEN)
@@ -255,6 +272,10 @@ MultiCamera <- constructor(MultiCameraClass)
 #'     self$wait(1)
 #'     self$play(dot$animate$shift(LEFT))
 #'   }))
+#' # The last frame as a PNG file in the session's temporary directory.
+#' render(UseZoomedScene, quality = "l", format = "png", media_dir = tempdir())
+#' \dontrun{
+#' # A video in the folder media of the working directory; this needs ffmpeg.
 #' render(UseZoomedScene, quality = "l")
 #' }
 ZoomedScene <- R6::R6Class("ZoomedScene", inherit = MovingCameraScene, lock_objects = FALSE,
@@ -272,7 +293,8 @@ ZoomedScene <- R6::R6Class("ZoomedScene", inherit = MovingCameraScene, lock_obje
     zoom_activated = FALSE,
     zoomed_camera = NULL,
     zoomed_display = NULL,
-    initialize = function(zoomed_display_height = 3, zoomed_display_width = 3, zoomed_display_center = NULL,
+    initialize = function(camera_class = NULL, zoomed_display_height = 3, zoomed_display_width = 3,
+                          zoomed_display_center = NULL,
                           zoomed_display_corner = UP + RIGHT, zoomed_display_corner_buff = DEFAULT_MOBJECT_TO_EDGE_BUFFER,
                           zoomed_camera_config = list(default_frame_stroke_width = 2, background_opacity = 1),
                           zoomed_camera_image_mobject_config = list(), zoomed_camera_frame_starting_position = ORIGIN,
@@ -288,7 +310,7 @@ ZoomedScene <- R6::R6Class("ZoomedScene", inherit = MovingCameraScene, lock_obje
       self$zoom_factor <- zoom_factor
       self$image_frame_stroke_width <- image_frame_stroke_width
       self$zoom_activated <- zoom_activated
-      super$initialize(...)
+      super$initialize(camera_class = camera_class, ...)
     },
     default_camera_class = function() MultiCameraClass,
     setup = function() {
@@ -340,8 +362,8 @@ ZoomedScene <- R6::R6Class("ZoomedScene", inherit = MovingCameraScene, lock_obje
     get_zoom_factor = function() self$zoomed_camera$frame$height / self$zoomed_display$height,
     # The zoomed display redraws the scene, so once zooming is on every
     # mobject is drawn each frame (no cached static background).
-    get_moving_mobjects = function(animations) {
-      moving <- super$get_moving_mobjects(animations)
+    get_moving_mobjects = function(...) {
+      moving <- super$get_moving_mobjects(...)
       if (self$zoom_activated) return(list_update(self$mobjects, moving))
       moving
     }

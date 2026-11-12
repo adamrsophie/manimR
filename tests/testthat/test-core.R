@@ -44,6 +44,7 @@ test_that("ValueTracker arithmetic and animate builder work", {
 
 test_that("scenes produce the same number of frames as upstream", {
   skip_if(!nzchar(Sys.which("ffmpeg")), "ffmpeg not available")
+  skip_on_cran()
   dir <- withr_tempdir()
   out <- render(function(self) {
     self$play(Create(Circle()))
@@ -148,6 +149,7 @@ test_that("fast_clone matches R6 clone", {
 
 test_that("sections split the movie and can skip animations", {
   skip_if_not(nzchar(Sys.which("ffmpeg")))
+  skip_on_cran()
   dir <- withr_tempdir()
   sc <- manim_scene(function(self) {
     self$next_section("intro")

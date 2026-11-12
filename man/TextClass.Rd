@@ -22,13 +22,13 @@ Text(
   t2w = NULL,
   gradient = NULL,
   tab_width = 4,
+  warn_missing_font = TRUE,
   height = NULL,
   width = NULL,
   should_center = TRUE,
   disable_ligatures = FALSE,
-  markup = FALSE,
-  warn_missing_font = TRUE,
   use_svg_cache = FALSE,
+  markup = FALSE,
   justify = FALSE,
   ...
 )
@@ -58,6 +58,9 @@ gradients.}
 
 \item{tab_width}{Spaces per tab.}
 
+\item{warn_missing_font}{Warn when \code{font} is not installed (or registered
+with \code{\link[=register_font]{register_font()}}), as upstream does.}
+
 \item{height, width}{Optional target size.}
 
 \item{should_center}{Center the text at the origin.}
@@ -65,19 +68,21 @@ gradients.}
 \item{disable_ligatures}{Keep one submobject per character, with an
 invisible point for each space, as upstream (default \code{FALSE}).}
 
-\item{markup}{Parse \code{text} as Pango style markup, as \code{\link[=MarkupText]{MarkupText()}} does.}
-
-\item{warn_missing_font}{Warn when \code{font} is not installed (or registered
-with \code{\link[=register_font]{register_font()}}), as upstream does.}
-
 \item{use_svg_cache}{Accepted for upstream's signature; glyphs are read
 from the fonts directly, so there is no SVG to cache.}
+
+\item{markup}{Parse \code{text} as Pango style markup, as \code{\link[=MarkupText]{MarkupText()}} does.}
 
 \item{justify}{For \code{\link[=MarkupText]{MarkupText()}}: stretch the lines that wrap (markup
 lines wrap at 2400 / \code{font_size} em, upstream's Pango layout width) to
 that full width.}
 
 \item{...}{Passed to \code{\link[=VMobject]{VMobject()}}.}
+}
+\value{
+A mobject: an R6 object of the class named by the function called.
+The objects whose names end in \code{Class} are the R6 class generators that
+these functions call.
 }
 \description{
 Text rendered from system fonts as vectorized glyphs. Each

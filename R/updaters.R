@@ -36,6 +36,9 @@ ValueTrackerClass <- R6::R6Class("ValueTracker", inherit = MobjectClass, lock_ob
   )
 )
 
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @rdname ValueTrackerClass
 #' @export
 ValueTracker <- constructor(ValueTrackerClass)
@@ -145,13 +148,13 @@ always_rotate <- function(mobject, rate = 20 * DEGREES, ...) {
 
 #' @rdname updater_helpers
 #' @export
-turn_animation_into_updater <- function(animation, cycle = FALSE, delay = 0) {
+turn_animation_into_updater <- function(animation, cycle = FALSE, delay = 0, ...) {
   mobject <- animation$mobject
   animation$suspend_mobject_updating <- FALSE
   animation$begin()
-  total_time <- -delay
+  animation$total_time <- -delay
   update <- function(m, dt) {
-    if (total_time >= 0) {
+    if (animation$total_time >= 0) {
       rt <- animation$get_run_time()
       if (rt <= 0) {
         animation$interpolate(1)
@@ -160,7 +163,7 @@ turn_animation_into_updater <- function(animation, cycle = FALSE, delay = 0) {
         m$remove_updater(update)
         return(invisible(NULL))
       }
-      ratio <- total_time / rt
+      ratio <- animation$total_time / rt
       if (cycle) {
         alpha <- ratio %% 1
       } else {
@@ -174,7 +177,7 @@ turn_animation_into_updater <- function(animation, cycle = FALSE, delay = 0) {
       animation$interpolate(alpha)
       animation$update_mobjects(dt)
     }
-    total_time <<- total_time + dt
+    animation$total_time <- animation$total_time + dt
   }
   mobject$add_updater(update)
   mobject
@@ -194,6 +197,9 @@ cycle_animation <- function(animation, ...) turn_animation_into_updater(animatio
 #' @param target_number Final number.
 #' @param suspend_mobject_updating Pause other updaters.
 #' @param ... Passed to [Animation()].
+#' @return An animation: an R6 object of the class named by the function
+#'   called, to pass to a scene's `play()`. The objects whose names end in
+#'   `Class` are the R6 class generators that these functions call.
 #' @name number_animations
 NULL
 
@@ -240,6 +246,7 @@ ChangeDecimalToValue <- function(decimal_mob, target_number, ...) {
 #' @param lag_ratio Lag between copies.
 #' @param run_time Duration.
 #' @param ... Passed to [LaggedStart()].
+#' @return A `Broadcast` animation, an R6 object to pass to a scene's `play()`.
 #' @export
 Broadcast <- function(mobject, focal_point = ORIGIN, n_mobs = 5, initial_opacity = 1, final_opacity = 0,
                       initial_width = 0, remover = TRUE, lag_ratio = 0.2, run_time = 3, ...) {

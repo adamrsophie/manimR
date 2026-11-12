@@ -3,6 +3,10 @@
 \name{ZoomedScene}
 \alias{ZoomedScene}
 \title{ZoomedScene}
+\value{
+An R6 class generator. A scene class inherits from it, and \verb{$new()}
+creates a scene.
+}
 \description{
 A \link{MovingCameraScene} with a second camera whose view is shown
 in a display in a corner of the screen. Call \code{activate_zooming()} to show
@@ -20,7 +24,6 @@ change them): \code{zoomed_display_height}, \code{zoomed_display_width},
 over display size, 0.15), \code{image_frame_stroke_width} and \code{zoom_activated}.
 }
 \examples{
-\dontrun{
 UseZoomedScene <- R6::R6Class("UseZoomedScene", inherit = ZoomedScene, public = list(
   construct = function() {
     dot <- Dot()$set_color(GREEN)
@@ -30,6 +33,10 @@ UseZoomedScene <- R6::R6Class("UseZoomedScene", inherit = ZoomedScene, public = 
     self$wait(1)
     self$play(dot$animate$shift(LEFT))
   }))
+# The last frame as a PNG file in the session's temporary directory.
+render(UseZoomedScene, quality = "l", format = "png", media_dir = tempdir())
+\dontrun{
+# A video in the folder media of the working directory; this needs ffmpeg.
 render(UseZoomedScene, quality = "l")
 }
 }

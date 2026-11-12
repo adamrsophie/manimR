@@ -49,6 +49,7 @@ on top of the mobject.
 \examples{
 print_family(VGroup(Square(), VGroup(Circle(), Dot())))
 \dontrun{
+# Needs LaTeX and dvisvgm.
 eq <- MathTex("\\\\frac{d}{dx}f(x)g(x)=")
 labels <- index_labels(eq[1])
 }

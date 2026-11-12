@@ -37,6 +37,9 @@ as_float32 <- function(x) {
 #' @param density Rings and dots per frame unit.
 #' @param ... Further arguments passed to [PMobject()], or point clouds for
 #'   `OpenGLPGroup()`.
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @name opengl_point_cloud
 #' @examples
 #' cloud <- DotCloud(radius = 1, density = 8)

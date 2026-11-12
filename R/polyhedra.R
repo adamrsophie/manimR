@@ -10,7 +10,9 @@
 #'   (through an updater).
 #'
 #'   `Tetrahedron()`, `Octahedron()`, `Icosahedron()` and `Dodecahedron()` are
-#'   the platonic solids; `ConvexHull3D()` is the convex hull of points.
+#'   the platonic solids; `ConvexHull3D()` is the convex hull of points, with
+#'   triangular faces (as upstream's QuickHull: a flat face through more
+#'   than three points is made of several triangles).
 #' @param vertex_coords Vertex coordinates.
 #' @param faces_list List of integer vectors of vertex indices (1 based).
 #' @param faces_config List of [Polygon()] arguments for the faces; the
@@ -19,9 +21,13 @@
 #'   `vertex_config`, `edge_type` (default [Line()]) and `edge_config`
 #'   (default invisible edges).
 #' @param edge_length Edge length of the platonic solid.
-#' @param tolerance Coplanarity tolerance of the hull.
+#' @param tolerance A point closer than this to a face of the hull is not
+#'   one of its vertices.
 #' @param ... For `ConvexHull3D()`, the points (then named arguments for
 #'   `Polyhedron()`); otherwise passed to `Polyhedron()`.
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @name polyhedra
 #' @examples
 #' pyramid <- Polyhedron(
@@ -68,12 +74,10 @@ PolyhedronClass <- R6::R6Class("Polyhedron", inherit = VGroupClass, lock_objects
       self$add(self$faces, self$graph)
       self$add_updater(function(m) m$update_faces())
     },
-    # Cyclic pairs of each face, each undirected edge once (upstream passes
-    # both directions of a shared edge to Graph).
+    # Cyclic pairs of each face, as upstream: an edge shared by two faces
+    # is listed once per face, and Graph() keeps one edge per direction.
     get_edges = function(faces_list) {
       pairs <- do.call(rbind, lapply(faces_list, function(f) cbind(f, c(f[-1], f[1]))))
-      key <- paste(pmin(pairs[, 1], pairs[, 2]), pmax(pairs[, 1], pairs[, 2]))
-      pairs <- pairs[!duplicated(key), , drop = FALSE]
       lapply(seq_len(nrow(pairs)), function(i) unname(pairs[i, ]))
     },
     create_faces = function(face_coords) {
@@ -154,53 +158,22 @@ Dodecahedron <- function(edge_length = 1, ...) {
   )
 }
 
-# Faces of the 3D convex hull of the rows of `P`, each as hull vertex indices
-# ordered counterclockwise seen from outside. Coplanar hull points form one
-# polygonal face.
-# Limitation: brute force O(n^4) over point triples instead of upstream's
-# QuickHull; fine for the tens of points hulls are drawn with, port
-# utils/qhull.py if large clouds are needed.
-convex_hull_3d_faces <- function(P, tol = 1e-5) {
-  n <- nrow(P)
-  if (n < 4) stop("ConvexHull3D needs at least 4 points.", call. = FALSE)
-  faces <- list()
-  seen <- character()
-  for (i in 1:(n - 2)) for (j in (i + 1):(n - 1)) for (k in (j + 1):n) {
-    nv <- cross(P[j, ] - P[i, ], P[k, ] - P[i, ])
-    nn <- sqrt(sum(nv^2))
-    if (nn < tol) next
-    nv <- nv / nn
-    d <- drop(P %*% nv) - sum(nv * P[i, ])
-    if (all(d <= tol)) {
-      out <- nv
-    } else if (all(d >= -tol)) {
-      out <- -nv
-    } else {
-      next
-    }
-    on_plane <- which(abs(d) <= tol)
-    key <- paste(on_plane, collapse = ",")
-    if (key %in% seen) next
-    seen <- c(seen, key)
-    # 2D hull of the coplanar points, in a basis (u, w) with w = out x u.
-    u <- normalize(P[j, ] - P[i, ])
-    w <- cross(out, u)
-    q <- sweep(P[on_plane, , drop = FALSE], 2, P[i, ])
-    hull <- grDevices::chull(drop(q %*% u), drop(q %*% w))
-    faces[[length(faces) + 1]] <- on_plane[rev(hull)]
-  }
-  faces
-}
-
 #' @rdname polyhedra
 #' @export
 ConvexHull3D <- function(..., tolerance = 1e-5) {
   args <- list(...)
   nm <- names(args) %||% rep("", length(args))
   pts <- args[nm == ""]
-  P <- as_points(if (length(pts) == 1 && is.matrix(pts[[1]])) pts[[1]] else pts)
-  faces <- convex_hull_3d_faces(P, tolerance)
-  used <- sort(unique(unlist(faces)))
-  remap <- match(seq_len(nrow(P)), used)
-  do.call(Polyhedron, c(list(P[used, , drop = FALSE], lapply(faces, function(f) remap[f])), args[nm != ""]))
+  P <- unique(as_points(if (length(pts) == 1 && is.matrix(pts[[1]])) pts[[1]] else pts))
+  # Triangles, as upstream's QuickHull: several points on one flat face
+  # give several triangles. Each is turned counterclockwise seen from
+  # outside.
+  center <- colMeans(P)
+  faces <- lapply(quick_hull(P, tolerance), function(f) {
+    out <- cross(P[f[2], ] - P[f[1], ], P[f[3], ] - P[f[1], ])
+    if (sum(out * (P[f[1], ] - center)) < 0) rev(f) else f
+  })
+  # Vertices in the order the faces first use them.
+  used <- unique(unlist(faces))
+  do.call(Polyhedron, c(list(P[used, , drop = FALSE], lapply(faces, function(f) match(f, used))), args[nm != ""]))
 }

@@ -71,15 +71,45 @@ restore_type <- function(out, ...) {
 #' * `stretch_array_to_length(nparray, length)`: a vector, or a matrix by
 #'   rows, stretched to `length` entries by repeating them in place; it is an
 #'   error to shrink.
+#' * `resize_array(nparray, length)`: a vector, or a matrix by rows, cut or
+#'   cyclically repeated to `length` entries (as `numpy.resize`).
+#'   `resize_preserving_order()` repeats or drops entries in place instead,
+#'   and `resize_with_interpolation()` interpolates linearly between
+#'   neighboring entries.
+#' * `batch_by_property(items, property_func)`: consecutive items with the
+#'   same `property_func(item)` grouped; a list of `list(batch, property)`
+#'   pairs.
+#' * `uniq_chain(...)`: the elements of all arguments in order, without
+#'   repeats.
+#' * `hash_obj(obj)`: a hash (a string) of a nested list that does not depend
+#'   on the order of the entries of named lists.
+#' * `flatten_iterable_parameters(args)`: the elements of `args`, with those
+#'   that are themselves lists or vectors of several elements spliced in (one
+#'   level).
+#' * `extract_mobject_family_members(mobject_list, use_z_index,
+#'   only_those_with_points)`: every member of the families of the mobjects,
+#'   once each, optionally sorted by `z_index` and without the members that
+#'   have no points.
+#'   `restructure_list_to_exclude_certain_family_members(mobject_list,
+#'   to_remove)` drops `to_remove` and their family from the list; a group
+#'   that holds one of them is replaced by its remaining members.
 #'
-#' @param objects,iterable,iterable_1,iterable_2,lst,sequence,l1,l2,obj A
+#' @param objects,iterable,iterable_1,iterable_2,lst,sequence,l1,l2,obj,items A
 #'   vector or list.
+#' @param property_func Function giving the property of an item.
+#' @param args A list.
+#' @param mobject_list,to_remove Lists of mobjects.
+#' @param use_z_index Sort the result by `z_index`.
+#' @param only_those_with_points Keep only mobjects that have points.
 #' @param n Window size.
 #' @param Class A class name or R6 class generator.
 #' @param key `NULL`, or a function giving the value elements compare by.
 #' @param nparray A vector or matrix.
 #' @param length Length of the result.
 #' @param ... Vectors or lists.
+#' @return A list or a vector, as described above for each function.
+#'   `all_elements_are_instances()` returns `TRUE` or `FALSE`, and `hash_obj()`
+#'   returns a hash string.
 #' @name list_helpers
 #' @examples
 #' adjacent_pairs(1:4)
@@ -197,6 +227,98 @@ remove_nones <- function(sequence) {
   out
 }
 
+# Rows of a matrix, or entries of a vector, picked by index.
+take_entries <- function(a, idx) if (is.matrix(a)) a[idx, , drop = FALSE] else a[idx]
+n_entries <- function(a) if (is.matrix(a)) nrow(a) else length(a)
+
+#' @rdname list_helpers
+#' @export
+resize_array <- function(nparray, length) {
+  n <- n_entries(nparray)
+  if (n == length) return(nparray)
+  if (n == 0) return(if (is.matrix(nparray)) matrix(0, length, ncol(nparray)) else numeric(length))
+  take_entries(nparray, rep_len(seq_len(n), length))
+}
+
+#' @rdname list_helpers
+#' @export
+resize_preserving_order <- function(nparray, length) {
+  n <- n_entries(nparray)
+  if (n == 0) return(if (is.matrix(nparray)) matrix(0, length, ncol(nparray)) else numeric(length))
+  if (n == length) return(nparray)
+  take_entries(nparray, ((seq_len(length) - 1) * n) %/% length + 1)
+}
+
+#' @rdname list_helpers
+#' @export
+resize_with_interpolation <- function(nparray, length) {
+  n <- n_entries(nparray)
+  if (n == length) return(nparray)
+  ci <- seq(0, n - 1, length.out = length)
+  a <- ci %% 1
+  lo <- take_entries(nparray, floor(ci) + 1)
+  hi <- take_entries(nparray, ceiling(ci) + 1)
+  (1 - a) * lo + a * hi
+}
+
+#' @rdname list_helpers
+#' @export
+batch_by_property <- function(items, property_func) {
+  out <- list()
+  batch <- list()
+  prop <- NULL
+  for (item in as_items(items)) {
+    p <- property_func(item)
+    if (!length(batch) || !identical(p, prop)) {
+      if (length(batch)) out[[length(out) + 1]] <- list(batch, prop)
+      prop <- p
+      batch <- list(item)
+    } else {
+      batch[[length(batch) + 1]] <- item
+    }
+  }
+  if (length(batch)) out[[length(out) + 1]] <- list(batch, prop)
+  out
+}
+
+#' @rdname list_helpers
+#' @export
+uniq_chain <- function(...) {
+  out <- list()
+  for (x in unlist(lapply(list(...), as_items), recursive = FALSE)) {
+    if (!item_in(x, out)) out[[length(out) + 1]] <- x
+  }
+  if (...length() == 0) list() else restore_type(out, ...)
+}
+
+#' @rdname list_helpers
+#' @export
+flatten_iterable_parameters <- function(args) {
+  out <- list()
+  for (a in args) {
+    if (is_mobject(a) || is.function(a) || is.environment(a) || (!is.list(a) && length(a) == 1)) out[[length(out) + 1]] <- a
+    else out <- c(out, as.list(a))
+  }
+  out
+}
+
+#' @rdname list_helpers
+#' @export
+restructure_list_to_exclude_certain_family_members <- function(mobject_list, to_remove) {
+  get_restructured_mobject_list(mobject_list, extract_mobject_family_members(to_remove))
+}
+
+#' @rdname list_helpers
+#' @export
+hash_obj <- function(obj) {
+  if (is.list(obj)) {
+    parts <- vapply(obj, hash_obj, "")
+    if (is_dict(obj)) parts <- sort(paste(vapply(names(obj), hash_obj, ""), parts))
+    return(digest::digest(unname(parts), algo = "xxhash64"))
+  }
+  digest::digest(obj, algo = "xxhash64")
+}
+
 #' Path and file helpers
 #'
 #' Ports of `manim.utils.file_ops` and the path lookups of
@@ -210,9 +332,16 @@ remove_nones <- function(sequence) {
 #' * `seek_full_path_from_defaults(file_name, default_dir, extensions)`
 #'   returns the first existing path among `file_name` and `file_name` plus
 #'   each extension inside `default_dir`, and errors if there is none.
-#'   `get_full_raster_image_path()` and `get_full_sound_file_path()` look
-#'   for images (`.jpg`, `.jpeg`, `.png`, `.gif`, `.ico`) and sounds (`.wav`,
-#'   `.mp3`) in the `assets_dir` setting (default `"./"`).
+#'   `get_full_raster_image_path()`, `get_full_vector_image_path()` and
+#'   `get_full_sound_file_path()` look for images (`.jpg`, `.jpeg`, `.png`,
+#'   `.gif`, `.ico`), vector images (`.svg`) and sounds (`.wav`, `.mp3`) in
+#'   the `assets_dir` setting (default `"./"`).
+#' * `add_version_before_extension(file_name)` inserts the package version
+#'   before the extension (`"a.png"` gives `"a_manimR_v<version>.png"`), as
+#'   the default names of saved images and GIFs do.
+#' * `convert_audio(input_path, output_path, codec_name)` writes the audio
+#'   of a file in another codec (such as `"pcm_s16le"` or `"aac"`) with
+#'   `ffmpeg`.
 #' * `modify_atime(file_path)` sets a file's access time to now, keeping its
 #'   modification time.
 #' * `open_file(file_path, in_browser)` opens a file with the system viewer,
@@ -227,7 +356,14 @@ remove_nones <- function(sequence) {
 #' @param extensions Extensions to try, each including its dot.
 #' @param in_browser Show the file in the file browser instead of opening it.
 #' @param image_file_name,sound_file_name A file name.
+#' @param input_path,output_path Audio files to read and to write.
+#' @param codec_name Name of an `ffmpeg` audio encoder.
 #' @param assets_dir Directory to look in.
+#' @return A path (a character string) from the functions that find or change
+#'   one; `guarantee_existence()` and `guarantee_empty_existence()` return the
+#'   normalized path of the directory. `convert_audio()` returns `output_path`
+#'   invisibly, `modify_atime()` and `open_file()` return `NULL` invisibly, and
+#'   `ensure_executable()` returns `TRUE` or `FALSE`.
 #' @name path_helpers
 #' @examples
 #' add_extension_if_not_present("scene", ".png")
@@ -275,6 +411,28 @@ seek_full_path_from_defaults <- function(file_name, default_dir, extensions) {
 #' @export
 get_full_raster_image_path <- function(image_file_name) {
   seek_full_path_from_defaults(image_file_name, cfg("assets_dir") %||% "./", c(".jpg", ".jpeg", ".png", ".gif", ".ico"))
+}
+
+#' @rdname path_helpers
+#' @export
+get_full_vector_image_path <- function(image_file_name) {
+  seek_full_path_from_defaults(image_file_name, cfg("assets_dir") %||% "./", ".svg")
+}
+
+#' @rdname path_helpers
+#' @export
+add_version_before_extension <- function(file_name) versioned_path(file_name)
+
+#' @rdname path_helpers
+#' @export
+convert_audio <- function(input_path, output_path, codec_name) {
+  out <- suppressWarnings(system2(ffmpeg_path(), c("-y", "-loglevel", "error", "-i", shQuote(path.expand(input_path)),
+                                                   "-vn", "-c:a", codec_name, shQuote(path.expand(output_path))),
+                                  stdout = TRUE, stderr = TRUE))
+  if (!is.null(attr(out, "status")) || !file.exists(output_path)) {
+    stop("Could not convert ", input_path, " to ", codec_name, ": ", paste(out, collapse = "\n"), call. = FALSE)
+  }
+  invisible(output_path)
 }
 
 #' @rdname path_helpers
@@ -347,6 +505,9 @@ ensure_executable <- function(path_to_exe) {
 #' @param image An image array.
 #' @param dtype Ignored.
 #' @param frames A list of image arrays of equal size.
+#' @return `change_to_rgba_array()` returns an array of height by width by 4
+#'   channels, `invert_image()` the image array with its colors inverted, and
+#'   `drag_pixels()` a list of frames.
 #' @name image_helpers
 #' @examples
 #' change_to_rgba_array(matrix(c(1, 2, 3, 4), 2))[1, 1, ]
@@ -386,6 +547,11 @@ drag_pixels <- function(frames) {
 #' @param command_input Text passed to the command's standard input.
 #' @param dirpath A directory.
 #' @param path_to_video A video file.
+#' @return `capture()` returns a list with the output `out`, the error output
+#'   `err` and the exit status `returncode`. `get_dir_layout()` returns a
+#'   character vector of the paths below `dirpath`. `get_video_metadata()`
+#'   returns a list with `width`, `height`, `nb_frames`, `duration`,
+#'   `avg_frame_rate`, `codec_name` and `pix_fmt`.
 #' @name command_helpers
 #' @examples
 #' capture(c("R", "--version"))$returncode
@@ -481,6 +647,9 @@ count_video_frames <- function(path) {
 #' @param ... Named lists.
 #' @param current_dict A named list or an environment.
 #' @param dictin A named list.
+#' @return `merge_dicts_recursively()` and `update_dict_recursively()` return
+#'   the merged list. `DictAsObject()` returns an environment that holds the
+#'   entries of the list.
 #' @name dict_helpers
 #' @examples
 #' merge_dicts_recursively(list(a = 1, b = list(x = 1)), list(b = list(y = 2)))

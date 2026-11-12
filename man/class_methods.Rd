@@ -3,6 +3,10 @@
 \name{class_methods}
 \alias{class_methods}
 \title{Class methods}
+\value{
+The methods return what upstream's class methods of the same names
+return, as the list above describes.
+}
 \description{
 Upstream's class and static methods live on the class generators:
 }

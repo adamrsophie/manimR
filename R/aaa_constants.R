@@ -5,6 +5,8 @@
 #' Unit vectors used to position and move mobjects, plus common numeric
 #' constants. Directions are length 3 numeric vectors `c(x, y, z)`.
 #'
+#' @return Numeric vectors of length 3 for the origin and the directions, and
+#'   single numbers for the other constants.
 #' @name constants
 #' @examples
 #' Square()$shift(2 * RIGHT + UP)
@@ -123,6 +125,7 @@ DEFAULT_POINT_DENSITY_2D <- 25
 #' Any string works; the type is written to the sections index for tools
 #' such as presentation players.
 #'
+#' @return A named list of section type names.
 #' @format A named list of strings.
 #' @export
 DefaultSectionType <- list(NORMAL = "default.normal")
@@ -134,6 +137,8 @@ DefaultSectionType <- list(NORMAL = "default.normal")
 #' enumerations as named lists of the strings `joint_type` and `cap_style`
 #' accept: `Square(joint_type = LineJointType$ROUND)`.
 #'
+#' @return Character strings that name font slants and weights. `LineJointType`
+#'   and `CapStyleType` are named lists of stroke styles.
 #' @name font_constants
 #' @format Character strings, or named lists of character strings.
 #' @export
@@ -192,6 +197,8 @@ CapStyleType <- list(AUTO = "auto", ROUND = "round", BUTT = "butt", SQUARE = "sq
 #' scenes, the default window position (`START_X`, `START_Y`), and
 #' `RendererType`, the values the `renderer` setting accepts.
 #'
+#' @return Character strings and numbers used by the command line and the
+#'   interactive window. `CONTEXT_SETTINGS` and `RendererType` are named lists.
 #' @format Strings, numbers, or named lists.
 #' @name interface_constants
 #' @export

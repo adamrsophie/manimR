@@ -11,6 +11,11 @@ VGroup(...)
 \item{...}{VMobjects, or lists of them. Named style arguments are passed to
 \code{\link[=VMobject]{VMobject()}}.}
 }
+\value{
+A mobject: an R6 object of the class named by the function called.
+The objects whose names end in \code{Class} are the R6 class generators that
+these functions call.
+}
 \description{
 Group vectorized mobjects so they move and style together.
 }

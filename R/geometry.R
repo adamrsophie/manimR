@@ -40,8 +40,8 @@
 #'   path.
 #' @param side_length Side length of the square.
 #' @param corner_radius Radius of the rounded corners.
-#' @param tolerance Tolerance for nearly collinear points; accepted for
-#'   compatibility with Manim.
+#' @param tolerance For `ConvexHull()`: a point closer than this to an edge
+#'   of the hull is not one of its vertices.
 #' @return A mobject.
 #' @name geometry
 #' @examples
@@ -418,7 +418,8 @@ AnnulusClass <- R6::R6Class("Annulus", inherit = CircleClass, lock_objects = FAL
     inner_radius = 1,
     outer_radius = 2,
     initialize = function(inner_radius = 1, outer_radius = 2, fill_opacity = 1, stroke_width = 0,
-                          color = "#FFFFFF", ...) {
+                          color = "#FFFFFF", mark_paths_closed = FALSE, ...) {
+      self$mark_paths_closed <- mark_paths_closed
       self$inner_radius <- inner_radius
       self$outer_radius <- outer_radius
       super$initialize(fill_opacity = fill_opacity, stroke_width = stroke_width, color = color, ...)
@@ -765,10 +766,13 @@ AngleClass <- R6::R6Class("Angle", inherit = VMobjectClass, lock_objects = FALSE
       self$quadrant <- quadrant
       self$dot_distance <- dot_distance
       self$elbow <- elbow
-      inter <- tryCatch(line_intersection(rbind(line1$get_start(), line1$get_end()),
-                                          rbind(line2$get_start(), line2$get_end())),
-                        error = function(e) NULL)
-      if (is.null(inter)) {
+      ends <- rbind(line1$get_start(), line1$get_end(), line2$get_start(), line2$get_end())
+      inter <- tryCatch(line_intersection(ends[1:2, ], ends[3:4, ]), error = function(e) e)
+      if (inherits(inter, "error")) {
+        # Parallel lines in the xy-plane give an empty angle; any other
+        # failure (lines off the plane) is an error, as upstream.
+        parallel <- cross(line1$get_vector(), line2$get_vector())[3] == 0
+        if (!(all(ends[, 3] == 0) && parallel)) stop(inter)
         self$angle_value <- 0
         return(invisible(self))
       }
@@ -1128,9 +1132,13 @@ ConvexHull <- function(..., tolerance = 1e-5) {
   nm <- names(args) %||% rep("", length(args))
   pos <- args[nm == ""]
   pts <- if (length(pos) == 1 && is.matrix(pos[[1]])) as_points(pos[[1]]) else as_points(pos)
-  h <- grDevices::chull(pts[, 1], pts[, 2])
-  verts <- pts[rev(h), , drop = FALSE]
-  verts[, 3] <- 0
+  # The hull vertices from upstream's QuickHull (which honors `tolerance`),
+  # counterclockwise around their center.
+  xy <- unique(pts[, 1:2, drop = FALSE])
+  h <- unique(unlist(quick_hull(xy, tolerance)))
+  mid <- colMeans(xy[h, , drop = FALSE])
+  h <- h[order(atan2(xy[h, 2] - mid[2], xy[h, 1] - mid[1]))]
+  verts <- cbind(xy[h, , drop = FALSE], 0)
   p <- do.call(PolygramClass$new, c(list(verts), args[nm != ""]))
   class(p) <- c("ConvexHull", class(p))
   p

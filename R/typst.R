@@ -264,9 +264,13 @@ svg_matrix_rank <- function(X) {
 #' @param should_center Center the result at the origin.
 #' @param height,width Optional target size; `height` overrides `font_size`.
 #' @param ... Passed to [SVGMobject()] (style overrides such as `opacity`).
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @name typst
 #' @examples
 #' \dontrun{
+#' # Needs the typst compiler.
 #' Typst("*Hello* from _Typst!_", font_size = 72)
 #' eq <- MathTypst("{{ a^2 + b^2 : lhs }} = {{ c^2 }}")
 #' eq$select("lhs")$set_color(BLUE)
@@ -356,9 +360,6 @@ TypstClass <- R6::R6Class("Typst", inherit = SVGMobjectClass, lock_objects = FAL
     # centered or scaled) submobjects, as upstream get_mob_from_shape_element.
     track_svg_submobjects = function() {
       for (sm in self$submobjects) {
-        # Upstream imports stroke="none" with stroke opacity 1 and width 0, so
-        # an explicit stroke_width override draws. svg.R uses opacity 0.
-        if (sm$get_stroke_width() == 0 && all(sm$get_stroke_opacities() == 0)) sm$set_stroke(opacity = 1, family = FALSE)
         if (!self$preserve_svg_stroke_widths || !sm$has_points() || sm$get_stroke_width() <= 0) next
         ref <- max(sm$width, sm$height)
         if (ref <= 0) next

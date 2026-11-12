@@ -50,6 +50,11 @@ area (2D).}
 
 \item{location}{Position of the point.}
 }
+\value{
+A mobject: an R6 object of the class named by the function called.
+The objects whose names end in \code{Class} are the R6 class generators that
+these functions call.
+}
 \description{
 \code{PMobject} is a mobject made of points drawn as small squares,
 each with its own color (the \code{rgbas} matrix, one row per point).

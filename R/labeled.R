@@ -28,8 +28,9 @@ labeled_merge <- function(defaults, user) {
 #'   ring), then named arguments for [Polygram()].
 #' @export
 #' @examples
-#' \dontrun{
 #' Label(Text("Label Text"), box_config = list(color = BLUE, fill_opacity = 0.75))$scale(3)
+#' \dontrun{
+#' # A label given as a string is typeset with LaTeX.
 #' LabeledLine("0.5", label_position = 0.8, label_config = list(font_size = 20),
 #'             start = LEFT + DOWN, end = RIGHT + UP)
 #' }
@@ -57,6 +58,9 @@ LabelClass <- R6::R6Class("Label", inherit = VGroupClass, lock_objects = FALSE,
   )
 )
 
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @rdname LabelClass
 #' @export
 Label <- constructor(LabelClass)
@@ -191,7 +195,8 @@ polylabel_distance <- function(poly, point) {
 #' @param rings List of closed rings, each a matrix of points (n x 2 or n x 3).
 #'   Extra rings are holes.
 #' @param precision Precision of the result.
-#' @return A list with `c` (the 2D pole) and `d` (its distance to the edges).
+#' @return A list with `c` (the 2D pole), `d` (its distance to the edges) and
+#'   `h` (half the size of the cell it was found in).
 #' @export
 #' @examples
 #' polylabel(list(rbind(c(0, 0), c(4, 0), c(4, 2), c(0, 2), c(0, 0))))
@@ -213,6 +218,7 @@ polylabel <- function(rings, precision = 0.01) {
   if (s > 0) for (y in vf_arange(mins[2], maxs[2], s)) for (x in vf_arange(mins[1], maxs[1], s)) push(x + h, y + h, h)
   best_c <- poly$centroid %||% (mins + dims / 2)
   best_d <- polylabel_distance(poly, best_c)
+  best_h <- 0
   bbox_c <- mins + dims / 2
   bbox_d <- polylabel_distance(poly, bbox_c)
   if (bbox_d > best_d) {
@@ -228,6 +234,7 @@ polylabel <- function(rings, precision = 0.01) {
     if (cd[i] > best_d) {
       best_c <- c(cx[i], cy[i])
       best_d <- cd[i]
+      best_h <- ch[i]
     }
     if (cd[i] + ch[i] * sqrt(2) - best_d > precision) {
       hh <- ch[i] / 2
@@ -235,5 +242,5 @@ polylabel <- function(rings, precision = 0.01) {
       alive <- c(alive, rep(TRUE, 4))
     }
   }
-  list(c = best_c, d = best_d)
+  list(c = best_c, d = best_d, h = best_h)
 }

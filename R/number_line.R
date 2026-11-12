@@ -59,9 +59,11 @@ interpolate_points <- function(start, end, alphas) {
 #' @return A `NumberLine` mobject.
 #' @name NumberLine
 #' @examples
-#' \dontrun{
-#' l <- NumberLine(x_range = c(-5, 5, 1), length = 10, include_numbers = TRUE)
+#' l <- NumberLine(x_range = c(-5, 5, 1), length = 10)
 #' l$n2p(2)
+#' \dontrun{
+#' # The numbers are typeset with LaTeX.
+#' NumberLine(x_range = c(-5, 5, 1), length = 10, include_numbers = TRUE)
 #' }
 NULL
 

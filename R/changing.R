@@ -74,6 +74,9 @@ AnimatedBoundaryClass <- R6::R6Class("AnimatedBoundary", inherit = VGroupClass, 
   )
 )
 
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @rdname AnimatedBoundaryClass
 #' @export
 AnimatedBoundary <- constructor(AnimatedBoundaryClass)
@@ -132,6 +135,9 @@ ScreenRectangleClass <- R6::R6Class("ScreenRectangle", inherit = RectangleClass,
   )
 )
 
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @rdname ScreenRectangleClass
 #' @export
 ScreenRectangle <- constructor(ScreenRectangleClass)
@@ -153,6 +159,9 @@ FullScreenRectangle <- function(...) {
 #' `50 * Pixels`, `25 * Percent(X_AXIS)`.
 #'
 #' @param axis `X_AXIS` or `Y_AXIS`.
+#' @return `Pixels`, `Degrees` and `Munits` are units to multiply a number by,
+#'   and `Percent()` returns such a unit for an axis; the product is a length in
+#'   scene units or an angle in radians.
 #' @name units
 #' @examples
 #' 100 * Pixels

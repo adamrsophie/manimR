@@ -67,6 +67,10 @@
 \alias{UnwriteClass}
 \alias{VariableClass}
 \title{Generators of classes built by constructor functions}
+\value{
+R6 class generators. \code{FooClass$new()} takes the arguments of the
+constructor \code{Foo()} and returns the same object.
+}
 \description{
 Some upstream classes only preset the arguments of their parent class, and
 manimR builds them with a function. They still have a class generator, a

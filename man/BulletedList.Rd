@@ -39,6 +39,11 @@ Title(
 
 \item{underline_buff}{Gap below the title.}
 }
+\value{
+A mobject: an R6 object of the class named by the function called.
+The objects whose names end in \code{Class} are the R6 class generators that
+these functions call.
+}
 \description{
 \code{BulletedList()} typesets items with bullets; \code{Title()}
 places underlined LaTeX text at the top of the frame. Both use \code{\link[=Tex]{Tex()}}.

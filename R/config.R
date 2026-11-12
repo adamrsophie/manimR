@@ -19,6 +19,8 @@ QUALITIES <- list(
   example_quality = list(flag = NA_character_, pixel_height = 480, pixel_width = 854, frame_rate = 30)
 )
 
+#' @return `QUALITIES` is a named list of render settings, one entry for each
+#'   quality. `DEFAULT_QUALITY` is the name of the default quality.
 #' @rdname QUALITIES
 #' @export
 DEFAULT_QUALITY <- "high_quality"
@@ -282,6 +284,7 @@ manim_config <- function(...) {
 #'
 #' @param settings A named list passed to [manim_config()].
 #' @param code Code to evaluate.
+#' @return The value of `code`.
 #' @export
 with_manim_config <- function(settings, code) {
   old <- do.call(manim_config, settings)

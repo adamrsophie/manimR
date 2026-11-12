@@ -277,6 +277,9 @@ ThreeDCameraClass <- R6::R6Class("ThreeDCamera", inherit = CameraClass, lock_obj
   )
 )
 
+#' @return A camera: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @rdname ThreeDCameraClass
 #' @export
 ThreeDCamera <- constructor(ThreeDCameraClass)

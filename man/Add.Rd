@@ -14,6 +14,9 @@ Add(..., run_time = 0, use_override = TRUE)
 \item{use_override}{\code{FALSE} ignores an override of \code{Add} set with
 \code{\link[=override_animation]{override_animation()}} on the first mobject's class.}
 }
+\value{
+An \code{Add} animation, an R6 object to pass to a scene's \code{play()}.
+}
 \description{
 Adds mobjects to the scene instantly, useful inside
 \code{\link[=Succession]{Succession()}}.

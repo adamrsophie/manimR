@@ -9,6 +9,9 @@ A named list of strings.
 \usage{
 DefaultSectionType
 }
+\value{
+A named list of section type names.
+}
 \description{
 Upstream's \code{DefaultSectionType}, for the \code{section_type} argument of a
 scene's \code{next_section()}: \code{self$next_section("intro", DefaultSectionType$NORMAL)}.

@@ -14,6 +14,10 @@ QUALITIES
 
 DEFAULT_QUALITY
 }
+\value{
+\code{QUALITIES} is a named list of render settings, one entry for each
+quality. \code{DEFAULT_QUALITY} is the name of the default quality.
+}
 \description{
 Upstream's quality presets. \code{quality} in \code{\link[=manim_config]{manim_config()}} and \code{\link[=render]{render()}}
 accepts a preset name such as \code{"low_quality"} or its flag (\code{"l"}).

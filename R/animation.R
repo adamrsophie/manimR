@@ -143,6 +143,8 @@ AnimationClass <- R6::R6Class("Animation", lock_objects = FALSE,
   )
 )
 
+#' @return An `Animation`, an R6 object to pass to a scene's `play()`.
+#'   `AnimationClass` is its R6 class generator.
 #' @rdname AnimationClass
 #' @export
 Animation <- constructor(AnimationClass)
@@ -151,6 +153,7 @@ Animation <- constructor(AnimationClass)
 #' Turns `mob$animate` builders into animations; animations pass through.
 #'
 #' @param anim An animation or animation builder.
+#' @return An animation, an R6 object.
 #' @export
 prepare_animation <- function(anim) {
   if (inherits(anim, "manim_animation_builder")) return(build_animation(anim))
@@ -188,6 +191,9 @@ WaitClass <- R6::R6Class("Wait", inherit = AnimationClass, lock_objects = FALSE,
   )
 )
 
+#' @return An animation: an R6 object of the class named by the function
+#'   called, to pass to a scene's `play()`. The objects whose names end in
+#'   `Class` are the R6 class generators that these functions call.
 #' @rdname WaitClass
 #' @export
 Wait <- constructor(WaitClass)
@@ -198,6 +204,7 @@ Wait <- constructor(WaitClass)
 #' @param run_time Duration in seconds; zero adds the mobjects instantly.
 #' @param use_override `FALSE` ignores an override of `Add` set with
 #'   [override_animation()] on the first mobject's class.
+#' @return An `Add` animation, an R6 object to pass to a scene's `play()`.
 #' @export
 Add <- function(..., run_time = 0, use_override = TRUE) {
   args <- list(...)
@@ -211,12 +218,18 @@ Add <- function(..., run_time = 0, use_override = TRUE) {
       return(do.call(override, c(mobs[-1], list(run_time = run_time), args[nm != ""])))
     }
   }
-  mob <- if (length(mobs) == 1) mobs[[1]] else do.call(Group, mobs)
-  do.call(AddClass$new, c(list(mob, run_time = run_time, introducer = TRUE), args[nm != ""]))
+  do.call(AddClass$new, c(mobs, list(run_time = run_time), args[nm != ""]))
 }
 
 AddClass <- R6::R6Class("Add", inherit = AnimationClass, lock_objects = FALSE,
   public = list(
+    initialize = function(..., run_time = 0) {
+      args <- list(...)
+      nm <- names(args) %||% rep("", length(args))
+      mobs <- args[nm == ""]
+      mob <- if (length(mobs) == 1) mobs[[1]] else do.call(Group, mobs)
+      do.call(super$initialize, c(list(mob, run_time = run_time, introducer = TRUE), args[nm != ""]))
+    },
     begin = function() invisible(NULL),
     finish = function() invisible(NULL),
     clean_up_from_scene = function(scene) invisible(NULL),
@@ -250,6 +263,8 @@ animation_builder <- function(mobject) {
 #' @export
 `$.manim_animation_builder` <- function(x, name) {
   state <- attr(x, "state")
+  # $build() gives the animation, as upstream's _AnimationBuilder.build().
+  if (name == "build") return(function() build_animation(x))
   # Mobjects can supply their own animation for a method, like upstream's
   # override_animate (for example Graph$animate$add_vertices).
   override <- state$mobject[[paste0("animate_override_", name)]]

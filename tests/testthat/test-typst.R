@@ -2,7 +2,10 @@
 # manim (typst_mobject.py) with the typst 0.14 compiler at the default
 # 1920 x 1080 configuration.
 
-skip_if_no_typst <- function() skip_if(!nzchar(typst_executable()), "typst compiler not available")
+skip_if_no_typst <- function() {
+  skip_if(!nzchar(typst_executable()), "typst compiler not available")
+  skip_on_cran()
+}
 
 MANIMGRP_LABEL_PREAMBLE <- "#let manimgrp(lbl, body) = [#box(body) #label(lbl)]"
 

@@ -36,6 +36,9 @@ Broadcast(
 
 \item{...}{Passed to \code{\link[=LaggedStart]{LaggedStart()}}.}
 }
+\value{
+A \code{Broadcast} animation, an R6 object to pass to a scene's \code{play()}.
+}
 \description{
 Emits expanding copies of a mobject from a focal point.
 }

@@ -38,6 +38,11 @@ TrueDot(center = ORIGIN, stroke_width = 2, ...)
 
 \item{density}{Rings and dots per frame unit.}
 }
+\value{
+A mobject: an R6 object of the class named by the function called.
+The objects whose names end in \code{Class} are the R6 class generators that
+these functions call.
+}
 \description{
 Point cloud mobjects of upstream's OpenGL renderer, drawn as round dots of
 radius \code{stroke_width / 100} frame units (\code{point_radius}).

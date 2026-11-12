@@ -145,6 +145,9 @@ get_shaded_rgb <- function(rgb, point, unit_normal_vect, light_source) {
 #' @param major_radius,minor_radius Distance from the center of the torus to
 #'   the center of its tube, and the radius of the tube.
 #' @param ... Other named arguments, passed to [VMobject()].
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @name three_dimensions
 #' @examples
 #' s <- Sphere(radius = 1.5, resolution = c(12, 6))

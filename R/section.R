@@ -18,6 +18,8 @@
 #'   is not saved.
 #' @param name Section name.
 #' @param skip_animations Skip rendering the animations of this section.
+#' @return A `Section`, an R6 object that describes one section of a scene's
+#'   output. `SectionClass` is its R6 class generator.
 #' @name Section
 #' @format NULL
 #' @usage NULL

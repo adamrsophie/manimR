@@ -29,27 +29,38 @@ rgba_hex <- function(rgba) {
 #' @param background_image Path of an image (found with
 #'   [get_full_raster_image_path()]) drawn as the background.
 #' @param cairo_line_width_multiple Scale of stroke widths, as upstream's.
+#' @param image_mode,n_channels,pixel_array_dtype Layout of the pixel array
+#'   (see `$get_pixel_array()`): `"RGBA"`, 4 channels and `"uint8"` values, as
+#'   upstream. `pixel_array_dtype` sets the largest channel value
+#'   (`rgb_max_val`).
+#' @param background Accepted as upstream, where the background built from
+#'   `background_image` or `background_color` replaces it.
 #' @param ... Ignored.
 #' @export
 CameraClass <- R6::R6Class("Camera", lock_objects = FALSE,
   public = list(
     pixel_width = NULL,
     pixel_height = NULL,
-    frame_width = NULL,
-    frame_height = NULL,
-    frame_center = NULL,
+    frame_width_value = NULL,
+    frame_height_value = NULL,
+    frame_center_value = NULL,
     frame_rate = NULL,
     background_color = NULL,
     background_opacity = 1,
     use_z_index = TRUE,
     curve_tolerance = 0.25,
-    initialize = function(pixel_width = cfg("pixel_width"), pixel_height = cfg("pixel_height"),
-                          frame_height = cfg("frame_height"), frame_width = cfg("frame_width"),
-                          frame_center = ORIGIN, frame_rate = cfg("frame_rate"),
+    initialize = function(background_image = NULL, frame_center = ORIGIN, image_mode = "RGBA", n_channels = 4,
+                          pixel_array_dtype = "uint8", cairo_line_width_multiple = 0.01, use_z_index = TRUE,
+                          background = NULL, pixel_height = cfg("pixel_height"),
+                          pixel_width = cfg("pixel_width"), frame_height = cfg("frame_height"),
+                          frame_width = cfg("frame_width"), frame_rate = cfg("frame_rate"),
                           background_color = cfg("background_color"),
-                          background_opacity = cfg("background_opacity"), use_z_index = TRUE,
-                          background_image = NULL, cairo_line_width_multiple = 0.01, ...) {
+                          background_opacity = cfg("background_opacity"), ...) {
       self$use_z_index <- use_z_index
+      self$image_mode <- image_mode
+      self$n_channels <- n_channels
+      self$pixel_array_dtype <- pixel_array_dtype
+      self$rgb_max_val <- pixel_dtype_max(pixel_array_dtype)
       # Stroke widths are in hundredths of a frame unit, as upstream.
       self$cairo_line_width_multiple <- cairo_line_width_multiple
       self$background_image <- self$load_background_image(background_image, pixel_width, pixel_height)
@@ -66,10 +77,23 @@ CameraClass <- R6::R6Class("Camera", lock_objects = FALSE,
       self$background_opacity <- if (isTRUE(cfg("transparent"))) 0 else background_opacity
       self$curve_tolerance <- cfg("curve_tolerance") %||% 0.25
     },
-    # Current view; MovingCamera overrides these to follow its frame.
-    get_frame_width = function() self$frame_width,
-    get_frame_height = function() self$frame_height,
-    get_frame_center = function() self$frame_center,
+    # Current view, behind the frame_width, frame_height and frame_center
+    # properties; MovingCamera overrides these to follow its frame.
+    get_frame_width = function() self$frame_width_value,
+    get_frame_height = function() self$frame_height_value,
+    get_frame_center = function() self$frame_center_value,
+    set_frame_width = function(frame_width) {
+      self$frame_width_value <- frame_width
+      invisible(self)
+    },
+    set_frame_height = function(frame_height) {
+      self$frame_height_value <- frame_height
+      invisible(self)
+    },
+    set_frame_center = function(frame_center) {
+      self$frame_center_value <- frame_center
+      invisible(self)
+    },
     get_mobjects_to_display = function(mobjects, include_submobjects = TRUE, excluded_mobjects = NULL) {
       if (include_submobjects) {
         mobjects <- extract_mobject_family_members(mobjects, use_z_index = self$use_z_index,
@@ -124,7 +148,8 @@ CameraClass <- R6::R6Class("Camera", lock_objects = FALSE,
         return(invisible(self))
       }
       if (self$background_opacity > 0) {
-        bg <- rgba_hex(c(color_to_rgb(self$background_color), self$background_opacity))
+        # Whole 0 to 255 channel values, truncated as upstream fills its pixel array.
+        bg <- rgba_hex(color_to_int_rgba(self$background_color, self$background_opacity) / 255)
         grid::grid.rect(gp = grid::gpar(fill = bg, col = NA))
       }
     },
@@ -388,6 +413,11 @@ CameraClass <- R6::R6Class("Camera", lock_objects = FALSE,
                         interpolate = method != "nearest")
       invisible(self)
     }
+  ),
+  active = list(
+    frame_width = function(value) if (missing(value)) self$get_frame_width() else self$set_frame_width(value),
+    frame_height = function(value) if (missing(value)) self$get_frame_height() else self$set_frame_height(value),
+    frame_center = function(value) if (missing(value)) self$get_frame_center() else self$set_frame_center(value)
   )
 )
 
@@ -573,8 +603,10 @@ flatten_subpaths <- function(xy, split, px_per_unit, tol = 0.25, point_tol = 1e-
 }
 
 # Family members of a list of mobjects, deduplicated, optionally z sorted.
-extract_mobject_family_members <- function(mobjects, use_z_index = FALSE, only_those_with_points = FALSE) {
-  fam <- unlist(lapply(mobjects, function(m) {
+#' @rdname list_helpers
+#' @export
+extract_mobject_family_members <- function(mobject_list, use_z_index = FALSE, only_those_with_points = FALSE) {
+  fam <- unlist(lapply(mobject_list, function(m) {
     if (only_those_with_points) m$family_members_with_points() else m$get_family()
   }), recursive = FALSE)
   if (length(fam) == 0) return(list())

@@ -15,6 +15,8 @@
 #' `unit` would mask `grid::unit()`; use [Pixels], [Percent()], [Degrees] and
 #' [Munits] directly.
 #'
+#' @return Named lists: `rate_functions` of the rate functions, and `color` of
+#'   the colors, the palettes and the color functions.
 #' @format Named lists of functions and values.
 #' @name upstream_modules
 #' @examples

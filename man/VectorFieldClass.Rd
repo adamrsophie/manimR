@@ -111,6 +111,14 @@ defaults to half of the y step.}
 
 \item{stroke_width}{Stroke width of the stream lines.}
 }
+\value{
+The constructors return mobjects: R6 objects of the class named by
+the function called. \code{vector_field_shift_func()} and
+\code{vector_field_scale_func()} return functions, and
+\code{DEFAULT_SCALAR_FIELD_COLORS} is a character vector of colors. The objects
+whose names end in \code{Class} are the R6 class generators that these functions
+call.
+}
 \description{
 \code{VectorField()} holds a function mapping a position to a
 vector and provides methods to move other mobjects along the field.
@@ -136,9 +144,10 @@ so a line's color changes along it with the field), and 3D stream lines
 get a stroke gradient from the colors at their anchors.
 }
 \examples{
-\dontrun{
 func <- function(pos) ((pos[1] * UR + pos[2] * LEFT) - pos) / 3
-ArrowVectorField(func)
-StreamLines(func)
+ArrowVectorField(func, x_range = c(-3, 3, 1), y_range = c(-2, 2, 1))
+\donttest{
+# Tracing stream lines takes a few seconds.
+StreamLines(func, x_range = c(-3, 3, 1), y_range = c(-2, 2, 1))
 }
 }

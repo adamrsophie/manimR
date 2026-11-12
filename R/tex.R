@@ -29,9 +29,9 @@ TexTemplateClass <- R6::R6Class("TexTemplate", lock_objects = FALSE,
     post_doc_commands = "",
     description = "",
     custom_body = NULL,
-    initialize = function(tex_compiler = "latex", output_format = ".dvi",
+    initialize = function(tex_compiler = "latex", description = "", output_format = ".dvi",
                           documentclass = "\\documentclass[preview]{standalone}", preamble = DEFAULT_TEX_PREAMBLE,
-                          placeholder_text = "YourTextHere", post_doc_commands = "", description = "") {
+                          placeholder_text = "YourTextHere", post_doc_commands = "") {
       self$tex_compiler <- tex_compiler
       self$output_format <- output_format
       self$documentclass <- documentclass
@@ -50,11 +50,17 @@ TexTemplateClass <- R6::R6Class("TexTemplate", lock_objects = FALSE,
       invisible(self)
     },
     add_to_preamble = function(txt, prepend = FALSE) {
+      if (!is.null(self$custom_body) && nzchar(self$custom_body)) {
+        warning("This TeX template was created with a fixed body, trying to add text the preamble will have no effect.", call. = FALSE)
+      }
       self$preamble <- if (prepend) paste(txt, self$preamble, sep = "\n") else paste(self$preamble, txt, sep = "\n")
       invisible(self)
     },
     add_to_document = function(txt) {
-      self$post_doc_commands <- paste(self$post_doc_commands, txt, sep = "\n")
+      if (!is.null(self$custom_body) && nzchar(self$custom_body)) {
+        warning("This TeX template was created with a fixed body, trying to add text the document will have no effect.", call. = FALSE)
+      }
+      self$post_doc_commands <- paste0(self$post_doc_commands, txt)
       invisible(self)
     },
     get_texcode_for_expression = function(expression) {
@@ -68,6 +74,8 @@ TexTemplateClass <- R6::R6Class("TexTemplate", lock_objects = FALSE,
   )
 )
 
+#' @return A `TexTemplate`, an R6 object. `TexTemplateClass` is its R6 class
+#'   generator.
 #' @rdname TexTemplateClass
 #' @export
 TexTemplate <- constructor(TexTemplateClass)
@@ -75,7 +83,7 @@ texcode_for_environment <- function(environment) {
   env <- sub("^\\\\begin", "", environment)
   env <- sub("^\\{", "", env)
   begin <- paste0("\\begin{", env)
-  if (!grepl("[}\\]]$", begin)) begin <- paste0(begin, "}")
+  if (!grepl("[]}]$", begin)) begin <- paste0(begin, "}")
   end <- paste0("\\end{", strsplit(env, "}", fixed = TRUE)[[1]][1], "}")
   list(begin = begin, end = end)
 }
@@ -164,12 +172,30 @@ tex_to_svg_file <- function(expression, environment = NULL, tex_template = NULL)
 }
 
 tex_error_lines <- function(log_file) {
-  if (!file.exists(log_file)) return("")
+  if (!file.exists(log_file)) return("The compiler did not produce a log file. Check your LaTeX installation.")
   lines <- readLines(log_file, warn = FALSE)
   idx <- grep("^!", lines)
   if (!length(idx)) return("")
   i <- idx[1]
-  paste(lines[i:min(length(lines), i + 4)], collapse = "\n")
+  paste(c(lines[i:min(length(lines), i + 4)], tex_error_insights(lines)), collapse = "\n")
+}
+
+# Hints for errors with a known cause, as upstream's LATEX_ERROR_INSIGHTS.
+tex_error_insights <- function(lines) {
+  found <- function(pattern) {
+    m <- regmatches(lines, regexec(pattern, lines, perl = TRUE))
+    unique(vapply(m[lengths(m) > 0], `[`, "", 2))
+  }
+  c(
+    unlist(lapply(found("inputenc Error: Unicode character (?:.*) \\(U\\+([0-9a-fA-F]+)\\)"), function(code) c(
+      sprintf("TexTemplate does not support character U+%s.", code),
+      "See TexTemplate() for using a custom template."
+    ))),
+    unlist(lapply(found("LaTeX Error: File `(.*?[clsty])' not found"), function(pkg) c(
+      sprintf("You do not have package %s installed.", pkg),
+      sprintf("Install %s using your LaTeX package manager, or check for typos.", pkg)
+    )))
+  )
 }
 
 modify_special_strings <- function(tex) {
@@ -229,9 +255,13 @@ remove_stray_braces <- function(tex) {
 #' @param organize_left_to_right Sort glyphs by x.
 #' @param font_size Font size (48 by default).
 #' @param color Color.
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @name tex
 #' @examples
 #' \dontrun{
+#' # Needs LaTeX and dvisvgm.
 #' MathTex("e^{i\\pi} + 1 = 0")
 #' Tex("Hello \\LaTeX", color = BLUE)
 #' }
@@ -523,6 +553,9 @@ Tex <- constructor(TexClass)
 #' @export
 BulletedList <- constructor(BulletedListClass)
 
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @rdname BulletedList
 #' @export
 Title <- constructor(TitleClass)
@@ -550,7 +583,7 @@ BulletedListClass <- R6::R6Class("BulletedList", inherit = TexClass, lock_object
     initialize = function(..., buff = MED_LARGE_BUFF, dot_scale_factor = 2, tex_environment = NULL, dot_buff = SMALL_BUFF) {
       args <- list(...)
       nm <- names(args) %||% rep("", length(args))
-      items <- paste0(unlist(args[nm == ""]), "\\\\")
+      items <- vapply(unlist(args[nm == ""]), function(s) paste0(s, "\\\\"), "", USE.NAMES = FALSE)
       self$buff <- buff
       self$dot_scale_factor <- dot_scale_factor
       do.call(super$initialize, c(as.list(items), list(tex_environment = tex_environment), args[nm != ""]))

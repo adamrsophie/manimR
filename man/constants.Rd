@@ -106,6 +106,10 @@ DEFAULT_POINT_DENSITY_1D
 
 DEFAULT_POINT_DENSITY_2D
 }
+\value{
+Numeric vectors of length 3 for the origin and the directions, and
+single numbers for the other constants.
+}
 \description{
 Unit vectors used to position and move mobjects, plus common numeric
 constants. Directions are length 3 numeric vectors \code{c(x, y, z)}.

@@ -36,6 +36,8 @@ matrix_to_tex_string <- function(matrix) {
          "\\end{array} \\right]")
 }
 
+#' @return `matrix_to_tex_string()` returns a LaTeX string, and
+#'   `matrix_to_mobject()` a `MathTex` mobject of it.
 #' @rdname matrix_to_tex_string
 #' @export
 matrix_to_mobject <- function(matrix) MathTex(matrix_to_tex_string(matrix))
@@ -66,6 +68,7 @@ matrix_to_mobject <- function(matrix) MathTex(matrix_to_tex_string(matrix))
 #' @export
 #' @examples
 #' \dontrun{
+#' # Needs LaTeX and dvisvgm.
 #' Matrix(list(list(2, "\\pi"), list(-1, 1)))
 #' IntegerMatrix(rbind(c(3.7, 2), c(42.2, 12)), left_bracket = "(", right_bracket = ")")
 #' }
@@ -180,6 +183,9 @@ MatrixClass <- R6::R6Class("Matrix", inherit = VMobjectClass, lock_objects = FAL
   )
 )
 
+#' @return A mobject: an R6 object of the class named by the function called.
+#'   The objects whose names end in `Class` are the R6 class generators that
+#'   these functions call.
 #' @rdname MatrixClass
 #' @export
 Matrix <- constructor(MatrixClass)
@@ -222,6 +228,7 @@ MobjectMatrix <- function(matrix, element_to_mobject = function(m) m, ...) {
 #' @export
 #' @examples
 #' \dontrun{
+#' # Needs LaTeX and dvisvgm.
 #' m <- Matrix(rbind(c(2, 0), c(-1, 1)))
 #' det <- get_det_text(m, determinant = 3, initial_scale_factor = 1)
 #' }

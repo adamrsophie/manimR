@@ -130,6 +130,7 @@ test_that("plugins are listed", {
 
 test_that("gain_to_background lowers earlier sounds", {
   skip_if_not(nzchar(Sys.which("ffmpeg")) && nzchar(Sys.which("ffprobe")))
+  skip_on_cran()
   dir <- withr_tempdir()
   make <- function(name, src) {
     f <- file.path(dir, name)
@@ -156,6 +157,7 @@ test_that("gain_to_background lowers earlier sounds", {
 
 test_that("partial movie files are cached by play hash", {
   skip_if_not(nzchar(Sys.which("ffmpeg")))
+  skip_on_cran()
   dir <- withr_tempdir()
   make <- function(col) function(self) {
     self$play(Create(Square(color = col)), run_time = 0.2)

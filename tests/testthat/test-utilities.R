@@ -15,6 +15,7 @@ util_mat <- function(x) {
 
 util_skip_if_no_latex <- function(env = parent.frame()) {
   skip_if(Sys.which("latex") == "" || Sys.which("dvisvgm") == "", "LaTeX or dvisvgm not available")
+  skip_on_cran()
   old <- manim_config(media_dir = file.path(tempdir(), "manimR-test-utilities"))
   do.call(on.exit, list(substitute(.manim$config <- old, list(old = old)), add = TRUE), envir = env)
 }
@@ -50,12 +51,8 @@ test_that("integer_interpolate, mid and is_closed match upstream", {
   }
   expect_equal(mid(1, 4), o$mid[[1]])
   expect_equal(mid(c(1, 2, 3), c(3, 4, 5)), unlist(o$mid[[2]]))
-  # manim 0.20.1 (the oracle) compares against a signed tolerance, so a curve
-  # starting at a negative coordinate never counts as closed; current
-  # upstream, followed here, uses abs(start).
   for (nm in names(o$is_closed)) {
-    expected <- if (nm == "negative_start") TRUE else o$is_closed[[nm]]
-    expect_identical(is_closed(util_mat(o$is_closed_points[[nm]])), expected, info = nm)
+    expect_identical(is_closed(util_mat(o$is_closed_points[[nm]])), o$is_closed[[nm]], info = nm)
   }
 })
 
@@ -64,16 +61,6 @@ test_that("smooth handles match upstream", {
   for (nm in names(o$smooth_anchors)) {
     anchors <- util_mat(o$smooth_anchors[[nm]])
     h <- get_smooth_cubic_bezier_handle_points(anchors)
-    if (nm == "negative_closed") {
-      # The 0.20.1 oracle smooths this closed curve as open (its is_closed
-      # bug); closed smoothing is translation invariant, so compare with the
-      # same curve moved to positive coordinates.
-      shift <- matrix(c(10, 10, 0), nrow(anchors) - 1, 3, byrow = TRUE)
-      hs <- get_smooth_cubic_bezier_handle_points(anchors + rbind(shift, shift[1, ]))
-      expect_equal(h$h1, hs$h1 - shift, tolerance = 1e-9)
-      expect_equal(h$h2, hs$h2 - shift, tolerance = 1e-9)
-      next
-    }
     expect_equal(unname(h$h1), util_mat(o$smooth_handles[[nm]][[1]]), tolerance = 1e-9, info = nm)
     expect_equal(unname(h$h2), util_mat(o$smooth_handles[[nm]][[2]]), tolerance = 1e-9, info = nm)
   }
@@ -108,12 +95,9 @@ test_that("quaternion helpers match upstream", {
     q <- if (nm == "small") quaternion_from_angle_axis(PI / 3, c(1, 2, 3)) else quaternion_from_angle_axis(3 * PI / 2, OUT)
     aa <- angle_axis_from_quaternion(q)
     expect_equal(aa$angle, o$angle_axis_from_quaternion[[nm]][[1]], info = nm)
-    # For angles above pi current upstream (followed here) flips the axis,
-    # which 0.20.1 forgot, so the result is the same rotation as q.
-    sign <- if (nm == "big") -1 else 1
-    expect_equal(aa$axis, sign * unlist(o$angle_axis_from_quaternion[[nm]][[2]]), tolerance = 1e-9, info = nm)
+    expect_equal(aa$axis, unlist(o$angle_axis_from_quaternion[[nm]][[2]]), tolerance = 1e-9, info = nm)
   }
-  # manim 0.20.1 raises here; newer upstream falls back to the x axis.
+  # The identity rotation has no axis; upstream falls back to the x axis.
   expect_equal(angle_axis_from_quaternion(c(1, 0, 0, 0)), list(angle = 0, axis = c(1, 0, 0)))
   expect_equal(quaternion_conjugate(c(1, 2, 3, 4)), unlist(o$quaternion_conjugate))
 })

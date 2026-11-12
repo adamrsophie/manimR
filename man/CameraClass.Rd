@@ -6,42 +6,57 @@
 \title{Camera}
 \usage{
 Camera(
-  pixel_width = cfg("pixel_width"),
+  background_image = NULL,
+  frame_center = ORIGIN,
+  image_mode = "RGBA",
+  n_channels = 4,
+  pixel_array_dtype = "uint8",
+  cairo_line_width_multiple = 0.01,
+  use_z_index = TRUE,
+  background = NULL,
   pixel_height = cfg("pixel_height"),
+  pixel_width = cfg("pixel_width"),
   frame_height = cfg("frame_height"),
   frame_width = cfg("frame_width"),
-  frame_center = ORIGIN,
   frame_rate = cfg("frame_rate"),
   background_color = cfg("background_color"),
   background_opacity = cfg("background_opacity"),
-  use_z_index = TRUE,
-  background_image = NULL,
-  cairo_line_width_multiple = 0.01,
   ...
 )
 }
 \arguments{
+\item{background_image}{Path of an image (found with
+\code{\link[=get_full_raster_image_path]{get_full_raster_image_path()}}) drawn as the background.}
+
+\item{frame_center}{Point at the center of the frame.}
+
+\item{image_mode, n_channels, pixel_array_dtype}{Layout of the pixel array
+(see \verb{$get_pixel_array()}): \code{"RGBA"}, 4 channels and \code{"uint8"} values, as
+upstream. \code{pixel_array_dtype} sets the largest channel value
+(\code{rgb_max_val}).}
+
+\item{cairo_line_width_multiple}{Scale of stroke widths, as upstream's.}
+
+\item{use_z_index}{Draw mobjects in order of their \code{z_index}.}
+
+\item{background}{Accepted as upstream, where the background built from
+\code{background_image} or \code{background_color} replaces it.}
+
 \item{pixel_width, pixel_height}{Size of the frame in pixels.}
 
 \item{frame_width, frame_height}{Size of the frame in scene units; as
 upstream, the camera keeps the frame width and derives its height from
 the pixel aspect ratio.}
 
-\item{frame_center}{Point at the center of the frame.}
-
 \item{frame_rate}{Frames per second.}
 
 \item{background_color, background_opacity}{Color and opacity of the
 background.}
 
-\item{use_z_index}{Draw mobjects in order of their \code{z_index}.}
-
-\item{background_image}{Path of an image (found with
-\code{\link[=get_full_raster_image_path]{get_full_raster_image_path()}}) drawn as the background.}
-
-\item{cairo_line_width_multiple}{Scale of stroke widths, as upstream's.}
-
 \item{...}{Ignored.}
+}
+\value{
+A \code{Camera}, an R6 object. \code{CameraClass} is its R6 class generator.
 }
 \description{
 Converts mobjects into frames. \code{CameraClass} handles the
