@@ -1,0 +1,20 @@
+pandoc: 3.8.3
+pkgdown: 2.2.1
+pkgdown_sha: ~
+articles:
+  animations: animations.html
+  cameras-and-3d: cameras-and-3d.html
+  colors-images: colors-images.html
+  coming-from-python: coming-from-python.html
+  graphing: graphing.html
+  manimR: manimR.html
+  mobjects: mobjects.html
+  rendering: rendering.html
+  rstudio-knitr-shiny: rstudio-knitr-shiny.html
+  text-and-math: text-and-math.html
+  updaters: updaters.html
+  utilities: utilities.html
+last_built: 2026-11-12T11:34Z
+urls:
+  reference: https://adamrsophie.github.io/manimR/reference
+  article: https://adamrsophie.github.io/manimR/articles
