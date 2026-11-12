@@ -1,18 +1,18 @@
-# Methods of upstream's OpenGL mobject classes. Expected values marked
-# "Upstream" are the oracle output of upstream manim 0.22.1, printed by
-# data-raw/opengl_methods_oracle.py.
+# Methods of upstream's OpenGL mobject classes. Values read from `oracle`
+# are written by upstream manim 0.22.1 through data-raw/opengl_methods_oracle.py.
+oracle <- jsonlite::fromJSON(test_path("fixtures", "opengl_methods_oracle.json"), simplifyVector = TRUE)
 
 test_that("OpenGLArrowTip is a triangle pointing right, as upstream", {
   tip <- OpenGLArrowTip()
   expect_s3_class(tip, "OpenGLTriangle")
-  # Upstream: base (0.075, 0, 0), tip (0.425, 0, 0), length 0.35, angle 0.
-  expect_equal(tip$get_base(), c(0.075, 0, 0), tolerance = 1e-9)
-  expect_equal(tip$get_tip_point(), c(0.425, 0, 0), tolerance = 1e-9)
-  expect_equal(tip$get_length(), 0.35, tolerance = 1e-9)
-  expect_equal(tip$get_angle(), 0, tolerance = 1e-9)
+  o <- oracle$arrow_tip
+  expect_equal(tip$get_base(), o$base, tolerance = 1e-9)
+  expect_equal(tip$get_tip_point(), o$tip_point, tolerance = 1e-9)
+  expect_equal(tip$get_length(), o$length, tolerance = 1e-9)
+  expect_equal(tip$get_angle(), o$angle, tolerance = 1e-9)
   expect_equal(tip$get_fill_opacity(), 1)
   # As upstream, get_length() measures along the width.
-  expect_equal(OpenGLArrowTip(width = 1, length = 2)$get_length(), 1, tolerance = 1e-9)
+  expect_equal(OpenGLArrowTip(width = 1, length = 2)$get_length(), o$length_width_1, tolerance = 1e-9)
 })
 
 test_that("OpenGL mobjects keep upstream's state fields and data", {
@@ -58,10 +58,7 @@ test_that("OpenGL VMobject methods follow upstream", {
   a <- OpenGLArc(angle = PI / 2)
   expect_equal(a$get_start_angle(), 0, tolerance = 1e-9)
   expect_equal(a$get_stop_angle(), PI / 2, tolerance = 1e-9)
-  # Upstream: OpenGLArc.create_quadratic_bezier_points(pi / 2, 0, 2).
-  expect_equal(a$create_quadratic_bezier_points(PI / 2, 0, 2),
-               rbind(c(1, 0, 0), c(1, 0.414214, 0), c(0.707107, 0.707107, 0), c(0.707107, 0.707107, 0),
-                     c(0.414214, 1, 0), c(0, 1, 0)), tolerance = 1e-6)
+  expect_equal(a$create_quadratic_bezier_points(PI / 2, 0, 2), oracle$arc_quadratic_points, tolerance = 1e-9)
   p <- OpenGLPoint(location = c(1, 2, 0))
   expect_equal(p$get_location(), c(1, 2, 0))
   p$set_location(c(3, 3, 0))
@@ -89,13 +86,13 @@ test_that("OpenGL VMobjects give upstream's shader data and wrappers", {
 
 test_that("OpenGLSurface gives upstream's grid, triangles and shader data", {
   s <- OpenGLSurface(function(u, v) c(u, v, u * v), u_range = c(-1, 1), v_range = c(-1, 1), resolution = 2)
-  # Upstream: OpenGLSurface(..., resolution = (3, 3)), which counts points.
-  expect_equal(s$get_triangle_indices(), c(0, 3, 1, 1, 3, 4, 1, 4, 2, 2, 4, 5, 3, 6, 4, 4, 6, 7, 4, 7, 5, 5, 7, 8))
+  # Upstream's resolution counts points: (3, 3) there.
+  expect_equal(s$get_triangle_indices(), oracle$surface$triangle_indices)
   d <- s$get_shader_data()
   expect_named(d, c("point", "du_point", "dv_point", "color"))
-  expect_equal(d$point[1:4, ], rbind(c(-1, -1, 1), c(-1, 0, 0), c(-1, 1, -1), c(0, -1, 0)))
-  expect_equal(d$du_point[1:4, ], rbind(c(-0.99999, -1, 0.99999), c(-0.99999, 0, 0), c(-0.99999, 1, -0.99999),
-                                        c(1e-5, -1, -1e-5)), tolerance = 1e-6)
+  # Upstream's shader data is float32.
+  expect_equal(d$point[1:4, ], oracle$surface$point, tolerance = 1e-6)
+  expect_equal(d$du_point[1:4, ], oracle$surface$du_point, tolerance = 1e-6)
   expect_equal(dim(s$get_unit_normals()), c(9, 3))
   s$sort_faces_back_to_front()
   expect_setequal(s$get_triangle_indices(), 0:8)
@@ -103,15 +100,14 @@ test_that("OpenGLSurface gives upstream's grid, triangles and shader data", {
   ts <- OpenGLTexturedSurface(s, img)
   td <- ts$get_shader_data()
   expect_named(td, c("point", "du_point", "dv_point", "im_coords", "opacity"))
-  expect_equal(td$im_coords[1:3, ], rbind(c(0, 1), c(0, 0.5), c(0, 0)))
+  expect_equal(td$im_coords[1:3, ], oracle$textured_im_coords)
 })
 
 test_that("shader wrappers read upstream's GLSL files", {
-  # Upstream: lengths of get_shader_code_from_file() for these files.
-  expect_equal(nchar(get_shader_code_from_file("surface/vert.glsl")), 3154)
-  expect_equal(nchar(get_shader_code_from_file("quadratic_bezier_fill/frag.glsl")), 4841)
+  expect_equal(c(nchar(get_shader_code_from_file("surface/vert.glsl")),
+                 nchar(get_shader_code_from_file("quadratic_bezier_fill/frag.glsl"))), oracle$shader_code_lengths)
   expect_null(get_shader_code_from_file("no_such_folder/vert.glsl"))
-  expect_equal(get_colormap_code(rbind(c(1, 0, 0), c(0, 0.5, 1))), "vec3[2](vec3(1, 0, 0),vec3(0, 0.5, 1))")
+  expect_equal(get_colormap_code(rbind(c(1, 0, 0), c(0, 0.5, 1))), oracle$colormap_code)
   expect_error(find_file("nope.glsl", tempdir()), "not Found")
   w <- ShaderWrapper(OpenGLMobject()$get_shader_data(), shader_folder = "surface")
   expect_true(w$is_valid())
@@ -155,7 +151,7 @@ test_that("OpenGL methods take upstream's OpenGL arguments", {
   v <- OpenGLVMobject()
   v$set_anchors_and_handles(matrix(c(0, 0, 0), 1), matrix(c(1, 1, 0), 1), matrix(c(2, 0, 0), 1))
   expect_equal(v$points, rbind(c(0, 0, 0), c(2, 2, 0) / 3, c(4, 2, 0) / 3, c(2, 0, 0)))
-  expect_equal(v$point_from_proportion(0.5), c(1, 0.5, 0), tolerance = 1e-6)
+  expect_equal(v$point_from_proportion(0.5), oracle$quadratic_at_half, tolerance = 1e-6)
   held <- OpenGLDot()
   g <- OpenGLVGroup(OpenGLCircle())
   g$label <- held
@@ -169,12 +165,10 @@ test_that("OpenGL methods take upstream's OpenGL arguments", {
 test_that("OpenGL classes have upstream's own methods", {
   c1 <- OpenGLCircle()
   c1$surround(OpenGLSquare(side_length = 2), buff = 0.5)
-  # Upstream: OpenGLCircle().surround(OpenGLSquare(side_length=2), buff=0.5) is 3 by 3.
-  expect_equal(c(c1$width, c1$height), c(3, 3), tolerance = 1e-6)
+  expect_equal(c(c1$width, c1$height), oracle$circle_surround, tolerance = 1e-6)
   dl <- OpenGLDashedLine(LEFT, RIGHT, dash_length = 0.1, dashed_ratio = 0.5)
-  # Upstream: max(2, ceil(length / dash_length * dashed_ratio)).
-  expect_equal(dl$calculate_num_dashes(0.5), 10L)
-  expect_equal(OpenGLDashedLine(ORIGIN, 0.1 * RIGHT)$calculate_num_dashes(0.5), 2L)
+  expect_equal(c(dl$calculate_num_dashes(0.5), OpenGLDashedLine(ORIGIN, 0.1 * RIGHT)$calculate_num_dashes(0.5)),
+               oracle$num_dashes)
   arrow <- OpenGLArrow(LEFT, RIGHT)
   arrow$set_path_arc(PI / 2)
   expect_equal(arrow$path_arc, PI / 2)
@@ -186,8 +180,8 @@ test_that("OpenGL classes have upstream's own methods", {
   ts <- OpenGLTexturedSurface(s, img)
   tp <- ts$copy()
   tp$pointwise_become_partial(ts, 0, 0.5)
-  # Upstream, with resolution (5, 5): the first six image coordinates.
-  expect_equal(tp$im_coords[1:6, ], rbind(c(0, 1), c(0, 0.75), c(0, 0.5), c(0, 0.5), c(0, 0.5), c(0.25, 1)))
+  # Upstream's resolution (5, 5): the first six image coordinates.
+  expect_equal(tp$im_coords[1:6, ], oracle$textured_partial_im_coords)
   ts$set_opacity(0.4)
   expect_equal(ts$opacity, matrix(0.4))
   p <- OpenGLPMobject()
