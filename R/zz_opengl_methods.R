@@ -1,0 +1,1025 @@
+# Methods of upstream's OpenGL mobject classes (manim/mobject/opengl/) that
+# the Cairo classes do not have. manimR's OpenGL classes are subclasses of
+# their Cairo counterparts (zz_opengl_mobjects.R). Each one also gets the
+# methods below of its upstream OpenGL ancestors, root first, so that a
+# subclass overrides its base, and only where the Cairo parent has no member
+# of that name.
+#
+# The data model is manimR's: points, colors and widths are fields, and
+# upstream's `data` arrays are read from them (`rgbas` of a plain mobject,
+# `fill_rgba` and `stroke_rgba` of a VMobject are its color rows). manimR
+# keeps no bounding box cache, no parents list and no cached family, so
+# refresh_bounding_box(), assemble_family() and refresh_triangulation() have
+# nothing to refresh and return the mobject.
+
+# Writes rows of `value` into one attribute of shader data, a single row
+# being repeated for every vertex as numpy broadcasting does.
+opengl_fill_shader_field <- function(sd, key, value) {
+  width <- attr(sd, "dtype")[[key]]
+  m <- matrix(as.numeric(value), ncol = width)
+  n <- length(sd)
+  if (nrow(m) == 1 && n != 1) m <- m[rep(1, n), , drop = FALSE]
+  assign(key, m, envir = sd)
+}
+
+# The quadratic Bezier points upstream's OpenGL shaders read: each cubic curve
+# of a manimR VMobject becomes two quadratic curves (three points each).
+opengl_quadratic_points <- function(vmob) {
+  pts <- vmob$points
+  n <- nrow(pts) - nrow(pts) %% 4
+  if (n == 0) return(matrix(0, 0, 3))
+  i <- seq(1, n, by = 4)
+  q <- get_quadratic_approximation_of_cubic(pts[i, , drop = FALSE], pts[i + 1, , drop = FALSE],
+                                            pts[i + 2, , drop = FALSE], pts[i + 3, , drop = FALSE])
+  q
+}
+
+LINE_JOINT_TYPE_VALUES <- c(auto = 0, round = 1, bevel = 2, miter = 3)
+
+# Shader data methods of upstream's OpenGLMobject.
+opengl_mobject_shader_methods <- list(
+  shader_dtype = c(point = 3),
+  shader_folder = "",
+  texture_paths = NULL,
+  render_primitive = 4L,
+  check_data_alignment = function(array, data_key) {
+    value <- .subset2(self, data_key)
+    d_len <- if (is.matrix(value)) nrow(value) else length(value)
+    if (d_len != 1 && d_len != length(array)) {
+      self$set_data(stats::setNames(list(resize_with_interpolation(value, length(array))), data_key))
+    }
+    invisible(self)
+  },
+  get_resized_shader_data_array = function(length) shader_data(self$shader_dtype, nrow(self$points)),
+  read_data_to_shader = function(shader_data, shader_data_key, data_key) {
+    if (data_key %in% self$locked_data_keys) return(invisible(self))
+    self$check_data_alignment(shader_data, data_key)
+    opengl_fill_shader_field(shader_data, shader_data_key, .subset2(self, data_key))
+    invisible(self)
+  },
+  get_shader_data = function() {
+    sd <- self$get_resized_shader_data_array(self$get_num_points())
+    self$read_data_to_shader(sd, "point", "points")
+    sd
+  },
+  refresh_shader_data = function() {
+    self$get_shader_data()
+    invisible(self)
+  },
+  get_shader_wrapper = function() {
+    self$shader_wrapper <- ShaderWrapper(vert_data = self$get_shader_data(), vert_indices = self$get_shader_vert_indices(),
+                                         uniforms = self$get_shader_uniforms(), depth_test = self$depth_test,
+                                         texture_paths = self$texture_paths, render_primitive = self$render_primitive,
+                                         shader_folder = self$shader_folder)
+    self$shader_wrapper
+  },
+  get_shader_wrapper_list = function() {
+    wrappers <- c(list(self$get_shader_wrapper()), unlist(lapply(self$submobjects, function(sm) {
+      if (exists("get_shader_wrapper_list", envir = sm, inherits = FALSE)) sm$get_shader_wrapper_list()
+    }), recursive = FALSE))
+    result <- list()
+    for (batch in batch_by_property(wrappers, function(sw) sw$get_id())) {
+      group <- batch[[1]]
+      first <- group[[1]]
+      if (!first$is_valid()) next
+      do.call(first$combine_with, group[-1])
+      if (length(first$vert_data) > 0) result[[length(result) + 1]] <- first
+    }
+    result
+  },
+  refresh_shader_wrapper_id = function() {
+    self$get_shader_wrapper()$refresh_id()
+    invisible(self)
+  },
+  replace_shader_code = function(old_code, new_code) {
+    for (wrapper in self$get_shader_wrapper_list()) wrapper$replace_code(old_code, new_code)
+    invisible(self)
+  },
+  set_color_by_code = function(glsl_code) {
+    self$replace_shader_code("///// INSERT COLOR FUNCTION HERE /////", glsl_code)
+    invisible(self)
+  },
+  set_color_by_xyz_func = function(glsl_snippet, min_value = -5, max_value = 5, colormap = "viridis") {
+    for (ch in c("x", "y", "z")) glsl_snippet <- gsub(ch, paste0("point.", ch), glsl_snippet, fixed = TRUE)
+    rgb_list <- t(grDevices::col2rgb(grDevices::hcl.colors(9, colormap)) / 255)
+    self$set_color_by_code(sprintf("color.rgb = float_to_color(%s, %s, %s, %s);", glsl_snippet, format(as.numeric(min_value)),
+                                   format(as.numeric(max_value)), get_colormap_code(rgb_list)))
+    invisible(self)
+  }
+)
+
+# Shader data methods of upstream's OpenGLVMobject.
+opengl_vmobject_shader_methods <- list(
+  fill_dtype = c(point = 3, unit_normal = 3, color = 4, vert_index = 1),
+  stroke_dtype = c(point = 3, prev_point = 3, next_point = 3, unit_normal = 3, stroke_width = 1, color = 4),
+  stroke_shader_folder = "quadratic_bezier_stroke",
+  fill_shader_folder = "quadratic_bezier_fill",
+  draw_stroke_behind_fill = FALSE,
+  fill_data = NULL,
+  stroke_data = NULL,
+  fill_shader_wrapper = NULL,
+  stroke_shader_wrapper = NULL,
+  init_shader_data = function() {
+    self$fill_data <- shader_data(self$fill_dtype, 0)
+    self$stroke_data <- shader_data(self$stroke_dtype, 0)
+    self$fill_shader_wrapper <- ShaderWrapper(vert_data = self$fill_data, vert_indices = integer(),
+                                              shader_folder = self$fill_shader_folder,
+                                              render_primitive = self$render_primitive)
+    self$stroke_shader_wrapper <- ShaderWrapper(vert_data = self$stroke_data, shader_folder = self$stroke_shader_folder,
+                                                render_primitive = self$render_primitive)
+    invisible(self)
+  },
+  refresh_shader_wrapper_id = function() {
+    if (is.null(self$fill_shader_wrapper)) self$init_shader_data()
+    self$fill_shader_wrapper$refresh_id()
+    self$stroke_shader_wrapper$refresh_id()
+    invisible(self)
+  },
+  get_fill_shader_wrapper = function() {
+    self$update_fill_shader_wrapper()
+    self$fill_shader_wrapper
+  },
+  update_fill_shader_wrapper = function() {
+    if (is.null(self$fill_shader_wrapper)) self$init_shader_data()
+    w <- self$fill_shader_wrapper
+    w$vert_data <- self$get_fill_shader_data()
+    w$vert_indices <- self$get_triangulation()
+    w$uniforms <- self$get_fill_uniforms()
+    w$depth_test <- self$depth_test
+    invisible(self)
+  },
+  get_stroke_shader_wrapper = function() {
+    self$update_stroke_shader_wrapper()
+    self$stroke_shader_wrapper
+  },
+  update_stroke_shader_wrapper = function() {
+    if (is.null(self$stroke_shader_wrapper)) self$init_shader_data()
+    w <- self$stroke_shader_wrapper
+    w$vert_data <- self$get_stroke_shader_data()
+    w$uniforms <- self$get_stroke_uniforms()
+    w$depth_test <- self$depth_test
+    invisible(self)
+  },
+  get_shader_wrapper_list = function() {
+    fills <- list()
+    strokes <- list()
+    backs <- list()
+    for (sm in self$family_members_with_points()) {
+      if (!exists("get_fill_shader_wrapper", envir = sm, inherits = FALSE)) next
+      if (sm$has_fill() && !isTRUE(cfg("use_projection_fill_shaders"))) fills[[length(fills) + 1]] <- sm$get_fill_shader_wrapper()
+      if (sm$has_stroke() && !isTRUE(cfg("use_projection_stroke_shaders"))) {
+        ssw <- sm$get_stroke_shader_wrapper()
+        if (isTRUE(sm$draw_stroke_behind_fill)) backs[[length(backs) + 1]] <- ssw else strokes[[length(strokes) + 1]] <- ssw
+      }
+    }
+    result <- list()
+    for (wlist in list(backs, fills, strokes)) {
+      if (!length(wlist)) next
+      wrapper <- wlist[[1]]
+      do.call(wrapper$combine_with, wlist[-1])
+      result[[length(result) + 1]] <- wrapper
+    }
+    result
+  },
+  get_stroke_uniforms = function() {
+    c(self$get_shader_uniforms(), list(joint_type = unname(LINE_JOINT_TYPE_VALUES[tolower(self$joint_type %||% "auto")]),
+                                      flat_stroke = as.numeric(isTRUE(self$flat_stroke))))
+  },
+  get_fill_uniforms = function() {
+    list(is_fixed_in_frame = as.numeric(self$is_fixed_in_frame), is_fixed_orientation = as.numeric(self$is_fixed_orientation),
+         fixed_orientation_center = self$fixed_orientation_center, gloss = self$gloss, shadow = self$shadow)
+  },
+  # The point attributes come from the quadratic form of the points (see
+  # opengl_quadratic_points()); the colors, widths and normal are read as
+  # upstream reads them.
+  get_stroke_shader_data = function() {
+    points <- opengl_quadratic_points(self)
+    n <- nrow(points)
+    if (is.null(self$stroke_data) || length(self$stroke_data) != n) self$stroke_data <- shader_data(self$stroke_dtype, n)
+    sd <- self$stroke_data
+    if (!"points" %in% self$locked_data_keys && n > 0) {
+      nppc <- 3
+      assign("point", points, envir = sd)
+      assign("prev_point", rbind(points[(n - nppc + 1):n, , drop = FALSE], points[seq_len(n - nppc), , drop = FALSE]), envir = sd)
+      assign("next_point", rbind(points[-seq_len(nppc), , drop = FALSE], points[seq_len(nppc), , drop = FALSE]), envir = sd)
+    }
+    self$read_data_to_shader(sd, "color", "stroke_rgba")
+    self$read_data_to_shader(sd, "stroke_width", "stroke_width")
+    self$read_data_to_shader(sd, "unit_normal", "unit_normal")
+    sd
+  },
+  get_fill_shader_data = function() {
+    points <- opengl_quadratic_points(self)
+    n <- nrow(points)
+    if (is.null(self$fill_data) || length(self$fill_data) != n) {
+      self$fill_data <- shader_data(self$fill_dtype, n)
+      assign("vert_index", matrix(seq_len(n) - 1, n, 1), envir = self$fill_data)
+    }
+    sd <- self$fill_data
+    if (!"points" %in% self$locked_data_keys) assign("point", points, envir = sd)
+    self$read_data_to_shader(sd, "color", "fill_rgba")
+    self$read_data_to_shader(sd, "unit_normal", "unit_normal")
+    sd
+  },
+  refresh_shader_data = function() {
+    self$get_fill_shader_data()
+    self$get_stroke_shader_data()
+    invisible(self)
+  },
+  get_fill_shader_vert_indices = function() self$get_triangulation(),
+  # Upstream's triangulation of the fill, on the quadratic points: 0 based
+  # vertex indices, every curve's own triangle followed by the ear clipped
+  # triangles of the inner polygon.
+  get_triangulation = function(normal_vector = NULL) {
+    normal_vector <- normal_vector %||% self$get_unit_normal()
+    points <- opengl_quadratic_points(self)
+    if (nrow(points) <= 1) return(integer())
+    if (!isTRUE(all(abs(normal_vector - OUT) < 1e-8))) points <- points %*% z_to_vector(normal_vector)
+    n <- nrow(points)
+    indices <- seq_len(n) - 1L
+    i0 <- seq(1, n, by = 3)
+    b0 <- points[i0, , drop = FALSE]
+    b1 <- points[i0 + 1, , drop = FALSE]
+    b2 <- points[i0 + 2, , drop = FALSE]
+    convexities <- sign(cross2d(b1 - b0, b2 - b1))
+    atol <- self$tolerance_for_point_equality
+    k <- nrow(b0)
+    end_of_loop <- logical(k)
+    if (k > 1) end_of_loop[-k] <- apply(abs(b2[-k, , drop = FALSE] - b0[-1, , drop = FALSE]) > atol, 1, any)
+    end_of_loop[k] <- TRUE
+    inner <- sort(c(indices[i0], indices[i0 + 1][convexities < 0], indices[i0 + 2][end_of_loop]))
+    rings <- seq_along(inner)[inner %% 3 == 2]
+    tri <- earclip_triangulation(points[inner + 1, , drop = FALSE], rings)
+    c(indices, inner[tri])
+  }
+)
+
+
+opengl_bounding_box <- function(points) {
+  if (!nrow(points)) return(matrix(0, 3, 3))
+  mins <- apply(points, 2, min)
+  maxs <- apply(points, 2, max)
+  unname(rbind(mins, (mins + maxs) / 2, maxs))
+}
+
+# The data arrays of a mobject, as upstream's OpenGLMobject.data.
+opengl_data <- function(mob) {
+  keys <- if (inherits(mob, "VMobject")) c("points", "bounding_box", "fill_rgba", "stroke_rgba", "stroke_width", "unit_normal")
+          else c("points", "bounding_box", "rgbas")
+  stats::setNames(lapply(keys, function(k) .subset2(mob, k)), keys)
+}
+
+OPENGL_MOBJECT_METHODS <- list(
+  public = list(
+    gloss = 0,
+    shadow = 0,
+    depth_test = FALSE,
+    is_fixed_in_frame = 0,
+    is_fixed_orientation = 0,
+    fixed_orientation_center = c(0, 0, 0),
+    model_matrix = diag(4),
+    parent = NULL,
+    locked_data_keys = character(),
+    shader_indices = NULL,
+    has_updaters = FALSE,
+    init_data = function() {
+      self$points <- matrix(0, 0, 3)
+      self$rgbas <- matrix(0, 1, 4)
+      invisible(self)
+    },
+    set_data = function(data) {
+      for (key in names(data)) assign(key, data[[key]], envir = self)
+      invisible(self)
+    },
+    set_uniforms = function(uniforms) {
+      for (key in names(uniforms)) assign(key, uniforms[[key]], envir = self)
+      invisible(self)
+    },
+    resize_points = function(new_length, resize_func = resize_array) {
+      if (new_length != nrow(self$points)) self$points <- resize_func(self$points, new_length)
+      invisible(self)
+    },
+    set_points = function(points) {
+      self$points <- as_points(points)
+      invisible(self)
+    },
+    append_points = function(new_points) {
+      self$points <- rbind(self$points, as_points(new_points))
+      invisible(self)
+    },
+    apply_points_function = function(func, about_point = NULL, about_edge = ORIGIN, works_on_bounding_box = FALSE) {
+      if (is.null(about_point) && !is.null(about_edge)) about_point <- self$get_bounding_box_point(about_edge)
+      for (mob in self$get_family()) {
+        if (!mob$has_points()) next
+        if (is.null(about_point)) {
+          mob$points <- func(mob$points)
+        } else {
+          shifted <- sweep(mob$points, 2, as_point(about_point))
+          mob$points <- sweep(func(shifted), 2, as_point(about_point), "+")
+        }
+      }
+      invisible(self)
+    },
+    clear_points = function() {
+      self$points <- matrix(0, 0, 3)
+      invisible(self)
+    },
+    get_bounding_box = function() self$compute_bounding_box(),
+    compute_bounding_box = function() {
+      pts <- do.call(rbind, c(list(self$points), lapply(self$get_family()[-1], function(m) m$points)))
+      opengl_bounding_box(pts)
+    },
+    refresh_bounding_box = function(recurse_down = FALSE, recurse_up = TRUE) invisible(self),
+    is_point_touching = function(point, buff = MED_SMALL_BUFF) {
+      bb <- self$get_bounding_box()
+      point <- as_point(point)
+      all(point >= bb[1, ] - buff) && all(point <= bb[3, ] + buff)
+    },
+    assemble_family = function() invisible(self),
+    replace_submobject = function(index, new_submob) {
+      old <- self$submobjects[[index]]
+      if (identical(old, new_submob)) return(invisible(self))
+      existing <- which(vapply(self$submobjects, identical, NA, new_submob))
+      self$submobjects[[index]] <- new_submob
+      if (length(existing)) self$submobjects[[existing[1]]] <- NULL
+      invisible(self)
+    },
+    get_grid = function(n_rows, n_cols, height = NULL, ...) {
+      grid <- self$duplicate(n_rows * n_cols)
+      grid$arrange_in_grid(n_rows, n_cols, ...)
+      if (!is.null(height)) grid$set_height(height)
+      grid
+    },
+    duplicate = function(n) do.call(self$get_group_class(), lapply(seq_len(n), function(i) self$copy())),
+    deepcopy = function() self$copy(),
+    init_updaters = function() {
+      self$updaters <- list()
+      self$has_updaters <- FALSE
+      self$updating_suspended <- FALSE
+      invisible(self)
+    },
+    refresh_has_updater_status = function() {
+      self$has_updaters <- any(vapply(self$get_family(), function(m) length(m$get_updaters()) > 0, NA))
+      invisible(self)
+    },
+    hierarchical_model_matrix = function() {
+      matrices <- list()
+      mob <- self
+      while (!is.null(mob)) {
+        matrices <- c(list(mob$model_matrix %||% diag(4)), matrices)
+        mob <- mob$parent
+      }
+      Reduce(`%*%`, matrices)
+    },
+    wag = function(direction = RIGHT, axis = DOWN, wag_factor = 1) {
+      for (mob in self$family_members_with_points()) {
+        alphas <- as.numeric(mob$points %*% as_point(axis))
+        alphas <- alphas - min(alphas)
+        alphas <- (alphas / max(alphas))^wag_factor
+        mob$set_points(mob$points + outer(alphas, as_point(direction)))
+      }
+      invisible(self)
+    },
+    set_rgba_array = function(color = NULL, opacity = NULL, name = "rgbas", recurse = TRUE) {
+      rgbs <- if (!is.null(color)) do.call(rbind, lapply(listify(color), color_to_rgb))
+      opacities <- if (!is.null(opacity)) unlist(listify(opacity))
+      for (mob in self$get_family(recurse)) {
+        current <- .subset2(mob, name) %||% matrix(0, 1, 4)
+        if (!is.null(rgbs) && is.null(opacities)) {
+          arr <- resize_array(current, nrow(rgbs))
+          arr[, 1:3] <- rgbs
+        } else if (is.null(rgbs) && !is.null(opacities)) {
+          arr <- resize_array(current, length(opacities))
+          arr[, 4] <- opacities
+        } else if (!is.null(rgbs)) {
+          even <- make_even(lapply(seq_len(nrow(rgbs)), function(i) rgbs[i, ]), as.list(opacities))
+          arr <- do.call(rbind, Map(function(rgb, o) c(rgb, o), even[[1]], even[[2]]))
+        } else {
+          next
+        }
+        assign(name, arr, envir = mob)
+      }
+      invisible(self)
+    },
+    set_rgba_array_direct = function(rgbas, name = "rgbas", recurse = TRUE) {
+      for (mob in self$get_family(recurse)) assign(name, rgbas, envir = mob)
+      invisible(self)
+    },
+    set_opacity = function(opacity, recurse = TRUE) {
+      self$set_rgba_array(color = NULL, opacity = opacity, recurse = FALSE)
+      if (recurse) for (sm in self$submobjects) sm$set_opacity(opacity, recurse = TRUE)
+      invisible(self)
+    },
+    get_opacity = function() self$rgbas[1, 4],
+    get_gloss = function() self$gloss,
+    set_gloss = function(gloss, recurse = TRUE) {
+      for (mob in self$get_family(recurse)) mob$gloss <- gloss
+      invisible(self)
+    },
+    get_shadow = function() self$shadow,
+    set_shadow = function(shadow, recurse = TRUE) {
+      for (mob in self$get_family(recurse)) mob$shadow <- shadow
+      invisible(self)
+    },
+    get_bounding_box_point = function(direction) {
+      bb <- self$get_bounding_box()
+      idx <- sign(as_point(direction)) + 2
+      vapply(1:3, function(i) bb[idx[i], i], 0)
+    },
+    get_continuous_bounding_box_point = function(direction) {
+      bb <- self$get_bounding_box()
+      center <- bb[2, ]
+      corner <- bb[3, ] - center
+      direction <- as_point(direction)
+      ratio <- ifelse(corner != 0, direction / corner, 0)
+      center + direction / max(abs(ratio))
+    },
+    pfp = function(alpha) self$point_from_proportion(alpha),
+    align_data_and_family = function(mobject) {
+      self$align_family(mobject)
+      self$align_data(mobject)
+      invisible(self)
+    },
+    align_family = function(mobject) {
+      n1 <- length(self)
+      n2 <- length(mobject)
+      if (n1 != n2) {
+        self$add_n_more_submobjects(max(0, n2 - n1))
+        mobject$add_n_more_submobjects(max(0, n1 - n2))
+      }
+      for (i in seq_along(self$submobjects)) self$submobjects[[i]]$align_family(mobject$submobjects[[i]])
+      invisible(self)
+    },
+    lock_data = function(keys) {
+      if (isTRUE(self$has_updaters)) return(invisible(self))
+      self$locked_data_keys <- unique(as.character(unlist(keys)))
+      invisible(self)
+    },
+    lock_matching_data = function(mobject1, mobject2) {
+      fams <- list(self$get_family(), mobject1$get_family(), mobject2$get_family())
+      for (i in seq_len(min(lengths(fams)))) {
+        d1 <- opengl_data(fams[[2]][[i]])
+        d2 <- opengl_data(fams[[3]][[i]])
+        keys <- intersect(intersect(names(opengl_data(fams[[1]][[i]])), names(d1)), names(d2))
+        same <- Filter(function(k) isTRUE(all(d1[[k]] == d2[[k]])), keys)
+        fams[[1]][[i]]$lock_data(same)
+      }
+      invisible(self)
+    },
+    unlock_data = function() {
+      for (mob in self$get_family()) mob$locked_data_keys <- character()
+      invisible(self)
+    },
+    fix_in_frame = function() {
+      self$is_fixed_in_frame <- 1
+      invisible(self)
+    },
+    fix_orientation = function() {
+      self$is_fixed_orientation <- 1
+      self$fixed_orientation_center <- self$get_center()
+      self$depth_test <- TRUE
+      invisible(self)
+    },
+    unfix_from_frame = function() {
+      self$is_fixed_in_frame <- 0
+      invisible(self)
+    },
+    unfix_orientation = function() {
+      self$is_fixed_orientation <- 0
+      self$fixed_orientation_center <- c(0, 0, 0)
+      self$depth_test <- FALSE
+      invisible(self)
+    },
+    apply_depth_test = function() {
+      self$depth_test <- TRUE
+      invisible(self)
+    },
+    deactivate_depth_test = function() {
+      self$depth_test <- FALSE
+      invisible(self)
+    },
+    get_shader_uniforms = function() {
+      list(is_fixed_in_frame = self$is_fixed_in_frame, is_fixed_orientation = self$is_fixed_orientation,
+           fixed_orientation_center = self$fixed_orientation_center, gloss = self$gloss, shadow = self$shadow)
+    },
+    get_shader_vert_indices = function() self$shader_indices
+  ),
+  active = list(
+    rgbas = function(value) {
+      if (missing(value)) {
+        return(private$.rgbas %||% matrix(c(color_to_rgb(self$color %||% WHITE), 1), 1))
+      }
+      private$.rgbas <- value
+    },
+    bounding_box = function(value) {
+      if (missing(value)) return(self$get_bounding_box())
+      invisible(NULL)
+    },
+    data = function(value) {
+      if (missing(value)) return(opengl_data(self))
+      self$set_data(value)
+    },
+    uniforms = function(value) {
+      if (missing(value)) return(self$get_shader_uniforms())
+      self$set_uniforms(value)
+    }
+  ),
+  private = list(.rgbas = NULL)
+)
+
+# Upstream's OpenGLVMobject draws quadratic curves (three points each);
+# manimR's OpenGL VMobjects are its Cairo VMobjects, with cubic curves (four
+# points each). The methods below take the curve size from
+# n_points_per_cubic_curve, so for quadratic input they do what upstream does.
+OPENGL_VMOBJECT_METHODS <- list(
+  public = list(
+    flat_stroke = TRUE,
+    triangulation_locked = FALSE,
+    init_data = function() {
+      self$points <- matrix(0, 0, 3)
+      self$fill_rgbas <- matrix(0, 1, 4)
+      self$stroke_rgbas <- matrix(0, 1, 4)
+      invisible(self)
+    },
+    get_stroke_widths = function() self$stroke_width,
+    get_colors = function() if (self$has_stroke()) self$get_stroke_colors() else self$get_fill_colors(),
+    has_stroke = function() {
+      widths <- self$get_stroke_widths()
+      opacities <- self$get_stroke_opacities()
+      !is.null(widths) && !is.null(opacities) && any(widths != 0) && any(opacities != 0)
+    },
+    has_fill = function() {
+      opacities <- self$get_fill_opacities()
+      !is.null(opacities) && any(opacities != 0)
+    },
+    get_opacity = function() if (self$has_fill()) self$get_fill_opacity() else self$get_stroke_opacity(),
+    set_flat_stroke = function(flat_stroke = TRUE, recurse = TRUE) {
+      for (mob in self$get_family(recurse)) mob$flat_stroke <- flat_stroke
+      invisible(self)
+    },
+    get_flat_stroke = function() self$flat_stroke,
+    add_smooth_cubic_curve_to = function(handle, point) {
+      self$throw_error_if_no_points()
+      new_handle <- self$get_reflection_of_last_handle()
+      self$add_cubic_bezier_curve_to(new_handle, handle, point)
+      invisible(self)
+    },
+    get_reflection_of_last_handle = function() {
+      n <- nrow(self$points)
+      2 * self$points[n, ] - self$points[n - 1, ]
+    },
+    subdivide_sharp_curves = function(angle_threshold = 30 * DEGREES, recurse = TRUE) {
+      for (vmob in Filter(function(m) m$has_points(), self$get_family(recurse))) {
+        new_points <- list()
+        for (tup in vmob$get_bezier_tuples()) {
+          k <- nrow(tup)
+          angle <- angle_between_vectors(tup[2, ] - tup[1, ], tup[k, ] - tup[k - 1, ])
+          if (angle > angle_threshold) {
+            n <- ceiling(angle / angle_threshold)
+            alphas <- seq(0, 1, length.out = n + 1)
+            for (i in seq_len(n)) new_points[[length(new_points) + 1]] <- partial_bezier_points(tup, alphas[i], alphas[i + 1])
+          } else {
+            new_points[[length(new_points) + 1]] <- tup
+          }
+        }
+        vmob$set_points(do.call(rbind, new_points))
+      }
+      invisible(self)
+    },
+    make_approximately_smooth = function() {
+      self$change_anchor_mode("smooth")
+      invisible(self)
+    },
+    get_bezier_tuples_from_points = function(points) {
+      nppc <- self$n_points_per_cubic_curve
+      k <- nrow(points) %/% nppc
+      lapply(seq_len(k), function(i) points[(nppc * (i - 1) + 1):(nppc * i), , drop = FALSE])
+    },
+    get_bezier_tuples = function() self$get_bezier_tuples_from_points(self$points),
+    get_points_without_null_curves = function(atol = 1e-9) {
+      nppc <- self$n_points_per_cubic_curve
+      points <- self$points
+      starts <- seq(1, nrow(points), by = nppc)
+      distinct <- Reduce(`|`, lapply(seq_len(nppc - 1), function(i) {
+        apply(abs(points[starts + i, , drop = FALSE] - points[starts, , drop = FALSE]) > atol, 1, any)
+      }))
+      points[rep(distinct, each = nppc), , drop = FALSE]
+    },
+    get_area_vector = function() {
+      if (!self$has_points()) return(c(0, 0, 0))
+      nppc <- self$n_points_per_cubic_curve
+      points <- self$points
+      p0 <- points[seq(1, nrow(points), by = nppc), , drop = FALSE]
+      p1 <- points[seq(nppc, nrow(points), by = nppc), , drop = FALSE]
+      0.5 * c(sum((p0[, 2] + p1[, 2]) * (p1[, 3] - p0[, 3])),
+              sum((p0[, 3] + p1[, 3]) * (p1[, 1] - p0[, 1])),
+              sum((p0[, 1] + p1[, 1]) * (p1[, 2] - p0[, 2])))
+    },
+    get_unit_normal = function(recompute = FALSE) {
+      points <- self$points
+      if (nrow(points) < 3) return(OUT)
+      area_vect <- self$get_area_vector()
+      area <- sqrt(sum(area_vect^2))
+      if (area > 0) return(area_vect / area)
+      get_unit_normal(points[2, ] - points[1, ], points[3, ] - points[2, ])
+    },
+    refresh_unit_normal = function() invisible(self),
+    refresh_triangulation = function() invisible(self)
+  ),
+  active = list(
+    fill_rgba = function(value) {
+      if (missing(value)) return(self$fill_rgbas %||% matrix(0, 1, 4))
+      self$fill_rgbas <- value
+    },
+    stroke_rgba = function(value) {
+      if (missing(value)) return(self$stroke_rgbas %||% matrix(0, 1, 4))
+      self$stroke_rgbas <- value
+    },
+    unit_normal = function(value) {
+      if (missing(value)) return(matrix(self$get_unit_normal(), 1))
+      invisible(NULL)
+    }
+  )
+)
+
+# Upstream's OpenGLArc.create_quadratic_bezier_points(): quadratic Bezier
+# points (three per curve) of an arc of the unit circle.
+opengl_quadratic_arc_points <- function(angle, start_angle = 0, n_components = 8) {
+  a <- seq(start_angle, start_angle + angle, length.out = 2 * n_components + 1)
+  samples <- cbind(cos(a), sin(a), 0)
+  theta <- angle / n_components
+  odd <- seq(2, nrow(samples), by = 2)
+  samples[odd, ] <- samples[odd, ] / cos(theta / 2)
+  points <- matrix(0, 3 * n_components, 3)
+  points[seq(1, by = 3, length.out = n_components), ] <- samples[seq(1, by = 2, length.out = n_components), ]
+  points[seq(2, by = 3, length.out = n_components), ] <- samples[odd, ]
+  points[seq(3, by = 3, length.out = n_components), ] <- samples[seq(3, by = 2, length.out = n_components), ]
+  points
+}
+
+OPENGL_CLASS_METHODS <- list(
+  OpenGLArc = list(public = list(
+    create_quadratic_bezier_points = function(angle, start_angle = 0, n_components = 8) {
+      opengl_quadratic_arc_points(angle, start_angle, n_components)
+    },
+    get_start_angle = function() angle_of_vector(self$get_start() - self$get_arc_center()) %% TAU,
+    get_stop_angle = function() angle_of_vector(self$get_end() - self$get_arc_center()) %% TAU
+  )),
+  # manimR draws an OpenGLArrow as its Cairo Arrow, a stroked line with a tip,
+  # so the thickness of upstream's filled arrow body is the stroke width:
+  # a stroke of width w is w * 0.01 units wide (cairo_line_width_multiple).
+  OpenGLArrow = list(public = list(
+    thickness = 0.05,
+    reset_points_around_ends = function() {
+      self$set_points_by_ends(self$get_start(), self$get_end(), path_arc = self$path_arc)
+      invisible(self)
+    },
+    set_thickness = function(thickness) {
+      self$thickness <- thickness
+      self$set_stroke(width = thickness / 0.01, family = FALSE)
+      self$reset_points_around_ends()
+      invisible(self)
+    }
+  )),
+  OpenGLPoint = list(public = list(
+    get_location = function() self$points[1, ],
+    get_bounding_box_point = function(...) self$get_location(),
+    set_location = function(new_loc) {
+      self$set_points(matrix(as_point(new_loc), 1))
+      invisible(self)
+    }
+  ))
+)
+
+# OpenGLSurface. Upstream keeps a grid of nu x nv points and two copies
+# nudged by epsilon along u and along v. manimR's surface is a group of faces;
+# its grid is the corners of the faces as they are now (surface_corner_grid(),
+# so it follows transformations), and the nudged points are the grid moved by
+# epsilon times its derivative along u or v (finite differences).
+opengl_surface_points <- function(surface) {
+  grid <- surface_corner_grid(surface)
+  nu <- dim(grid)[1]
+  nv <- dim(grid)[2]
+  flat <- function(g) matrix(aperm(g, c(2, 1, 3)), ncol = 3)
+  deriv <- function(along, step) {
+    d <- array(0, dim(grid))
+    n <- dim(grid)[along]
+    take <- function(i) if (along == 1) grid[i, , , drop = FALSE] else grid[, i, , drop = FALSE]
+    put <- function(i, v) if (along == 1) d[i, , ] <<- v else d[, i, ] <<- v
+    for (i in seq_len(n)) {
+      lo <- max(i - 1, 1)
+      hi <- min(i + 1, n)
+      put(i, (take(hi) - take(lo)) / ((hi - lo) * step))
+    }
+    d
+  }
+  eps <- surface$epsilon %||% 1e-5
+  ur <- surface$u_range
+  vr <- surface$v_range
+  du <- grid + eps * deriv(1, (ur[2] - ur[1]) / (nu - 1))
+  dv <- grid + eps * deriv(2, (vr[2] - vr[1]) / (nv - 1))
+  list(flat(grid), flat(du), flat(dv), resolution = c(nu, nv))
+}
+
+OPENGL_SURFACE_METHODS <- list(
+  public = list(
+    shader_dtype = c(point = 3, du_point = 3, dv_point = 3, color = 4),
+    shader_folder = "surface",
+    epsilon = 1e-5,
+    triangle_indices = NULL,
+    compute_triangle_indices = function() {
+      res <- opengl_surface_points(self)$resolution
+      nu <- res[1]
+      nv <- res[2]
+      if (nu == 0 || nv == 0) {
+        self$triangle_indices <- integer()
+        return(invisible(self))
+      }
+      grid <- matrix(seq_len(nu * nv) - 1L, nu, nv, byrow = TRUE)
+      tl <- as.vector(t(grid[-nu, -nv, drop = FALSE]))
+      bl <- as.vector(t(grid[-1, -nv, drop = FALSE]))
+      tr <- as.vector(t(grid[-nu, -1, drop = FALSE]))
+      br <- as.vector(t(grid[-1, -1, drop = FALSE]))
+      self$triangle_indices <- as.vector(rbind(tl, bl, tr, tr, bl, br))
+      invisible(self)
+    },
+    get_triangle_indices = function() {
+      if (is.null(self$triangle_indices)) self$compute_triangle_indices()
+      self$triangle_indices
+    },
+    get_surface_points_and_nudged_points = function() opengl_surface_points(self)[1:3],
+    get_unit_normals = function() {
+      p <- self$get_surface_points_and_nudged_points()
+      a <- (p[[2]] - p[[1]]) / self$epsilon
+      b <- (p[[3]] - p[[1]]) / self$epsilon
+      normals <- cbind(a[, 2] * b[, 3] - a[, 3] * b[, 2], a[, 3] * b[, 1] - a[, 1] * b[, 3], a[, 1] * b[, 2] - a[, 2] * b[, 1])
+      normalize_along_axis(normals, 1)
+    },
+    get_partial_points_array = function(points, a, b, resolution, axis) {
+      if (!nrow(points)) return(points)
+      nu <- resolution[1]
+      nv <- resolution[2]
+      arr <- aperm(array(t(points), c(ncol(points), nv, nu)), c(3, 2, 1))
+      max_index <- resolution[axis + 1] - 1
+      lo <- integer_interpolate(0, max_index, a)
+      hi <- integer_interpolate(0, max_index, b)
+      at <- function(i) if (axis == 0) arr[i + 1, , , drop = FALSE] else arr[, i + 1, , drop = FALSE]
+      low <- interpolate(at(lo[[1]]), at(lo[[1]] + 1), lo[[2]])
+      high <- interpolate(at(hi[[1]]), at(hi[[1]] + 1), hi[[2]])
+      n_axis <- resolution[axis + 1]
+      for (i in seq_len(n_axis) - 1) {
+        v <- if (i < lo[[1]]) low else if (i > hi[[1]]) high else next
+        if (axis == 0) arr[i + 1, , ] <- v else arr[, i + 1, ] <- v
+      }
+      matrix(aperm(arr, c(2, 1, 3)), ncol = dim(arr)[3])
+    },
+    sort_faces_back_to_front = function(vect = OUT) {
+      tri <- self$get_triangle_indices()
+      s_points <- self$get_surface_points_and_nudged_points()[[1]]
+      first <- tri[seq(1, length(tri), by = 3)]
+      ord <- order(as.numeric(s_points[first + 1, , drop = FALSE] %*% as_point(vect)))
+      m <- matrix(tri, nrow = 3)
+      self$triangle_indices <- as.vector(m[, ord, drop = FALSE])
+      invisible(self)
+    },
+    get_shader_data = function() {
+      p <- self$get_surface_points_and_nudged_points()
+      sd <- shader_data(self$shader_dtype, nrow(p[[1]]))
+      if (!"points" %in% self$locked_data_keys) {
+        assign("point", p[[1]], envir = sd)
+        assign("du_point", p[[2]], envir = sd)
+        assign("dv_point", p[[3]], envir = sd)
+        self$fill_in_shader_color_info(sd)
+      }
+      sd
+    },
+    fill_in_shader_color_info = function(shader_data) {
+      self$read_data_to_shader(shader_data, "color", "rgbas")
+      shader_data
+    },
+    get_shader_vert_indices = function() self$get_triangle_indices()
+  ),
+  active = list(
+    rgbas = function(value) {
+      if (missing(value)) return(self$get_fill_rgbas())
+      self$fill_rgbas <- value
+    }
+  )
+)
+
+# OpenGLTexturedSurface: image coordinates of the grid (u from 0 to 1,
+# v from 1 to 0, as upstream flips the image vertically) and the opacity.
+opengl_image_from_file <- function(image_file, image_mode) {
+  ImageMobject(get_full_raster_image_path(image_file), image_mode = image_mode)$pixel_array
+}
+
+OPENGL_TEXTURED_SURFACE_METHODS <- list(
+  public = list(
+    shader_dtype = c(point = 3, du_point = 3, dv_point = 3, im_coords = 2, opacity = 1),
+    shader_folder = "textured_surface",
+    get_image_from_file = function(image_file, image_mode) opengl_image_from_file(image_file, image_mode),
+    init_data = function() {
+      self$points <- matrix(0, 0, 3)
+      self$im_coords <- matrix(0, 0, 2)
+      self$opacity <- matrix(0, 0, 1)
+      invisible(self)
+    },
+    fill_in_shader_color_info = function(shader_data) {
+      self$read_data_to_shader(shader_data, "opacity", "opacity")
+      self$read_data_to_shader(shader_data, "im_coords", "im_coords")
+      shader_data
+    }
+  ),
+  active = list(
+    im_coords = function(value) {
+      if (!missing(value)) {
+        private$.im_coords <- value
+        return(invisible(NULL))
+      }
+      if (!is.null(private$.im_coords) && nrow(private$.im_coords)) return(private$.im_coords)
+      res <- opengl_surface_points(self)$resolution
+      grid <- expand.grid(v = seq(1, 0, length.out = res[2]), u = seq(0, 1, length.out = res[1]))
+      unname(cbind(grid$u, grid$v))
+    },
+    opacity = function(value) {
+      if (!missing(value)) {
+        private$.opacity <- value
+        return(invisible(NULL))
+      }
+      if (!is.null(private$.opacity) && nrow(private$.opacity)) return(private$.opacity)
+      matrix(self$get_fill_opacity() %||% 1, 1, 1)
+    }
+  ),
+  private = list(.im_coords = NULL, .opacity = NULL)
+)
+
+
+OPENGL_MOBJECT_METHODS$public <- c(OPENGL_MOBJECT_METHODS$public, opengl_mobject_shader_methods)
+OPENGL_VMOBJECT_METHODS$public <- c(OPENGL_VMOBJECT_METHODS$public, opengl_vmobject_shader_methods)
+OPENGL_CLASS_METHODS$OpenGLImageMobject <- list(public = list(
+  get_image_from_file = function(image_file, image_mode) opengl_image_from_file(image_file, image_mode)
+))
+
+# Upstream's OpenGL classes name some arguments differently from its Cairo
+# classes: `recurse` where the Cairo methods have `recursive` or `family`,
+# `opacity` in set_color(), `stretch` in set_width(). These wrappers take
+# upstream's OpenGL arguments and still accept the Cairo names, which
+# manimR's own code passes. They replace the inherited methods of each
+# OpenGL class (not methods the class defines itself).
+OPENGL_MOBJECT_SIGNATURES <- list(public = list(
+  clear_updaters = function(recurse = TRUE, recursive = recurse) super$clear_updaters(recursive),
+  suspend_updating = function(recurse = TRUE, recursive = recurse) super$suspend_updating(recursive),
+  resume_updating = function(recurse = TRUE, call_updater = TRUE, recursive = recurse) {
+    self$updating_suspended <- FALSE
+    if (recursive) for (sm in self$submobjects) sm$resume_updating(recursive)
+    if (call_updater) self$update(dt = 0, recursive = recursive)
+    invisible(self)
+  },
+  update = function(dt = 0, recurse = TRUE, recursive = recurse) super$update(dt, recursive),
+  shuffle = function(recurse = FALSE, recursive = recurse) super$shuffle(recursive),
+  fade = function(darkness = 0.5, recurse = TRUE, family = recurse) super$fade(darkness, family = family),
+  # A shallow copy, as upstream's, copies the family but shares the mobjects
+  # held in other fields.
+  copy = function(shallow = FALSE, .memo = NULL) {
+    if (is.environment(shallow)) return(super$copy(shallow))
+    new <- super$copy(.memo)
+    if (isTRUE(shallow)) {
+      family <- self$get_family()
+      for (nm in mobject_fields(self)) {
+        v <- .subset2(self, nm)
+        if (is_mobject(v) && !any(vapply(family, identical, NA, v))) assign(nm, v, envir = new)
+      }
+    }
+    new
+  },
+  save_state = function(use_deepcopy = FALSE) super$save_state(),
+  # manimR keeps no parents list, so update_parent has nothing to update.
+  insert = function(index, mobject, update_parent = FALSE) super$insert(index, mobject),
+  set_color = function(color, opacity = NULL, recurse = TRUE, family = recurse, alpha = NULL) {
+    super$set_color(color, family = family)
+    opacity <- opacity %||% alpha
+    if (!is.null(opacity)) {
+      if ("recurse" %in% names(formals(self$set_opacity))) self$set_opacity(opacity, recurse = family)
+      else self$set_opacity(opacity)
+    }
+    invisible(self)
+  },
+  set_width = function(width, stretch = FALSE, ...) self$rescale_to_fit(width, 1, stretch = stretch, ...),
+  set_height = function(height, stretch = FALSE, ...) self$rescale_to_fit(height, 2, stretch = stretch, ...),
+  set_depth = function(depth, stretch = FALSE, ...) self$rescale_to_fit(depth, 3, stretch = stretch, ...)
+))
+
+OPENGL_VMOBJECT_SIGNATURES <- list(public = list(
+  set_fill = function(color = NULL, opacity = NULL, recurse = TRUE, family = recurse) {
+    super$set_fill(color, opacity, family = family)
+  },
+  # As upstream, `background` sets whether the stroke is drawn behind the
+  # fill (the Cairo classes' background stroke is set_background_stroke()).
+  set_stroke = function(color = NULL, width = NULL, opacity = NULL, background = NULL, recurse = TRUE,
+                        family = recurse) {
+    super$set_stroke(color, width, opacity, family = family)
+    if (!is.null(background)) for (mob in self$get_family(family)) mob$draw_stroke_behind_fill <- background
+    invisible(self)
+  },
+  set_opacity = function(opacity, recurse = TRUE, family = recurse) super$set_opacity(opacity, family = family),
+  match_style = function(vmobject, recurse = TRUE, family = recurse) super$match_style(vmobject, family = family),
+  set_style = function(fill_color = NULL, fill_opacity = NULL, fill_rgba = NULL, stroke_color = NULL,
+                       stroke_opacity = NULL, stroke_rgba = NULL, stroke_width = NULL, gloss = NULL, shadow = NULL,
+                       recurse = TRUE, family = recurse, ...) {
+    super$set_style(fill_color = fill_color, fill_opacity = fill_opacity, stroke_color = stroke_color,
+                    stroke_width = stroke_width, stroke_opacity = stroke_opacity, family = family, ...)
+    for (mob in self$get_family(family)) {
+      if (!is.null(fill_rgba)) mob$fill_rgbas <- matrix(as.numeric(fill_rgba), ncol = 4)
+      if (!is.null(stroke_rgba)) mob$stroke_rgbas <- matrix(as.numeric(stroke_rgba), ncol = 4)
+    }
+    if (!is.null(gloss)) self$set_gloss(gloss, recurse = family)
+    if (!is.null(shadow)) self$set_shadow(shadow, recurse = family)
+    invisible(self)
+  },
+  insert_n_curves = function(n, recurse = TRUE) {
+    for (mob in self$get_family(recurse)) {
+      if (mob$get_num_curves() == 0) next
+      if (identical(mob, self)) super$insert_n_curves(n)
+      else if ("recurse" %in% names(formals(mob$insert_n_curves))) mob$insert_n_curves(n, recurse = FALSE)
+      else mob$insert_n_curves(n)
+    }
+    invisible(self)
+  },
+  set_points_smoothly = function(points, true_smooth = FALSE) super$set_points_smoothly(points),
+  # Upstream's quadratic form (anchors, one handle, anchors) is raised to the
+  # cubic curves manimR draws; the cubic form of the Cairo classes, with two
+  # handles, is passed on.
+  set_anchors_and_handles = function(anchors1, handles, anchors2, ...) {
+    if (...length()) return(super$set_anchors_and_handles(anchors1, handles, anchors2, ...))
+    a1 <- as_points(anchors1)
+    h <- as_points(handles)
+    a2 <- as_points(anchors2)
+    super$set_anchors_and_handles(a1, a1 + 2 / 3 * (h - a1), a2 + 2 / 3 * (h - a2), a2)
+  },
+  pointwise_become_partial = function(vmobject, a, b, remap = TRUE) super$pointwise_become_partial(vmobject, a, b)
+))
+
+OPENGL_CLASS_METHODS$OpenGLArrow$public$set_path_arc <- function(path_arc) {
+  self$path_arc <- path_arc
+  self$reset_points_around_ends()
+  invisible(self)
+}
+# Upstream's OpenGLCircle.surround() keeps a circle shape, then stretches it
+# to leave `buff` on every side.
+OPENGL_CLASS_METHODS$OpenGLCircle <- list(public = list(
+  surround = function(mobject, dim_to_match = 1, stretch = FALSE, buff = MED_SMALL_BUFF) {
+    self$replace(mobject, dim_to_match, stretch)
+    self$stretch((self$width + 2 * buff) / self$width, 1)
+    self$stretch((self$height + 2 * buff) / self$height, 2)
+    invisible(self)
+  }
+))
+OPENGL_CLASS_METHODS$OpenGLDashedLine <- list(public = list(
+  calculate_num_dashes = function(dash_length = self$dash_length, dashed_ratio = self$dashed_ratio) {
+    as.integer(ceiling(self$get_length() / (dash_length / dashed_ratio)))
+  }
+))
+# Upstream's OpenGLSurface.pointwise_become_partial(): the grid points
+# outside [a, b] along `axis` (0 for u, 1 for v) collapse onto its ends.
+OPENGL_CLASS_METHODS$OpenGLSurface <- list(public = list(
+  prefered_creation_axis = 1,
+  pointwise_become_partial = function(smobject, a, b, axis = NULL) {
+    axis <- axis %||% self$prefered_creation_axis
+    grid <- surface_corner_grid(smobject)
+    nu <- dim(grid)[1]
+    nv <- dim(grid)[2]
+    flat <- matrix(aperm(grid, c(2, 1, 3)), ncol = 3)
+    if (!(a <= 0 && b >= 1)) flat <- self$get_partial_points_array(flat, a, b, c(nu, nv), axis)
+    g <- aperm(array(t(flat), c(3, nv, nu)), c(3, 2, 1))
+    for (f in self$list_of_faces) {
+      i <- f$u_index + 1
+      j <- f$v_index + 1
+      f$set_points_as_corners(rbind(g[i, j, ], g[i + 1, j, ], g[i + 1, j + 1, ], g[i, j + 1, ], g[i, j, ]))
+    }
+    invisible(self)
+  }
+))
+OPENGL_TEXTURED_SURFACE_METHODS$public$pointwise_become_partial <- function(tsmobject, a, b, axis = 1) {
+  super$pointwise_become_partial(tsmobject, a, b, axis)
+  self$im_coords <- tsmobject$im_coords
+  if (a <= 0 && b >= 1) return(invisible(self))
+  res <- opengl_surface_points(tsmobject)$resolution
+  self$im_coords <- self$get_partial_points_array(tsmobject$im_coords, a, b, res, axis)
+  invisible(self)
+}
+# The opacity of upstream's textured surface; manimR draws it with the faces'
+# opacity.
+OPENGL_TEXTURED_SURFACE_METHODS$public$set_opacity <- function(opacity, recurse = TRUE, family = recurse) {
+  values <- unlist(listify(opacity))
+  for (mob in self$get_family(family)) {
+    if (inherits(mob, "OpenGLTexturedSurface")) mob$opacity <- matrix(values, ncol = 1)
+  }
+  super$set_opacity(values[1], family = family)
+}
+OPENGL_PMOBJECT_METHODS <- list(public = list(
+  shader_dtype = c(point = 3, color = 4),
+  shader_folder = "true_dot",
+  OPENGL_POINT_RADIUS_SCALE_FACTOR = 0.01,
+  match_colors = function(pmobject) super$match_colors(pmobject),
+  pointwise_become_partial = function(pmobject, a, b) super$pointwise_become_partial(pmobject, a, b)
+))

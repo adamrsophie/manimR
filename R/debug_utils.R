@@ -44,7 +44,7 @@ index_labels <- function(mobject, label_height = 0.15, background_stroke_width =
   labels <- VGroup()
   for (n in seq_along(mobject$submobjects)) {
     label <- Integer(n, ...)
-    label$set_stroke(background_stroke_color, background_stroke_width, background = TRUE)
+    label$set_background_stroke(background_stroke_color, background_stroke_width)
     label$height <- label_height
     label$move_to(mobject$submobjects[[n]])
     labels$add(label)

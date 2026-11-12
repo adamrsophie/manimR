@@ -118,8 +118,8 @@ VMobjectClass <- R6::R6Class("VMobject", inherit = MobjectClass, lock_objects = 
       self$set_fill(color = fill_col, opacity = self$fill_opacity, family = propagate_colors)
       self$set_stroke(color = stroke_col, width = self$stroke_width,
                       opacity = self$stroke_opacity, family = propagate_colors)
-      self$set_stroke(color = bg_col, width = self$background_stroke_width,
-                      opacity = self$background_stroke_opacity, background = TRUE, family = propagate_colors)
+      self$set_background_stroke(color = bg_col, width = self$background_stroke_width,
+                                 opacity = self$background_stroke_opacity, family = propagate_colors)
       self$set_sheen(factor = self$sheen_factor, direction = self$sheen_direction, family = propagate_colors)
       invisible(self)
     },
@@ -156,24 +156,28 @@ VMobjectClass <- R6::R6Class("VMobject", inherit = MobjectClass, lock_objects = 
       invisible(self)
     },
     set_stroke = function(color = NULL, width = NULL, opacity = NULL, background = FALSE, family = TRUE) {
-      if (family) for (sm in self$submobjects) if (is_vmobject(sm)) sm$set_stroke(color, width, opacity, background, family)
-      if (background) {
-        self$update_rgbas_array("background_stroke_rgbas", color, opacity)
-        if (!is.null(width)) self$background_stroke_width <- width
-        if (!is.null(opacity)) self$background_stroke_opacity <- opacity
-      } else {
-        self$update_rgbas_array("stroke_rgbas", color, opacity)
-        if (!is.null(width)) self$stroke_width <- width
-        if (!is.null(opacity)) self$stroke_opacity <- opacity
-      }
+      if (background) return(self$set_background_stroke(color, width, opacity, family = family))
+      if (family) for (sm in self$submobjects) if (is_vmobject(sm)) sm$set_stroke(color, width, opacity, family = family)
+      self$update_rgbas_array("stroke_rgbas", color, opacity)
+      if (!is.null(width)) self$stroke_width <- width
+      if (!is.null(opacity)) self$stroke_opacity <- opacity
       invisible(self)
     },
     set_cap_style = function(cap_style) {
       self$cap_style <- cap_style
       invisible(self)
     },
+    # The stroke drawn behind the fill. manimR's own code sets it here rather
+    # than with set_stroke(background = TRUE), whose `background` means
+    # something else for the OpenGL classes.
     set_background_stroke = function(color = NULL, width = NULL, opacity = NULL, family = TRUE) {
-      self$set_stroke(color, width, opacity, background = TRUE, family = family)
+      if (family) {
+        for (sm in self$submobjects) if (is_vmobject(sm)) sm$set_background_stroke(color, width, opacity, family = family)
+      }
+      self$update_rgbas_array("background_stroke_rgbas", color, opacity)
+      if (!is.null(width)) self$background_stroke_width <- width
+      if (!is.null(opacity)) self$background_stroke_opacity <- opacity
+      invisible(self)
     },
     set_style = function(fill_color = NULL, fill_opacity = NULL, stroke_color = NULL, stroke_width = NULL,
                          stroke_opacity = NULL, background_stroke_color = NULL, background_stroke_width = NULL,
@@ -181,8 +185,8 @@ VMobjectClass <- R6::R6Class("VMobject", inherit = MobjectClass, lock_objects = 
                          background_image = NULL, family = TRUE) {
       self$set_fill(fill_color, fill_opacity, family = family)
       self$set_stroke(stroke_color, stroke_width, stroke_opacity, family = family)
-      self$set_stroke(background_stroke_color, background_stroke_width, background_stroke_opacity,
-                      background = TRUE, family = family)
+      self$set_background_stroke(background_stroke_color, background_stroke_width, background_stroke_opacity,
+                                 family = family)
       if (!is.null(sheen_factor) && sheen_factor != 0) {
         self$set_sheen(factor = sheen_factor, direction = sheen_direction, family = family)
       }
@@ -232,7 +236,7 @@ VMobjectClass <- R6::R6Class("VMobject", inherit = MobjectClass, lock_objects = 
     set_opacity = function(opacity, family = TRUE) {
       self$set_fill(opacity = opacity, family = family)
       self$set_stroke(opacity = opacity, family = family)
-      self$set_stroke(opacity = opacity, background = TRUE, family = family)
+      self$set_background_stroke(opacity = opacity, family = family)
       invisible(self)
     },
     scale = function(scale_factor, scale_stroke = FALSE, about_point = NULL, about_edge = NULL, ...) {
@@ -240,8 +244,8 @@ VMobjectClass <- R6::R6Class("VMobject", inherit = MobjectClass, lock_objects = 
         for (m in self$get_family()) {
           if (is_vmobject(m)) {
             m$set_stroke(width = abs(scale_factor[1]) * m$get_stroke_width(), family = FALSE)
-            m$set_stroke(width = abs(scale_factor[1]) * m$get_stroke_width(background = TRUE),
-                         background = TRUE, family = FALSE)
+            m$set_background_stroke(width = abs(scale_factor[1]) * m$get_stroke_width(background = TRUE),
+                                    family = FALSE)
           }
         }
       }
@@ -251,7 +255,7 @@ VMobjectClass <- R6::R6Class("VMobject", inherit = MobjectClass, lock_objects = 
       factor <- 1 - darkness
       self$set_fill(opacity = factor * self$get_fill_opacity(), family = FALSE)
       self$set_stroke(opacity = factor * self$get_stroke_opacity(), family = FALSE)
-      self$set_stroke(opacity = factor * self$get_stroke_opacity(background = TRUE), background = TRUE, family = FALSE)
+      self$set_background_stroke(opacity = factor * self$get_stroke_opacity(background = TRUE), family = FALSE)
       super$fade(darkness, family)
     },
     get_fill_rgbas = function() self$fill_rgbas %||% matrix(0, 1, 4),

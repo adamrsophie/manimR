@@ -182,8 +182,12 @@ CameraClass <- R6::R6Class("Camera", lock_objects = FALSE,
         return(self$display_with_background_image(vmobject, paths))
       }
       self$apply_stroke(vmobject, paths, background = TRUE)
+      # An OpenGL mobject may draw its stroke behind the fill, as upstream's
+      # draw_stroke_behind_fill.
+      behind <- isTRUE(vmobject$draw_stroke_behind_fill)
+      if (behind) self$apply_stroke(vmobject, paths, background = FALSE)
       self$apply_fill(vmobject, paths)
-      self$apply_stroke(vmobject, paths, background = FALSE)
+      if (!behind) self$apply_stroke(vmobject, paths, background = FALSE)
       invisible(self)
     },
     # Flatten a VMobject into polyline subpaths in frame units.

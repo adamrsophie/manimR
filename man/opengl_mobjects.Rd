@@ -112,8 +112,13 @@ Upstream's OpenGL renderer has its own mobject classes, such as
 \code{OpenGLCircle} or \code{OpenGLVGroup}. manimR draws every mobject with grid, so
 each of them is a subclass of its Cairo counterpart that takes the same
 arguments: \code{OpenGLCircle()} is a \code{\link[=Circle]{Circle()}} and \code{inherits(x, "OpenGLCircle")} is \code{TRUE}. Code written for the OpenGL renderer runs
-unchanged; the GPU pipeline itself (shaders, the OpenGL camera and window)
-is not part of manimR.
+unchanged. The classes also have the methods of upstream's OpenGL
+mobjects, such as \code{fix_in_frame()}, \code{set_gloss()}, \code{get_shader_data()},
+\code{get_triangulation()} and \code{get_shader_wrapper_list()}: they compute the
+data upstream's renderer sends to the GPU (see \code{\link[=ShaderWrapper]{ShaderWrapper()}}), from
+manimR's cubic curves, which they split into upstream's quadratic ones.
+manimR draws with grid and has no OpenGL window or camera.
+\code{OpenGLArrowTip()} is, as upstream, an \code{OpenGLTriangle} pointing right.
 }
 \details{
 Three classes have no Cairo counterpart:

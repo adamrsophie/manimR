@@ -33,6 +33,9 @@
   `OpenGLVGroup()`, `OpenGLSurface()` and the rest) are subclasses of their
   Cairo counterparts, so code written for that renderer runs unchanged;
   `OpenGLSurfaceMesh()` and `OpenGLTexturedSurface()` are ported to grid.
+  They also have the methods and argument names of upstream's OpenGL
+  classes, including the CPU side of its GPU pipeline: shader data,
+  triangulation, uniforms and `ShaderWrapper()`, with upstream's GLSL files.
 * Images are drawn through the homography of their corners with Pillow's
   nearest, bilinear and bicubic filters, and an image seen edge on is
   skipped as upstream.

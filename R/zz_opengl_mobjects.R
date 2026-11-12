@@ -10,8 +10,13 @@
 #' each of them is a subclass of its Cairo counterpart that takes the same
 #' arguments: `OpenGLCircle()` is a [Circle()] and `inherits(x,
 #' "OpenGLCircle")` is `TRUE`. Code written for the OpenGL renderer runs
-#' unchanged; the GPU pipeline itself (shaders, the OpenGL camera and window)
-#' is not part of manimR.
+#' unchanged. The classes also have the methods of upstream's OpenGL
+#' mobjects, such as `fix_in_frame()`, `set_gloss()`, `get_shader_data()`,
+#' `get_triangulation()` and `get_shader_wrapper_list()`: they compute the
+#' data upstream's renderer sends to the GPU (see [ShaderWrapper()]), from
+#' manimR's cubic curves, which they split into upstream's quadratic ones.
+#' manimR draws with grid and has no OpenGL window or camera.
+#' `OpenGLArrowTip()` is, as upstream, an `OpenGLTriangle` pointing right.
 #'
 #' Three classes have no Cairo counterpart:
 #'
@@ -107,7 +112,7 @@ OPENGL_MOBJECT_CLASSES <- c(
   OpenGLSector = "Sector", OpenGLAnnulus = "Annulus", OpenGLLine = "Line", OpenGLDashedLine = "DashedLine",
   OpenGLTangentLine = "TangentLine", OpenGLElbow = "Elbow", OpenGLArrow = "Arrow", OpenGLVector = "Vector",
   OpenGLDoubleArrow = "DoubleArrow", OpenGLCubicBezier = "CubicBezier", OpenGLPolygon = "Polygon",
-  OpenGLRegularPolygon = "RegularPolygon", OpenGLTriangle = "Triangle", OpenGLArrowTip = "ArrowTip",
+  OpenGLRegularPolygon = "RegularPolygon", OpenGLTriangle = "Triangle",
   OpenGLRectangle = "Rectangle", OpenGLSquare = "Square", OpenGLRoundedRectangle = "RoundedRectangle",
   OpenGLImageMobject = "ImageMobject", OpenGLSurface = "Surface"
 )
@@ -261,6 +266,96 @@ OpenGLSurfaceGroupClass <- R6::R6Class("OpenGLSurfaceGroup", inherit = OpenGLSur
 )
 OpenGLSurfaceGroup <- build_constructor(OpenGLSurfaceGroupClass)
 OpenGLTexturedSurface <- build_constructor(OpenGLTexturedSurfaceClass)
+
+# Upstream's OpenGLArrowTip is a triangle pointing right, its tip the first
+# point; `angle` is accepted and not used, as upstream.
+OpenGLArrowTipClass <- R6::R6Class("OpenGLArrowTip", inherit = OpenGLTriangleClass, lock_objects = FALSE,
+  public = list(
+    initialize = function(fill_opacity = 1, fill_color = WHITE, stroke_width = 0, width = DEFAULT_ARROW_TIP_WIDTH,
+                          length = DEFAULT_ARROW_TIP_LENGTH, angle = 0, ...) {
+      super$initialize(start_angle = 0, fill_opacity = fill_opacity, fill_color = fill_color,
+                       stroke_width = stroke_width, ...)
+      self$stretch_to_fit_width(width)
+      self$stretch_to_fit_height(length)
+      invisible(self)
+    },
+    get_base = function() self$point_from_proportion(0.5),
+    get_tip_point = function() self$points[1, ],
+    get_vector = function() self$get_tip_point() - self$get_base(),
+    get_angle = function() angle_of_vector(self$get_vector()),
+    get_length = function() sqrt(sum(self$get_vector()^2))
+  )
+)
+OpenGLArrowTip <- build_constructor(OpenGLArrowTipClass)
+
+# Names of the members of an R6 class generator and of its ancestors.
+r6_member_names <- function(gen) {
+  out <- character()
+  while (!is.null(gen)) {
+    out <- c(out, names(gen$public_methods), names(gen$public_fields), names(gen$active))
+    gen <- gen$get_inherit()
+  }
+  unique(out)
+}
+
+r6_inherits <- function(gen, classname) {
+  while (!is.null(gen)) {
+    if (identical(gen$classname, classname)) return(TRUE)
+    gen <- gen$get_inherit()
+  }
+  FALSE
+}
+
+# Member lists merged in order, later lists replacing earlier entries.
+opengl_merge <- function(specs) {
+  merged <- list(public = list(), active = list(), private = list())
+  for (spec in specs) {
+    for (type in names(merged)) merged[[type]][names(spec[[type]])] <- spec[[type]]
+  }
+  merged
+}
+
+# Adds the members of upstream's OpenGL classes (zz_opengl_methods.R) to a
+# generator. `ancestry` lists the member lists of its upstream ancestors,
+# root first; a member is added only when the class and its Cairo parents
+# have none of that name. `signatures` (upstream's OpenGL arguments) replace
+# inherited methods but not the class's own, and `own` lists the class's own
+# members, which replace everything.
+opengl_add_members <- function(gen, ancestry = list(), signatures = list(), own = NULL) {
+  have <- r6_member_names(gen)
+  defined <- c(names(gen$public_methods), names(gen$public_fields), names(gen$active))
+  add <- function(merged, keep) {
+    for (type in names(merged)) {
+      for (name in names(merged[[type]])) {
+        if (type == "private" || !name %in% keep) gen$set(type, name, merged[[type]][[name]], overwrite = TRUE)
+      }
+    }
+  }
+  add(opengl_merge(ancestry), have)
+  add(opengl_merge(signatures), defined)
+  add(opengl_merge(list(own)), character())
+  invisible(gen)
+}
+
+local({
+  ns <- topenv()
+  vmobject <- list(OPENGL_MOBJECT_METHODS, OPENGL_VMOBJECT_METHODS)
+  vmobject_signatures <- list(OPENGL_MOBJECT_SIGNATURES, OPENGL_VMOBJECT_SIGNATURES)
+  for (name in names(OPENGL_MOBJECT_CLASSES)) {
+    gen <- get(paste0(name, "Class"), envir = ns)
+    # manimR's surfaces are VMobjects; upstream's OpenGLSurface is not.
+    is_vmobject <- r6_inherits(gen, "VMobject") && name != "OpenGLSurface"
+    ancestry <- if (name == "OpenGLSurface") list(OPENGL_MOBJECT_METHODS, OPENGL_SURFACE_METHODS)
+                else if (is_vmobject) vmobject
+                else list(OPENGL_MOBJECT_METHODS)
+    signatures <- if (is_vmobject) vmobject_signatures else list(OPENGL_MOBJECT_SIGNATURES)
+    opengl_add_members(gen, ancestry, signatures, OPENGL_CLASS_METHODS[[name]])
+  }
+  opengl_add_members(OpenGLSurfaceMeshClass, vmobject, vmobject_signatures)
+  opengl_add_members(OpenGLTexturedSurfaceClass, own = OPENGL_TEXTURED_SURFACE_METHODS)
+  opengl_add_members(OpenGLPMobjectClass, list(OPENGL_MOBJECT_METHODS), list(OPENGL_MOBJECT_SIGNATURES),
+                     OPENGL_PMOBJECT_METHODS)
+})
 
 #' Base classes for the active renderer
 #'
