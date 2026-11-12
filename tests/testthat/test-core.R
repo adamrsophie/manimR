@@ -120,6 +120,7 @@ test_that("ConvexHull accepts a single point matrix", {
 })
 
 test_that("fast_clone matches R6 clone", {
+  skip_on_cran() # slow
   for (o in list(Circle(), Axes(), Transform(Square(), Circle()))) {
     a <- o$clone(deep = FALSE)
     b <- fast_clone(o)

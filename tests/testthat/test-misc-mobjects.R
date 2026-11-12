@@ -14,7 +14,7 @@ misc_bbox <- function(m) c(m$get_left()[1], m$get_right()[1], m$get_bottom()[2],
 # Skips without LaTeX; otherwise sends LaTeX output to a temporary media
 # directory until the calling test ends.
 skip_if_no_latex <- function(env = parent.frame()) {
-  skip_if(Sys.which("latex") == "" || Sys.which("dvisvgm") == "", "LaTeX or dvisvgm not available")
+  skip_if_not(latex_works(), "LaTeX or dvisvgm not available")
   skip_on_cran()
   old <- manim_config(media_dir = file.path(tempdir(), "manimR-test-media"))
   do.call(on.exit, list(substitute(.manim$config <- old, list(old = old)), add = TRUE), envir = env)
@@ -177,6 +177,7 @@ test_that("StreamLines integrate the field like upstream", {
 })
 
 test_that("copies of flowing StreamLines animate their own lines", {
+  skip_on_cran() # slow
   func <- function(pos) ((pos[1] * UR + pos[2] * LEFT) - pos) / 3
   sl <- StreamLines(func, x_range = c(-1, 1, 1), y_range = c(-1, 1, 1), noise_factor = 0, virtual_time = 1,
                     max_anchors_per_line = 5)
@@ -288,6 +289,7 @@ test_that("kamada_kawai layout matches networkx", {
 })
 
 test_that("planar layout matches networkx and draws no crossings", {
+  skip_on_cran() # slow
   skip_if_not_installed("jsonlite")
   cases <- jsonlite::fromJSON(test_path("fixtures", "planar_oracle.json"), simplifyVector = FALSE)
   # Number of pairs of edges without a common vertex whose segments cross.
@@ -528,6 +530,7 @@ test_that("Matrix layout matches upstream", {
 # Labels --------------------------------------------------------------------------
 
 test_that("polylabel finds the pole of inaccessibility like upstream", {
+  skip_on_cran() # slow
   o <- misc_oracle()
   ring1 <- rbind(c(-3.8, -2.4), c(-2.4, -2.5), c(-1.3, -1.6), c(-0.2, -1.7), c(1.7, -2.5), c(2.9, -2.6),
                  c(3.5, -1.5), c(4.9, -1.4), c(4.5, 0.2), c(4.7, 1.6), c(3.5, 2.4), c(1.1, 2.5), c(-0.1, 0.9),

@@ -216,6 +216,7 @@ test_that("scenes and renderers take upstream's arguments", {
 })
 
 test_that("ImplicitFunction traces the curve as upstream", {
+  skip_on_cran() # slow
   o <- extras_oracle()$implicit
   small <- list(x_range = c(-2, 2), y_range = c(-2, 2), min_depth = 3, max_quads = 100)
   circle <- function(x, y) x^2 + y^2 - 2
@@ -241,6 +242,7 @@ test_that("ImplicitFunction traces the curve as upstream", {
 })
 
 test_that("convex hulls have upstream's vertices and triangular faces", {
+  skip_on_cran() # slow
   o <- extras_oracle()$hulls
   rows <- function(m) m[do.call(order, as.data.frame(m)), , drop = FALSE]
   cloud <- ex_mat(o$cloud)

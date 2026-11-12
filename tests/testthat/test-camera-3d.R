@@ -154,6 +154,7 @@ test_that("set_fill_by_value colors faces by a coordinate", {
 })
 
 test_that("Cube, Prism, Cone, Cylinder, Line3D and Arrow3D are built right", {
+  skip_on_cran() # slow
   cube <- Cube(side_length = 3)
   expect_length(cube$submobjects, 6)
   expect_equal(c(cube$width, cube$height, cube$depth), c(3, 3, 3), tolerance = 1e-9)
@@ -179,6 +180,7 @@ test_that("Cube, Prism, Cone, Cylinder, Line3D and Arrow3D are built right", {
 })
 
 test_that("polyhedra have the right faces, edges and vertices", {
+  skip_on_cran() # slow
   tet <- Tetrahedron(edge_length = 2)
   expect_length(tet$faces$submobjects, 4)
   # As upstream, an edge shared by two faces that run along it in opposite
@@ -240,6 +242,7 @@ expect_oracle_family <- function(mob, ref, tol = 1e-8) {
 }
 
 test_that("3D mobjects match upstream points", {
+  skip_on_cran() # slow
   o <- read_oracle_3d()
   expect_oracle_family(Sphere(center = c(1, 0, 0), radius = 1.5, resolution = c(6, 4)), o$sphere)
   expect_oracle_family(Cube(side_length = 3), o$cube)
@@ -255,6 +258,7 @@ test_that("3D mobjects match upstream points", {
 })
 
 test_that("polyhedra match upstream faces and vertices", {
+  skip_on_cran() # slow
   o <- read_oracle_3d()
   solids <- list(tetrahedron = Tetrahedron, octahedron = Octahedron, icosahedron = Icosahedron,
                  dodecahedron = Dodecahedron)

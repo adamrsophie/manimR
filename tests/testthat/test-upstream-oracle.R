@@ -97,7 +97,7 @@ test_that("positioning matches upstream", {
 })
 
 test_that("LaTeX output matches upstream", {
-  skip_if(!nzchar(Sys.which("latex")) || !nzchar(Sys.which("dvisvgm")), "LaTeX not available")
+  skip_if_not(latex_works(), "LaTeX not available")
   skip_on_cran()
   o <- read_oracle()
   old <- manim_config(media_dir = file.path(tempdir(), "manimR-test-media"))
@@ -148,7 +148,7 @@ test_that("animations match upstream at intermediate alphas", {
 })
 
 test_that("Write on MathTex matches upstream", {
-  skip_if(!nzchar(Sys.which("latex")) || !nzchar(Sys.which("dvisvgm")), "LaTeX not available")
+  skip_if_not(latex_works(), "LaTeX not available")
   skip_on_cran()
   o <- read_oracle()
   old <- manim_config(media_dir = file.path(tempdir(), "manimR-test-media"))

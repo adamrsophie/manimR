@@ -332,7 +332,7 @@ test_that("scene_frame() closes its device when drawing fails", {
 })
 
 test_that("no_latex_cleanup keeps LaTeX intermediates", {
-  skip_if_not(nzchar(Sys.which("latex")) && nzchar(Sys.which("dvisvgm")))
+  skip_if_not(latex_works())
   skip_on_cran()
   td <- withr_tempdir()
   with_manim_config(list(tex_dir = td, no_latex_cleanup = TRUE), tex_to_svg_file("x^2+41", environment = "align*"))

@@ -28,8 +28,9 @@
   directory by default, as the Python library does, and only when the user
   calls it. No example, test or vignette uses this default: they write below
   `tempdir()`.
-* Tests that call external programs (LaTeX, 'dvisvgm', 'ffmpeg', 'typst') are
-  skipped on CRAN.
+* Tests that call external programs (LaTeX, 'dvisvgm', 'ffmpeg', 'typst') and
+  the ten slowest tests are skipped on CRAN. The vignette chunks that call
+  LaTeX or 'ffmpeg' are not evaluated on CRAN.
 * Only the introduction is shipped as a vignette. The eleven longer articles
   render many scenes and are published on the package website, to keep the
   check time and the size of the package small.

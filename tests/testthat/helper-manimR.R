@@ -8,3 +8,19 @@ withr_tempdir <- function(env = parent.frame()) {
 
 # Keep LaTeX caches and renders out of the package directory during tests.
 manim_config(media_dir = file.path(tempdir(), "manimR-tests"))
+
+# TRUE when LaTeX and dvisvgm are installed and compile the default template;
+# an installation can have both programs and lack the template's packages.
+latex_works <- local({
+  ok <- NULL
+  function() {
+    if (is.null(ok)) {
+      ok <<- nzchar(Sys.which("latex")) && nzchar(Sys.which("dvisvgm")) &&
+        tryCatch({
+          MathTex("x")
+          TRUE
+        }, error = function(e) FALSE)
+    }
+    ok
+  }
+})

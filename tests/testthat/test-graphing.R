@@ -1,4 +1,4 @@
-has_latex <- function() nzchar(Sys.which("latex")) && nzchar(Sys.which("dvisvgm"))
+has_latex <- function() latex_works()
 
 test_that("np_arange follows numpy semantics", {
   expect_equal(np_arange(0, 1, 0.25), c(0, 0.25, 0.5, 0.75))
@@ -432,7 +432,7 @@ test_that("labels match upstream placement", {
 })
 
 test_that("SampleSpace makes braces with labels for its parts", {
-  skip_if_not(nzchar(Sys.which("latex")) && nzchar(Sys.which("dvisvgm")))
+  skip_if_not(latex_works())
   skip_on_cran()
   space <- SampleSpace(width = 6, height = 4)
   space$divide_horizontally(0.3)

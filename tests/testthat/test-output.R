@@ -195,7 +195,7 @@ test_that("VDict adds, removes and replaces by key", {
   expect_true(inherits(d$get("b"), "Triangle"))
   expect_length(d$submobjects, 1)
   expect_error(VDict(list(a = Mobject())), "VMobject")
-  skip_if_not(nzchar(Sys.which("latex")) && nzchar(Sys.which("dvisvgm")))
+  skip_if_not(latex_works())
   skip_on_cran()
   k <- VDict(list(s = Square()), show_keys = TRUE)
   expect_true(any(vapply(k[["s"]]$submobjects, function(m) inherits(m, "Tex"), NA)))

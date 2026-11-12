@@ -14,7 +14,7 @@ util_mat <- function(x) {
 }
 
 util_skip_if_no_latex <- function(env = parent.frame()) {
-  skip_if(Sys.which("latex") == "" || Sys.which("dvisvgm") == "", "LaTeX or dvisvgm not available")
+  skip_if_not(latex_works(), "LaTeX or dvisvgm not available")
   skip_on_cran()
   old <- manim_config(media_dir = file.path(tempdir(), "manimR-test-utilities"))
   do.call(on.exit, list(substitute(.manim$config <- old, list(old = old)), add = TRUE), envir = env)

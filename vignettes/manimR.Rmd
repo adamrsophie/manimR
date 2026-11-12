@@ -18,13 +18,21 @@ knitr::opts_chunk$set(format = if (in_pkgdown) "auto" else "png", quality = "l")
 # Renders made outside manim chunks, and LaTeX caches, go to a temporary
 # directory instead of the working directory.
 manim_config(media_dir = file.path(tempdir(), "manimR-media"))
-has_latex <- nzchar(Sys.which("latex")) && nzchar(Sys.which("dvisvgm"))
-has_typst <- nzchar(Sys.which("typst"))
+# Chunks that call LaTeX or ffmpeg run on the website and in development
+# checks; elsewhere, as on CRAN, they show their code without its result.
+external_ok <- in_pkgdown || identical(Sys.getenv("NOT_CRAN"), "true")
+# LaTeX counts only when it compiles a formula: an installation can lack
+# the packages of the default template.
+has_latex <- external_ok && nzchar(Sys.which("latex")) && nzchar(Sys.which("dvisvgm")) &&
+  tryCatch({
+    MathTex("x")
+    TRUE
+  }, error = function(e) FALSE)
 ```
 
 ```{r has-ffmpeg, include = FALSE}
 # Chunks that encode video need ffmpeg.
-has_ffmpeg <- nzchar(Sys.which("ffmpeg"))
+has_ffmpeg <- external_ok && nzchar(Sys.which("ffmpeg"))
 ```
 
 manimR is a native R port of [Manim Community](https://www.manim.community/),
