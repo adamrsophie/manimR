@@ -68,8 +68,19 @@
   upstream’s OpenGL classes, including the CPU side of its GPU pipeline:
   shader data, triangulation, uniforms and
   [`ShaderWrapper()`](https://adamrsophie.github.io/manimR/reference/ShaderWrapper.md),
-  with upstream’s GLSL files. Where an OpenGL class differs from its
-  Cairo counterpart, it follows upstream’s OpenGL class:
+  with upstream’s GLSL files. The CPU side of upstream’s OpenGL renderer
+  is ported too: the camera
+  ([`OpenGLCamera()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)),
+  trees of 3D objects and meshes
+  ([`Object3D()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md),
+  [`Mesh()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)),
+  [`Shader()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md),
+  [`triangulate_mobject()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)
+  and
+  [`build_matrix_lists()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md);
+  drawing a mesh needs an OpenGL context and stops with a message. Where
+  an OpenGL class differs from its Cairo counterpart, it follows
+  upstream’s OpenGL class:
   [`OpenGLArrow()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
   is a filled shape,
   [`OpenGLLine()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)

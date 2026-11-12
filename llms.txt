@@ -928,6 +928,17 @@ The base classes, groups and indexing.
   [`get_colormap_code()`](https://adamrsophie.github.io/manimR/reference/ShaderWrapper.md)
   [`ShaderWrapper()`](https://adamrsophie.github.io/manimR/reference/ShaderWrapper.md)
   : Shader wrappers
+- [`OpenGLCamera()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)
+  [`Object3D()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)
+  [`Mesh()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)
+  [`Shader()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)
+  [`FullScreenQuad()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)
+  [`filter_attributes()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)
+  [`build_matrix_lists()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)
+  [`triangulate_mobject()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)
+  [`affects_shader_info_id()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)
+  [`triggers_refreshed_triangulation()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)
+  : The CPU side of upstream's OpenGL renderer
 - [`get_mobject_class()`](https://adamrsophie.github.io/manimR/reference/get_mobject_class.md)
   [`get_vectorized_mobject_class()`](https://adamrsophie.github.io/manimR/reference/get_mobject_class.md)
   [`get_point_mobject_class()`](https://adamrsophie.github.io/manimR/reference/get_mobject_class.md)

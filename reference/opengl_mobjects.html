@@ -175,6 +175,10 @@ along <code>colorscale_axis</code> (0 for x, as upstream). The default
 upstream's 101: manimR draws each face with grid, not on a GPU.</p></li>
 <li><p><code>OpenGLImageMobject(filename_or_array, width, height, ...)</code> is 4 units
 high unless <code>width</code> or <code>height</code> is given.</p></li>
+<li><p><code>OpenGLMobject(color, opacity, dim, gloss, shadow, ...)</code> and
+<code>OpenGLVMobject(fill_color, fill_opacity, stroke_color, stroke_opacity, stroke_width, draw_stroke_behind_fill, ...)</code> take upstream's arguments
+in upstream's order; <code>n_points_per_curve</code> is taken but not used, since
+manimR's curves are cubic.</p></li>
 </ul><p>Three classes have no Cairo counterpart:</p><ul><li><p><code>OpenGLSurfaceGroup(...)</code> is a surface without faces of its own that
 holds the surfaces it is given.</p></li>
 <li><p><code>OpenGLSurfaceMesh(uv_surface)</code> is a <code><a href="VGroupClass.html">VGroup()</a></code> of curves along the
