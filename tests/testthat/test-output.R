@@ -437,7 +437,7 @@ test_that("the default media folder is in the session's temporary directory", {
 
 test_that("the background job addin renders into this session's media folder", {
   skip_if_not_installed("rstudioapi")
-  scene_file <- withr::local_tempfile(fileext = ".R")
+  scene_file <- file.path(withr_tempdir(), "scene.R")
   writeLines("Sq <- R6::R6Class('Sq', inherit = manimR::SceneClass)", scene_file)
   script <- NULL
   local_mocked_bindings(

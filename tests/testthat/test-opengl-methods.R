@@ -56,7 +56,9 @@ test_that("OpenGL VMobject methods follow upstream", {
   sq$subdivide_sharp_curves(angle_threshold = 1e-3)
   expect_equal(nrow(sq$points), n)
   a <- OpenGLArc(angle = PI / 2)
-  expect_equal(a$get_start_angle(), 0, tolerance = 1e-9)
+  # As upstream, the angle is taken modulo TAU, so float noise below 0 gives TAU.
+  start_angle <- a$get_start_angle()
+  expect_equal(min(start_angle, TAU - start_angle), 0, tolerance = 1e-9)
   expect_equal(a$get_stop_angle(), PI / 2, tolerance = 1e-9)
   expect_equal(a$create_quadratic_bezier_points(PI / 2, 0, 2), oracle$arc_quadratic_points, tolerance = 1e-9)
   p <- OpenGLPoint(location = c(1, 2, 0))
@@ -107,6 +109,11 @@ test_that("shader wrappers read upstream's GLSL files", {
   expect_equal(c(nchar(get_shader_code_from_file("surface/vert.glsl")),
                  nchar(get_shader_code_from_file("quadratic_bezier_fill/frag.glsl"))), oracle$shader_code_lengths)
   expect_null(get_shader_code_from_file("no_such_folder/vert.glsl"))
+  # A file with CRLF line ends, as a checkout on Windows can have, reads the same.
+  crlf <- file.path(withr_tempdir(), "vert.glsl")
+  lf <- gsub("\r\n", "\n", rawToChar(readBin(file.path(get_shader_dir(), "surface/vert.glsl"), "raw", 1e5)))
+  writeBin(charToRaw(gsub("\n", "\r\n", lf)), crlf)
+  expect_identical(get_shader_code_from_file(crlf), get_shader_code_from_file("surface/vert.glsl"))
   expect_equal(get_colormap_code(rbind(c(1, 0, 0), c(0, 0.5, 1))), oracle$colormap_code)
   expect_error(find_file("nope.glsl", tempdir()), "not Found")
   w <- ShaderWrapper(OpenGLMobject()$get_shader_data(), shader_folder = "surface")

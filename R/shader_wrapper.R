@@ -63,7 +63,9 @@ get_shader_code_from_file <- function(filename) {
   if (!is.null(cache[[key]])) return(cache[[key]])
   path <- tryCatch(find_file(key, c(get_shader_dir(), "/")), error = function(e) NULL)
   if (is.null(path) || dir.exists(path)) return(NULL)
-  result <- rawToChar(readBin(path, "raw", file.size(path)))
+  # As Python's text mode, which upstream reads with: "\r\n" and "\r" end lines
+  # as "\n" (a checkout on Windows can have CRLF line ends).
+  result <- gsub("\r\n?", "\n", rawToChar(readBin(path, "raw", file.size(path))))
   for (line in regmatches(result, gregexpr("(?m)^#include \\.\\./include/.*\\.glsl$", result, perl = TRUE))[[1]]) {
     inserted <- get_shader_code_from_file(file.path("include", sub("#include ../include/", "", line, fixed = TRUE)))
     if (is.null(inserted)) return(NULL)
