@@ -30,12 +30,17 @@
   tests frames with testthat, and `GraphClass$from_igraph()` imports igraph
   graphs.
 * The mobject classes of upstream's OpenGL renderer (`OpenGLCircle()`,
-  `OpenGLVGroup()`, `OpenGLSurface()` and the rest) are subclasses of their
-  Cairo counterparts, so code written for that renderer runs unchanged;
+  `OpenGLVGroup()`, `OpenGLSurface()` and the rest) build on their Cairo
+  counterparts, so code written for that renderer runs unchanged;
   `OpenGLSurfaceMesh()` and `OpenGLTexturedSurface()` are ported to grid.
   They also have the methods and argument names of upstream's OpenGL
   classes, including the CPU side of its GPU pipeline: shader data,
   triangulation, uniforms and `ShaderWrapper()`, with upstream's GLSL files.
+  Where an OpenGL class differs from its Cairo counterpart, it follows
+  upstream's OpenGL class: `OpenGLArrow()` is a filled shape,
+  `OpenGLLine()` applies `buff` twice, arcs are made of quadratic pieces,
+  and `OpenGLArc()`, `OpenGLCircle()`, `OpenGLRectangle()` and others take
+  upstream's arguments in upstream's order.
 * Images are drawn through the homography of their corners with Pillow's
   nearest, bilinear and bicubic filters, and an image seen edge on is
   skipped as upstream.

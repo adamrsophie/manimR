@@ -1,6 +1,17 @@
 # Methods of upstream's OpenGL mobject classes. Values read from `oracle`
 # are written by upstream manim 0.22.1 through data-raw/opengl_methods_oracle.py.
 oracle <- jsonlite::fromJSON(test_path("fixtures", "opengl_methods_oracle.json"), simplifyVector = TRUE)
+# Upstream's quadratic pieces of manimR's cubic curves, which are raised from
+# them: the handle is recovered from the first cubic handle.
+as_quadratic <- function(p) {
+  i <- seq(1, nrow(p), by = 4)
+  k <- seq_along(i)
+  q <- matrix(0, 3 * length(i), 3)
+  q[3 * k - 2, ] <- p[i, ]
+  q[3 * k - 1, ] <- p[i, ] + 1.5 * (p[i + 1, ] - p[i, ])
+  q[3 * k, ] <- p[i + 3, ]
+  q
+}
 
 test_that("OpenGLArrowTip is a triangle pointing right, as upstream", {
   tip <- OpenGLArrowTip()
@@ -224,4 +235,60 @@ test_that("the Cairo background stroke and upstream's stroke behind the fill sta
   expect_true(osq$draw_stroke_behind_fill)
   osq$set_opacity(0.5)
   expect_equal(osq$stroke_width, 3)
+})
+
+test_that("OpenGL lines apply buff twice and arrows are upstream's filled shapes", {
+  o <- oracle$lines
+  l <- OpenGLLine(2 * LEFT, 2 * RIGHT, buff = 0.5)
+  expect_equal(rbind(l$get_start(), l$get_end()), rbind(o$buff$start, o$buff$end), tolerance = 1e-9)
+  expect_equal(as_quadratic(OpenGLLine(LEFT, RIGHT, path_arc = PI / 3)$points), o$arc$points, tolerance = 1e-9)
+  dl <- OpenGLDashedLine(2 * LEFT, 2 * RIGHT, buff = 0.5)
+  expect_equal(rbind(dl$get_start(), dl$get_end()), rbind(o$dashed_buff$start, o$dashed_buff$end), tolerance = 1e-9)
+  scaled <- OpenGLArrow()
+  scaled$scale(2)
+  thick <- OpenGLArrow()
+  thick$set_thickness(0.2)
+  arrows <- list(default = OpenGLArrow(), thick_tilted = OpenGLArrow(LEFT, 2 * UP + RIGHT, thickness = 0.1),
+                 short = OpenGLArrow(ORIGIN, 0.2 * RIGHT), arc = OpenGLArrow(ORIGIN, RIGHT, path_arc = PI / 2),
+                 negative_arc = OpenGLArrow(ORIGIN, RIGHT, path_arc = -PI / 3),
+                 space = OpenGLArrow(ORIGIN, c(1, 1, 1)), vector = OpenGLVector(c(1, 2)), scaled = scaled,
+                 thick = thick)
+  for (k in names(arrows)) {
+    expect_equal(as_quadratic(arrows[[k]]$points), oracle$arrows[[k]]$points, tolerance = 1e-9, label = k)
+    expect_equal(rbind(arrows[[k]]$get_start(), arrows[[k]]$get_end()),
+                 rbind(oracle$arrows[[k]]$start, oracle$arrows[[k]]$end), tolerance = 1e-9, label = k)
+  }
+  a <- arrows$default
+  expect_s3_class(a, "OpenGLLine")
+  expect_false(inherits(a, "Arrow"))
+  expect_equal(a$get_fill_color(), GREY_A, ignore_attr = TRUE)
+  expect_equal(a$get_fill_opacity(), 1)
+  d <- OpenGLDoubleArrow(LEFT, RIGHT)
+  expect_equal(as_quadratic(d$points), oracle$double_arrow$points, tolerance = 1e-9)
+  expect_length(d$submobjects, oracle$double_arrow$n_sub)
+  expect_equal(as_quadratic(d$start_tip$points), oracle$double_arrow$start_tip, tolerance = 1e-9)
+})
+
+test_that("OpenGL shapes take upstream's arguments and points", {
+  shapes <- list(arc = OpenGLArc(0, PI), arc_args = OpenGLArc(PI / 4, PI / 2, 2, 4, RIGHT),
+                 circle = OpenGLCircle(BLUE), dot = OpenGLDot(RIGHT), ellipse = OpenGLEllipse(4, 2),
+                 arc_between = OpenGLArcBetweenPoints(LEFT, RIGHT), annular_sector = OpenGLAnnularSector(),
+                 sector = OpenGLSector(2), sector_inner = OpenGLSector(2, 1), annulus = OpenGLAnnulus(),
+                 bezier = OpenGLCubicBezier(LEFT, UP, UP + RIGHT, DOWN), pentagon = OpenGLRegularPolygon(5),
+                 hexagon_turned = OpenGLRegularPolygon(6, PI / 6))
+  # Upstream stores a cubic Bezier as its two piece quadratic approximation;
+  # manimR keeps the cubic itself.
+  b <- shapes$bezier$points
+  expect_equal(b, rbind(LEFT, UP, UP + RIGHT, DOWN), ignore_attr = TRUE)
+  expect_equal(get_quadratic_approximation_of_cubic(b[1, ], b[2, ], b[3, ], b[4, ]), oracle$shapes$bezier,
+               tolerance = 1e-9)
+  for (k in setdiff(names(shapes), "bezier")) {
+    expect_equal(as_quadratic(shapes[[k]]$points), oracle$shapes[[k]], tolerance = 1e-9, label = k)
+  }
+  expect_equal(toupper(OpenGLCircle(BLUE)$get_color()), oracle$circle_color)
+  r <- OpenGLRectangle(WHITE, 4, 2)
+  expect_equal(c(r$get_width(), r$get_height()), oracle$rectangle_size)
+  p <- OpenGLPoint(RIGHT)
+  expect_equal(p$get_location(), oracle$point$location)
+  expect_equal(c(p$get_width(), p$get_height()), c(oracle$point$width, oracle$point$height))
 })

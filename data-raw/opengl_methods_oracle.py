@@ -6,10 +6,13 @@ import json, sys, tempfile
 from pathlib import Path
 import numpy as np
 from PIL import Image
-from manim import LEFT, ORIGIN, RIGHT, PI
+from manim import BLUE, DOWN, LEFT, ORIGIN, RIGHT, UP, WHITE, PI
 from manim.mobject.opengl.opengl_geometry import (
-    OpenGLArc, OpenGLArrowTip, OpenGLCircle, OpenGLDashedLine, OpenGLSquare,
+    OpenGLAnnularSector, OpenGLAnnulus, OpenGLArc, OpenGLArcBetweenPoints, OpenGLArrow, OpenGLArrowTip,
+    OpenGLCircle, OpenGLCubicBezier, OpenGLDashedLine, OpenGLDot, OpenGLDoubleArrow, OpenGLEllipse, OpenGLLine,
+    OpenGLRectangle, OpenGLRegularPolygon, OpenGLSector, OpenGLSquare, OpenGLVector,
 )
+from manim.mobject.opengl.opengl_mobject import OpenGLPoint
 from manim.mobject.opengl.opengl_surface import OpenGLSurface, OpenGLTexturedSurface
 from manim.mobject.opengl.opengl_vectorized_mobject import OpenGLVMobject
 from manim.renderer.shader_wrapper import get_colormap_code, get_shader_code_from_file
@@ -49,5 +52,40 @@ ts = OpenGLTexturedSurface(s2, img, resolution=(5, 5))
 tp = ts.copy()
 tp.pointwise_become_partial(ts, 0, 0.5)
 out["textured_partial_im_coords"] = tp.im_coords[:6].tolist()
+
+# Lines apply buff twice; arrows are filled shapes of quadratic pieces.
+lines = {"buff": OpenGLLine(2 * LEFT, 2 * RIGHT, buff=0.5),
+         "arc": OpenGLLine(LEFT, RIGHT, path_arc=PI / 3),
+         "dashed_buff": OpenGLDashedLine(2 * LEFT, 2 * RIGHT, buff=0.5)}
+out["lines"] = {k: {"start": m.get_start().tolist(), "end": m.get_end().tolist(), "n_points": len(m.points)}
+                for k, m in lines.items()}
+out["lines"]["arc"]["points"] = lines["arc"].points.tolist()
+scaled = OpenGLArrow()
+scaled.scale(2)
+thick = OpenGLArrow()
+thick.set_thickness(0.2)
+arrows = {"default": OpenGLArrow(), "thick_tilted": OpenGLArrow(LEFT, 2 * UP + RIGHT, thickness=0.1),
+          "short": OpenGLArrow(ORIGIN, 0.2 * RIGHT), "arc": OpenGLArrow(ORIGIN, RIGHT, path_arc=PI / 2),
+          "negative_arc": OpenGLArrow(ORIGIN, RIGHT, path_arc=-PI / 3), "space": OpenGLArrow(ORIGIN, np.array([1, 1, 1])),
+          "vector": OpenGLVector([1, 2]), "scaled": scaled, "thick": thick}
+out["arrows"] = {k: {"points": m.points.tolist(), "start": m.get_start().tolist(), "end": m.get_end().tolist()}
+                 for k, m in arrows.items()}
+d = OpenGLDoubleArrow(LEFT, RIGHT)
+out["double_arrow"] = {"points": d.points.tolist(), "start_tip": d.start_tip.points.tolist(), "n_sub": len(d.submobjects)}
+
+# Constructors whose arguments differ from the Cairo classes, and arcs of
+# quadratic pieces.
+shapes = {"arc": OpenGLArc(0, PI), "arc_args": OpenGLArc(PI / 4, PI / 2, 2, 4, RIGHT),
+          "circle": OpenGLCircle(BLUE), "dot": OpenGLDot(RIGHT), "ellipse": OpenGLEllipse(4, 2),
+          "arc_between": OpenGLArcBetweenPoints(LEFT, RIGHT), "annular_sector": OpenGLAnnularSector(),
+          "sector": OpenGLSector(2), "sector_inner": OpenGLSector(2, 1), "annulus": OpenGLAnnulus(),
+          "bezier": OpenGLCubicBezier(LEFT, UP, UP + RIGHT, DOWN), "pentagon": OpenGLRegularPolygon(5),
+          "hexagon_turned": OpenGLRegularPolygon(6, PI / 6)}
+out["shapes"] = {k: m.points.tolist() for k, m in shapes.items()}
+out["circle_color"] = OpenGLCircle(BLUE).get_color().to_hex()
+r = OpenGLRectangle(WHITE, 4, 2)
+out["rectangle_size"] = [r.width, r.height]
+p = OpenGLPoint(RIGHT)
+out["point"] = {"location": p.get_location().tolist(), "width": p.get_width(), "height": p.get_height()}
 
 json.dump(out, open(sys.argv[1], "w"), indent=1)

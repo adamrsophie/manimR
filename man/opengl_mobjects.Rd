@@ -110,17 +110,38 @@ these functions call.
 \description{
 Upstream's OpenGL renderer has its own mobject classes, such as
 \code{OpenGLCircle} or \code{OpenGLVGroup}. manimR draws every mobject with grid, so
-each of them is a subclass of its Cairo counterpart that takes the same
-arguments: \code{OpenGLCircle()} is a \code{\link[=Circle]{Circle()}} and \code{inherits(x, "OpenGLCircle")} is \code{TRUE}. Code written for the OpenGL renderer runs
+each of them is a subclass of its Cairo counterpart: \code{OpenGLCircle()} is
+a \code{\link[=Circle]{Circle()}} and \code{inherits(x, "OpenGLCircle")} is \code{TRUE}. Code written for the OpenGL renderer runs
 unchanged. The classes also have the methods of upstream's OpenGL
 mobjects, such as \code{fix_in_frame()}, \code{set_gloss()}, \code{get_shader_data()},
 \code{get_triangulation()} and \code{get_shader_wrapper_list()}: they compute the
 data upstream's renderer sends to the GPU (see \code{\link[=ShaderWrapper]{ShaderWrapper()}}), from
 manimR's cubic curves, which they split into upstream's quadratic ones.
 manimR draws with grid and has no OpenGL window or camera.
-\code{OpenGLArrowTip()} is, as upstream, an \code{OpenGLTriangle} pointing right.
 }
 \details{
+Where upstream's OpenGL class differs from its Cairo counterpart, manimR
+follows the OpenGL class:
+\itemize{
+\item \code{OpenGLArrowTip()} is an \code{OpenGLTriangle} pointing right.
+\item \code{OpenGLArrow()}, \code{OpenGLVector()} and \code{OpenGLDoubleArrow()} are filled
+shapes (a stem \code{thickness} wide and a head, grey by default) and
+subclasses of \code{OpenGLLine}, not of \code{\link[=Arrow]{Arrow()}}.
+\item \code{OpenGLLine()}, \code{OpenGLDashedLine()} and \code{OpenGLTangentLine()} apply
+\code{buff} twice, as upstream: \code{OpenGLLine(2 * LEFT, 2 * RIGHT, buff = 0.5)}
+runs from -1 to 1.
+\item \code{OpenGLArc(start_angle, angle, radius, n_components, arc_center)},
+\code{OpenGLCircle(color)}, \code{OpenGLSector(outer_radius, inner_radius)},
+\code{OpenGLRectangle(color, width, height)},
+\code{OpenGLRegularPolygon(n, start_angle)},
+\code{OpenGLCubicBezier(a0, h0, h1, a1)} and
+\code{OpenGLPoint(location, artificial_width, artificial_height)} take
+upstream's arguments in upstream's order.
+\item Arcs, circles, dots, ellipses, sectors and annuli are made of
+\code{n_components} quadratic pieces (8 by default), as upstream, stored as
+cubic curves.
+}
+
 Three classes have no Cairo counterpart:
 \itemize{
 \item \code{OpenGLSurfaceGroup(...)} is a surface without faces of its own that

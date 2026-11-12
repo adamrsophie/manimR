@@ -1,14 +1,15 @@
 # Mobject classes of upstream's OpenGL renderer (manim/mobject/opengl/).
-# manimR draws everything with grid, so each one is a subclass of its Cairo
-# counterpart with the same arguments; OpenGLSurfaceMesh and
-# OpenGLTexturedSurface, which have no counterpart, are ported here.
+# manimR draws everything with grid, so most are a subclass of their Cairo
+# counterpart; OpenGLSurfaceMesh,
+# OpenGLTexturedSurface, the arrow tip and the filled arrows, which differ
+# from any Cairo class, are ported here.
 
 #' OpenGL mobject classes
 #'
 #' Upstream's OpenGL renderer has its own mobject classes, such as
 #' `OpenGLCircle` or `OpenGLVGroup`. manimR draws every mobject with grid, so
-#' each of them is a subclass of its Cairo counterpart that takes the same
-#' arguments: `OpenGLCircle()` is a [Circle()] and `inherits(x,
+#' each of them is a subclass of its Cairo counterpart: `OpenGLCircle()` is
+#' a [Circle()] and `inherits(x,
 #' "OpenGLCircle")` is `TRUE`. Code written for the OpenGL renderer runs
 #' unchanged. The classes also have the methods of upstream's OpenGL
 #' mobjects, such as `fix_in_frame()`, `set_gloss()`, `get_shader_data()`,
@@ -16,7 +17,27 @@
 #' data upstream's renderer sends to the GPU (see [ShaderWrapper()]), from
 #' manimR's cubic curves, which they split into upstream's quadratic ones.
 #' manimR draws with grid and has no OpenGL window or camera.
-#' `OpenGLArrowTip()` is, as upstream, an `OpenGLTriangle` pointing right.
+#'
+#' Where upstream's OpenGL class differs from its Cairo counterpart, manimR
+#' follows the OpenGL class:
+#'
+#' * `OpenGLArrowTip()` is an `OpenGLTriangle` pointing right.
+#' * `OpenGLArrow()`, `OpenGLVector()` and `OpenGLDoubleArrow()` are filled
+#'   shapes (a stem `thickness` wide and a head, grey by default) and
+#'   subclasses of `OpenGLLine`, not of [Arrow()].
+#' * `OpenGLLine()`, `OpenGLDashedLine()` and `OpenGLTangentLine()` apply
+#'   `buff` twice, as upstream: `OpenGLLine(2 * LEFT, 2 * RIGHT, buff = 0.5)`
+#'   runs from -1 to 1.
+#' * `OpenGLArc(start_angle, angle, radius, n_components, arc_center)`,
+#'   `OpenGLCircle(color)`, `OpenGLSector(outer_radius, inner_radius)`,
+#'   `OpenGLRectangle(color, width, height)`,
+#'   `OpenGLRegularPolygon(n, start_angle)`,
+#'   `OpenGLCubicBezier(a0, h0, h1, a1)` and
+#'   `OpenGLPoint(location, artificial_width, artificial_height)` take
+#'   upstream's arguments in upstream's order.
+#' * Arcs, circles, dots, ellipses, sectors and annuli are made of
+#'   `n_components` quadratic pieces (8 by default), as upstream, stored as
+#'   cubic curves.
 #'
 #' Three classes have no Cairo counterpart:
 #'
@@ -110,8 +131,7 @@ OPENGL_MOBJECT_CLASSES <- c(
   OpenGLCurvedArrow = "CurvedArrow", OpenGLCurvedDoubleArrow = "CurvedDoubleArrow", OpenGLCircle = "Circle",
   OpenGLDot = "Dot", OpenGLEllipse = "Ellipse", OpenGLAnnularSector = "AnnularSector",
   OpenGLSector = "Sector", OpenGLAnnulus = "Annulus", OpenGLLine = "Line", OpenGLDashedLine = "DashedLine",
-  OpenGLTangentLine = "TangentLine", OpenGLElbow = "Elbow", OpenGLArrow = "Arrow", OpenGLVector = "Vector",
-  OpenGLDoubleArrow = "DoubleArrow", OpenGLCubicBezier = "CubicBezier", OpenGLPolygon = "Polygon",
+  OpenGLTangentLine = "TangentLine", OpenGLElbow = "Elbow", OpenGLCubicBezier = "CubicBezier", OpenGLPolygon = "Polygon",
   OpenGLRegularPolygon = "RegularPolygon", OpenGLTriangle = "Triangle",
   OpenGLRectangle = "Rectangle", OpenGLSquare = "Square", OpenGLRoundedRectangle = "RoundedRectangle",
   OpenGLImageMobject = "ImageMobject", OpenGLSurface = "Surface"
@@ -288,6 +308,160 @@ OpenGLArrowTipClass <- R6::R6Class("OpenGLArrowTip", inherit = OpenGLTriangleCla
 )
 OpenGLArrowTip <- build_constructor(OpenGLArrowTipClass)
 
+# Upstream's OpenGLArrow is a filled shape, its stem `thickness` wide and its
+# head `tip_width_ratio` times that, drawn as one closed curve with the tip at
+# point `tip_index`. As upstream, `buff` is applied only by
+# set_start_and_end_attrs(), and scale() rebuilds the shape around its ends.
+OpenGLArrowClass <- R6::R6Class("OpenGLArrow", inherit = OpenGLLineClass, lock_objects = FALSE,
+  public = list(
+    thickness = 0.05,
+    tip_width_ratio = 5,
+    tip_angle = PI / 3,
+    max_tip_length_to_length_ratio = 0.5,
+    max_width_to_length_ratio = 0.1,
+    tip_index = NULL,
+    initialize = function(start = LEFT, end = RIGHT, path_arc = 0, fill_color = GREY_A, fill_opacity = 1,
+                          stroke_width = 0, buff = MED_SMALL_BUFF, thickness = 0.05, tip_width_ratio = 5,
+                          tip_angle = PI / 3, max_tip_length_to_length_ratio = 0.5,
+                          max_width_to_length_ratio = 0.1, ...) {
+      self$thickness <- thickness
+      self$tip_width_ratio <- tip_width_ratio
+      self$tip_angle <- tip_angle
+      self$max_tip_length_to_length_ratio <- max_tip_length_to_length_ratio
+      self$max_width_to_length_ratio <- max_width_to_length_ratio
+      super$initialize(start = start, end = end, buff = buff, path_arc = path_arc, fill_color = fill_color,
+                       fill_opacity = fill_opacity, stroke_width = stroke_width, ...)
+    },
+    set_points_by_ends = function(start, end, buff = 0, path_arc = 0) {
+      start <- as_point(start)
+      vect <- as_point(end) - start
+      len <- max(sqrt(sum(vect^2)), 1e-8)
+      thickness <- self$thickness
+      w_ratio <- self$max_width_to_length_ratio / (thickness / len)
+      if (w_ratio < 1) thickness <- thickness * w_ratio
+      tip_width <- self$tip_width_ratio * thickness
+      tip_length <- tip_width / (2 * tan(self$tip_angle / 2))
+      t_ratio <- self$max_tip_length_to_length_ratio / (tip_length / len)
+      if (t_ratio < 1) {
+        tip_length <- tip_length * t_ratio
+        tip_width <- tip_width * t_ratio
+      }
+      if (path_arc == 0) {
+        points1 <- (len - tip_length) * rbind(RIGHT, 0.5 * RIGHT, ORIGIN)
+        points1 <- sweep(points1, 2, thickness * UP / 2, "+")
+        points2 <- sweep(points1[3:1, , drop = FALSE], 2, thickness * DOWN, "+")
+      } else {
+        # The radius for which the tip to tail length is |end - start|.
+        a <- 2 * (1 - cos(path_arc))
+        b <- -2 * tip_length * sin(path_arc)
+        cc <- tip_length^2 - len^2
+        R <- (-b + sqrt(b^2 - 4 * a * cc)) / (2 * a)
+        points1 <- opengl_quadratic_arc_points(path_arc)
+        points2 <- points1[rev(seq_len(nrow(points1))), , drop = FALSE]
+        points1 <- points1 * (R + thickness / 2)
+        points2 <- points2 * (R - thickness / 2)
+        if (path_arc < 0) tip_length <- -tip_length
+        rot_t <- rotation_matrix_transpose(PI / 2 - path_arc, OUT)
+        points1 <- sweep(points1 %*% rot_t, 2, R * DOWN, "+")
+        points2 <- sweep(points2 %*% rot_t, 2, R * DOWN, "+")
+      }
+      # Upstream's add_line_to(): one straight quadratic piece.
+      line_to <- function(q, p) {
+        e <- q[nrow(q), ]
+        rbind(q, e, e + 0.5 * (p - e), p)
+      }
+      q <- line_to(points1, tip_width * UP / 2)
+      q <- line_to(q, tip_length * LEFT)
+      tip_curve <- nrow(q) / 3
+      q <- line_to(q, tip_width * DOWN / 2)
+      q <- line_to(q, points2[1, ])
+      q <- rbind(q, points2)
+      q <- line_to(q, points1[1, ])
+      self$set_points(opengl_cubic_from_quadratic(unname(q)))
+      self$tip_index <- 4 * tip_curve
+      super$scale(len / self$get_length())
+      self$rotate(angle_of_vector(vect) - self$get_angle())
+      tilt <- PI / 2 - acos(normalize(vect)[3])
+      if (tilt != 0) self$rotate(tilt, axis = rotate_vector(self$get_unit_vector(), -PI / 2))
+      self$shift(start - self$get_start())
+      invisible(self)
+    },
+    reset_points_around_ends = function() {
+      self$set_points_by_ends(self$get_start(), self$get_end(), path_arc = self$path_arc)
+      invisible(self)
+    },
+    get_start = function() {
+      n <- nrow(self$points)
+      (self$points[1, ] + self$points[n - 3, ]) / 2
+    },
+    get_end = function() self$points[self$tip_index, ],
+    get_length = function() sqrt(sum((self$get_end() - self$get_start())^2)),
+    put_start_and_end_on = function(start, end) {
+      self$set_points_by_ends(start, end, buff = 0, path_arc = self$path_arc)
+      invisible(self)
+    },
+    scale = function(...) {
+      super$scale(...)
+      self$reset_points_around_ends()
+      invisible(self)
+    },
+    set_thickness = function(thickness) {
+      self$thickness <- thickness
+      self$reset_points_around_ends()
+      invisible(self)
+    },
+    set_path_arc = function(path_arc) {
+      self$path_arc <- path_arc
+      self$reset_points_around_ends()
+      invisible(self)
+    },
+    # Upstream's OpenGLTipableVMobject.add_tip(), with an OpenGLArrowTip
+    # placed along the first handle (at the start) or the last.
+    add_tip = function(at_start = FALSE, ...) {
+      tip <- OpenGLArrowTip(...)
+      # Upstream's handles are those of its quadratic pieces.
+      n <- nrow(self$points)
+      if (at_start) {
+        anchor <- self$get_start()
+        handle <- self$points[1, ] + 1.5 * (self$points[2, ] - self$points[1, ])
+      } else {
+        anchor <- self$get_end()
+        handle <- self$points[n, ] + 1.5 * (self$points[n - 1, ] - self$points[n, ])
+      }
+      tip$rotate(angle_of_vector(handle - anchor) - PI - tip$get_angle())
+      tip$shift(anchor - tip$get_tip_point())
+      if (self$get_length() != 0) {
+        if (at_start) self$put_start_and_end_on(tip$get_base(), self$get_end())
+        else self$put_start_and_end_on(self$get_start(), tip$get_base())
+      }
+      if (at_start) self$start_tip <- tip else self$tip <- tip
+      self$add(tip)
+      invisible(self)
+    }
+  )
+)
+OpenGLArrow <- build_constructor(OpenGLArrowClass)
+
+OpenGLVectorClass <- R6::R6Class("OpenGLVector", inherit = OpenGLArrowClass, lock_objects = FALSE,
+  public = list(
+    initialize = function(direction = RIGHT, buff = 0, ...) {
+      self$buff <- buff
+      super$initialize(ORIGIN, as_point(direction), buff = buff, ...)
+    }
+  )
+)
+OpenGLVector <- build_constructor(OpenGLVectorClass)
+
+OpenGLDoubleArrowClass <- R6::R6Class("OpenGLDoubleArrow", inherit = OpenGLArrowClass, lock_objects = FALSE,
+  public = list(
+    initialize = function(...) {
+      super$initialize(...)
+      self$add_tip(at_start = TRUE)
+    }
+  )
+)
+OpenGLDoubleArrow <- build_constructor(OpenGLDoubleArrowClass)
+
 # Names of the members of an R6 class generator and of its ancestors.
 r6_member_names <- function(gen) {
   out <- character()
@@ -349,7 +523,12 @@ local({
                 else if (is_vmobject) vmobject
                 else list(OPENGL_MOBJECT_METHODS)
     signatures <- if (is_vmobject) vmobject_signatures else list(OPENGL_MOBJECT_SIGNATURES)
-    opengl_add_members(gen, ancestry, signatures, OPENGL_CLASS_METHODS[[name]])
+    own <- OPENGL_CLASS_METHODS[[name]]
+    if (name %in% OPENGL_LINE_CLASSES) own <- list(public = c(OPENGL_LINE_METHODS$public, own$public))
+    if (name %in% OPENGL_ARC_CLASSES) own <- list(public = c(OPENGL_ARC_POINTS$public, own$public))
+    opengl_add_members(gen, ancestry, signatures, own)
+    # A constructor takes the arguments of its initializer when it is built.
+    if (!is.null(own$public$initialize)) assign(name, build_constructor(gen), envir = ns)
   }
   opengl_add_members(OpenGLSurfaceMeshClass, vmobject, vmobject_signatures)
   opengl_add_members(OpenGLTexturedSurfaceClass, own = OPENGL_TEXTURED_SURFACE_METHODS)

@@ -665,22 +665,6 @@ OPENGL_CLASS_METHODS <- list(
     get_start_angle = function() angle_of_vector(self$get_start() - self$get_arc_center()) %% TAU,
     get_stop_angle = function() angle_of_vector(self$get_end() - self$get_arc_center()) %% TAU
   )),
-  # manimR draws an OpenGLArrow as its Cairo Arrow, a stroked line with a tip,
-  # so the thickness of upstream's filled arrow body is the stroke width:
-  # a stroke of width w is w * 0.01 units wide (cairo_line_width_multiple).
-  OpenGLArrow = list(public = list(
-    thickness = 0.05,
-    reset_points_around_ends = function() {
-      self$set_points_by_ends(self$get_start(), self$get_end(), path_arc = self$path_arc)
-      invisible(self)
-    },
-    set_thickness = function(thickness) {
-      self$thickness <- thickness
-      self$set_stroke(width = thickness / 0.01, family = FALSE)
-      self$reset_points_around_ends()
-      invisible(self)
-    }
-  )),
   OpenGLPoint = list(public = list(
     get_location = function() self$points[1, ],
     get_bounding_box_point = function(...) self$get_location(),
@@ -959,11 +943,6 @@ OPENGL_VMOBJECT_SIGNATURES <- list(public = list(
   pointwise_become_partial = function(vmobject, a, b, remap = TRUE) super$pointwise_become_partial(vmobject, a, b)
 ))
 
-OPENGL_CLASS_METHODS$OpenGLArrow$public$set_path_arc <- function(path_arc) {
-  self$path_arc <- path_arc
-  self$reset_points_around_ends()
-  invisible(self)
-}
 # Upstream's OpenGLCircle.surround() keeps a circle shape, then stretches it
 # to leave `buff` on every side.
 OPENGL_CLASS_METHODS$OpenGLCircle <- list(public = list(
@@ -1023,3 +1002,142 @@ OPENGL_PMOBJECT_METHODS <- list(public = list(
   match_colors = function(pmobject) super$match_colors(pmobject),
   pointwise_become_partial = function(pmobject, a, b) super$pointwise_become_partial(pmobject, a, b)
 ))
+
+# Cubic curves of the shape of upstream's quadratic ones, given as rows of
+# three points per curve: each quadratic is raised to a cubic.
+opengl_cubic_from_quadratic <- function(q) {
+  k <- nrow(q) %/% 3
+  if (k == 0) return(matrix(0, 0, 3))
+  i <- 3 * seq_len(k) - 2
+  a <- q[i, , drop = FALSE]
+  h <- q[i + 1, , drop = FALSE]
+  b <- q[i + 2, , drop = FALSE]
+  out <- matrix(0, 4 * k, 3)
+  j <- 4 * seq_len(k) - 3
+  out[j, ] <- a
+  out[j + 1, ] <- a + 2 / 3 * (h - a)
+  out[j + 2, ] <- b + 2 / 3 * (h - b)
+  out[j + 3, ] <- b
+  out
+}
+
+# Upstream's OpenGLLine and its subclasses. As upstream, `buff` is applied
+# twice: set_start_and_end_attrs() moves the ends by it, and
+# set_points_by_ends() then cuts it off again through account_for_buff(),
+# which reads the `buff` field rather than its argument. A path arc is
+# upstream's quadratic arc of 8 pieces.
+OPENGL_LINE_METHODS <- list(public = list(
+  set_start_and_end_attrs = function(start, end) {
+    rough_start <- self$pointify(start)
+    rough_end <- self$pointify(end)
+    vect <- normalize(rough_end - rough_start)
+    self$start <- self$pointify(start, vect) + self$buff * vect
+    self$end <- self$pointify(end, -vect) - self$buff * vect
+    invisible(self)
+  },
+  pointify = function(mob_or_point, direction = NULL) {
+    if (is_mobject(mob_or_point)) {
+      if (is.null(direction)) return(mob_or_point$get_center())
+      return(mob_or_point$get_continuous_bounding_box_point(direction))
+    }
+    as_point(mob_or_point)
+  },
+  set_points_by_ends = function(start, end, buff = 0, path_arc = 0) {
+    if (path_arc != 0) {
+      self$set_points(opengl_cubic_from_quadratic(opengl_quadratic_arc_points(path_arc)))
+      self$put_start_and_end_on(start, end)
+    } else {
+      self$set_points_as_corners(rbind(as_point(start), as_point(end)))
+    }
+    self$account_for_buff(self$buff)
+    invisible(self)
+  },
+  put_start_and_end_on = function(start, end) {
+    se <- self$get_start_and_end()
+    if (all(se[[1]] == se[[2]])) self$set_points_by_ends(start, end, self$path_arc)
+    super$put_start_and_end_on(start, end)
+  },
+  set_path_arc = function(new_value) {
+    self$path_arc <- new_value
+    self$init_points()
+    invisible(self)
+  }
+))
+OPENGL_LINE_CLASSES <- c("OpenGLLine", "OpenGLDashedLine", "OpenGLTangentLine")
+
+# Upstream's OpenGLArc and the classes built on it draw `n_components`
+# quadratic pieces (8 by default); manimR raises them to cubic curves.
+OPENGL_ARC_POINTS <- list(public = list(
+  n_components = 8,
+  set_pre_positioned_points = function() {
+    self$set_points(opengl_cubic_from_quadratic(
+      opengl_quadratic_arc_points(self$angle, self$start_angle, self$n_components %||% 8)))
+  }
+))
+OPENGL_ARC_CLASSES <- c("OpenGLArc", "OpenGLArcBetweenPoints", "OpenGLCurvedArrow", "OpenGLCurvedDoubleArrow",
+                        "OpenGLCircle", "OpenGLDot", "OpenGLEllipse")
+
+# A straight cubic piece from a to b (upstream's add_line_to(), raised).
+opengl_line_piece <- function(a, b) rbind(a, a + (b - a) / 3, a + 2 * (b - a) / 3, b, deparse.level = 0)
+
+# Constructors whose upstream arguments differ from their Cairo counterpart.
+OPENGL_CLASS_METHODS$OpenGLArc$public$initialize <- function(start_angle = 0, angle = TAU / 4, radius = 1,
+                                                              n_components = 8, arc_center = ORIGIN, ...) {
+  self$n_components <- n_components
+  super$initialize(radius = radius, start_angle = start_angle, angle = angle, arc_center = arc_center, ...)
+}
+OPENGL_CLASS_METHODS$OpenGLCircle$public$initialize <- function(color = RED, ...) {
+  super$initialize(color = color, ...)
+}
+OPENGL_CLASS_METHODS$OpenGLAnnularSector <- list(public = list(
+  generate_points = function() {
+    arc <- function(r) OpenGLArc(start_angle = self$start_angle, angle = self$angle, radius = r,
+                                 arc_center = self$arc_center)$points
+    inner <- arc(self$inner_radius)
+    outer <- arc(self$outer_radius)
+    outer <- outer[rev(seq_len(nrow(outer))), , drop = FALSE]
+    self$set_points(rbind(inner, opengl_line_piece(inner[nrow(inner), ], outer[1, ]), outer,
+                          opengl_line_piece(outer[nrow(outer), ], inner[1, ])))
+    invisible(self)
+  }
+))
+OPENGL_CLASS_METHODS$OpenGLSector <- list(public = list(
+  initialize = function(outer_radius = 1, inner_radius = 0, ...) {
+    # Sector() adopts the points of a Cairo AnnularSector, so draw them again.
+    super$initialize(radius = outer_radius, ...)
+    self$inner_radius <- inner_radius
+    self$generate_points()
+  },
+  generate_points = OPENGL_CLASS_METHODS$OpenGLAnnularSector$public$generate_points
+))
+OPENGL_CLASS_METHODS$OpenGLAnnulus <- list(public = list(
+  generate_points = function() {
+    self$radius <- self$outer_radius
+    outer <- OpenGLCircle(radius = self$outer_radius)$points
+    inner <- OpenGLCircle(radius = self$inner_radius)$points
+    self$set_points(rbind(outer, inner[rev(seq_len(nrow(inner))), , drop = FALSE]))
+    self$shift(self$arc_center)
+    invisible(self)
+  }
+))
+OPENGL_CLASS_METHODS$OpenGLCubicBezier <- list(public = list(
+  initialize = function(a0, h0, h1, a1, ...) super$initialize(a0, h0, h1, a1, ...)
+))
+OPENGL_CLASS_METHODS$OpenGLRegularPolygon <- list(public = list(
+  initialize = function(n = 6, start_angle = NULL, ...) super$initialize(n = n, start_angle = start_angle, ...)
+))
+OPENGL_CLASS_METHODS$OpenGLRectangle <- list(public = list(
+  initialize = function(color = WHITE, width = 4, height = 2, ...) {
+    super$initialize(color = color, height = height, width = width, ...)
+  }
+))
+OPENGL_CLASS_METHODS$OpenGLPoint$public$artificial_width <- 1e-6
+OPENGL_CLASS_METHODS$OpenGLPoint$public$artificial_height <- 1e-6
+OPENGL_CLASS_METHODS$OpenGLPoint$public$initialize <- function(location = ORIGIN, artificial_width = 1e-6,
+                                                                artificial_height = 1e-6, color = WHITE, ...) {
+  self$artificial_width <- artificial_width
+  self$artificial_height <- artificial_height
+  super$initialize(location = location, color = color, ...)
+}
+OPENGL_CLASS_METHODS$OpenGLPoint$public$get_width <- function() self$artificial_width
+OPENGL_CLASS_METHODS$OpenGLPoint$public$get_height <- function() self$artificial_height
