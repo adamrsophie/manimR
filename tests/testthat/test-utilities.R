@@ -313,6 +313,16 @@ test_that("register_font makes a font file usable by Text", {
   expect_identical(shaped_path(weight = "bold"), normalizePath(bold))
 })
 
+test_that("register_font accepts a file of an installed family", {
+  fonts <- systemfonts::system_fonts()
+  fams <- vapply(fonts$path, function(f) {
+    tryCatch(systemfonts::font_info(path = f)$family[1], error = function(e) "")
+  }, "", USE.NAMES = FALSE)
+  hit <- which(fams %in% fonts$family)
+  skip_if(!length(hit), "no installed font whose file reports a listed family")
+  expect_identical(register_font(fonts$path[hit[1]]), fams[hit[1]])
+})
+
 test_that("utility edge cases follow upstream", {
   expect_equal(get_winding_number(rbind(c(1, 0, 0))), 0)
   expect_equal(get_winding_number(list(c(1, 0, 0), c(0, 1, 0), c(-1, 0, 0), c(0, -1, 0))), 1)

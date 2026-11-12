@@ -14,11 +14,12 @@
 #' `Text("Hi", font = register_font("MyFont.ttf"))` works directly.
 #'
 #' The first file registered for a family is used for every style (regular,
-#' bold, italic, bold italic) the system does not already provide for that
-#' family. A later file of the same family replaces only its own style, so
-#' registering a regular and a bold file gives `weight = "BOLD"` the bold
-#' one, and registering only a bold file for an installed family keeps the
-#' installed regular face.
+#' bold, italic, bold italic). A later file of the same family replaces only
+#' its own style, so registering a regular and a bold file gives
+#' `weight = "BOLD"` the bold one. A file whose family is already installed
+#' is usable by name, so its family is returned without registering it
+#' (systemfonts does not allow registering an installed family) and the
+#' installed faces are used.
 #'
 #' @param font_file Path to a font file (for example `.ttf` or `.otf`).
 #' @return The font family name, invisibly.
@@ -37,19 +38,11 @@ register_font <- function(font_file) {
   path <- normalizePath(found[1])
   info <- systemfonts::font_info(path = path)
   family <- info$family[1]
+  if (family %in% systemfonts::system_fonts()$family) return(invisible(family))
   # Registry rows come in the order plain, bold, italic, bold italic.
   old <- systemfonts::registry_fonts()
   old <- old$path[old$family == family]
-  styles <- list(c(FALSE, FALSE), c(TRUE, FALSE), c(FALSE, TRUE), c(TRUE, TRUE))
-  files <- if (length(old) == 4) {
-    as.list(old)
-  } else if (family %in% systemfonts::system_fonts()$family) {
-    lapply(styles, function(st) {
-      systemfonts::match_fonts(family, italic = st[2], weight = if (st[1]) "bold" else "normal")$path
-    })
-  } else {
-    as.list(rep(path, 4))
-  }
+  files <- if (length(old) == 4) as.list(old) else as.list(rep(path, 4))
   files[[1 + isTRUE(info$bold[1]) + 2 * isTRUE(info$italic[1])]] <- path
   systemfonts::register_font(family, files[[1]], files[[2]], files[[3]], files[[4]])
   invisible(family)

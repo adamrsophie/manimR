@@ -25,11 +25,12 @@ rest of the R session (through \code{\link[systemfonts:register_font]{systemfont
 \code{Text("Hi", font = register_font("MyFont.ttf"))} works directly.
 
 The first file registered for a family is used for every style (regular,
-bold, italic, bold italic) the system does not already provide for that
-family. A later file of the same family replaces only its own style, so
-registering a regular and a bold file gives \code{weight = "BOLD"} the bold
-one, and registering only a bold file for an installed family keeps the
-installed regular face.
+bold, italic, bold italic). A later file of the same family replaces only
+its own style, so registering a regular and a bold file gives
+\code{weight = "BOLD"} the bold one. A file whose family is already installed
+is usable by name, so its family is returned without registering it
+(systemfonts does not allow registering an installed family) and the
+installed faces are used.
 }
 \examples{
 \dontrun{
