@@ -23,7 +23,8 @@ return, as the list above describes.
   an updater that follows speed changes (the same as
   [`change_speed_add_updater()`](https://adamrsophie.github.io/manimR/reference/change_speed_add_updater.md)).
 
-- `MobjectClass$set_default(...)` and `AnimationClass$set_default(...)`:
+- `MobjectClass$set_default(...)`, `OpenGLMobjectClass$set_default(...)`
+  and `AnimationClass$set_default(...)`:
   [`set_default()`](https://adamrsophie.github.io/manimR/reference/set_default.md)
   for those base classes.
 
