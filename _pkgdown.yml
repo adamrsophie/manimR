@@ -145,6 +145,7 @@ reference:
   - point_cloud
   - opengl_point_cloud
   - opengl_mobjects
+  - get_mobject_class
   - image_helpers
 - title: Animations
   contents:

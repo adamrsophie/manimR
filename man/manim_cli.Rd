@@ -46,7 +46,7 @@ The other subcommands of \code{manim}:
 \itemize{
 \item \code{checkhealth} reports the programs manimR uses (\code{\link[=manim_check]{manim_check()}}).
 \item \verb{cfg show} prints the settings, \verb{cfg write} writes them to \code{manim.cfg}
-in the working directory and \verb{cfg export --dir DIR} into \code{DIR}.
+in the working directory and \verb{cfg export --directory DIR} into \code{DIR}.
 \item \verb{init project NAME} creates a project folder with \code{main.R} and a
 \code{manim.cfg} (upstream's default settings: 1920 x 1080 at 30 fps);
 \verb{init scene NAME [FILE]} appends a scene template to \code{FILE} (\code{main.R}).

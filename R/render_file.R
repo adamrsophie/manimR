@@ -203,7 +203,7 @@ prompt_scene_choice <- function(names, input = NULL) {
 #' The other subcommands of `manim`:
 #' * `checkhealth` reports the programs manimR uses ([manim_check()]).
 #' * `cfg show` prints the settings, `cfg write` writes them to `manim.cfg`
-#'   in the working directory and `cfg export --dir DIR` into `DIR`.
+#'   in the working directory and `cfg export --directory DIR` into `DIR`.
 #' * `init project NAME` creates a project folder with `main.R` and a
 #'   `manim.cfg` (upstream's default settings: 1920 x 1080 at 30 fps);
 #'   `init scene NAME [FILE]` appends a scene template to `FILE` (`main.R`).
@@ -372,7 +372,7 @@ write_cfg_file <- function(path, settings) {
   lines <- c("[CLI]", vapply(names(settings), function(k) {
     v <- settings[[k]]
     v <- if (is.logical(v)) (if (v) "True" else "False") else paste(v, collapse = ",")
-    paste(k, "=", v)
+    paste(k, "=", gsub("%", "%%", v, fixed = TRUE))
   }, ""))
   writeLines(lines, path)
   invisible(path)
@@ -399,7 +399,7 @@ cli_subcommand <- function(args) {
       keep <- c("frame_rate", "pixel_width", "pixel_height", "background_color", "background_opacity", "media_dir",
                 "format", "save_sections", "disable_caching", "verbosity", "zero_pad")
       current <- manim_config()[keep]
-      dir <- if (sub_cmd == "export") opt(c("-d", "--dir"), ".") else "."
+      dir <- if (sub_cmd == "export") opt(c("-d", "--directory", "--dir"), ".") else "."
       if (!sub_cmd %in% c("write", "export")) stop("Unknown cfg subcommand '", sub_cmd, "'", call. = FALSE)
       dir.create(dir, recursive = TRUE, showWarnings = FALSE)
       path <- write_cfg_file(file.path(dir, "manim.cfg"), current)

@@ -389,7 +389,7 @@ read_cfg_file <- function(path) {
     if (grepl("^\\s*([#;].*)?$", ln)) next
     if (grepl("^\\s*\\[.+\\]\\s*$", ln)) {
       section <- sub("^\\s*\\[(.+)\\]\\s*$", "\\1", ln)
-      if (is.null(out[[section]])) out[[section]] <- character()
+      if (is.null(out[[section]])) out[[section]] <- list()
       last_key <- NULL
       next
     }
@@ -403,7 +403,8 @@ read_cfg_file <- function(path) {
     out[[section]][[key]] <- m[3]
     last_key <- key
   }
-  out
+  # configparser's interpolation reads %% as a single %.
+  lapply(out, function(sec) lapply(sec, gsub, pattern = "%%", replacement = "%", fixed = TRUE))
 }
 
 cfg_bool <- function(x) {
@@ -442,6 +443,8 @@ digest_cfg <- function(parsed) {
       s$plugins <- if (nzchar(v)) trimws(strsplit(v, ",", fixed = TRUE)[[1]]) else character()
     } else if (k %in% c("gui_location", "window_size")) {
       s[[k]] <- if (v == "default") v else as.integer(strsplit(v, "[;,-]")[[1]])
+    } else if (k == "tex_template") {
+      # Listed in upstream's default.cfg, which reads tex_template_file instead.
     } else {
       stop("Unknown setting '", k, "' in the [CLI] section.", call. = FALSE)
     }
@@ -452,7 +455,7 @@ digest_cfg <- function(parsed) {
     if (!is.null(enc[["pixel_format"]])) s$pixel_format <- enc[["pixel_format"]]
   }
   opts <- parsed[["video_encoder.options"]]
-  if (length(opts)) s$video_encoder_options <- as.list(opts)
+  if (length(opts)) s$video_encoder_options <- opts
   media <- parsed[["media"]]
   if (!is.null(media[["loglevel"]])) s$media_loglevel <- media[["loglevel"]]
   jup <- parsed[["jupyter"]]

@@ -28,11 +28,6 @@
 #'   `dark_image_file` on the side facing away from the light; manimR keeps
 #'   it in `dark_image` but draws the light image on both sides.
 #'
-#' `get_mobject_class()`, `get_vectorized_mobject_class()` and
-#' `get_point_mobject_class()` return the base classes for the active
-#' renderer, as upstream's `manim.mobject.utils`; with manimR's renderer
-#' they are [MobjectClass], [VMobjectClass] and [PMobjectClass].
-#'
 #' @param uv_surface A [Surface()].
 #' @param resolution Number of mesh lines along `u` and `v`.
 #' @param stroke_width Width of the mesh lines.
@@ -267,14 +262,25 @@ OpenGLSurfaceGroupClass <- R6::R6Class("OpenGLSurfaceGroup", inherit = OpenGLSur
 OpenGLSurfaceGroup <- build_constructor(OpenGLSurfaceGroupClass)
 OpenGLTexturedSurface <- build_constructor(OpenGLTexturedSurfaceClass)
 
-#' @rdname opengl_mobjects
+#' Base classes for the active renderer
+#'
+#' `get_mobject_class()`, `get_vectorized_mobject_class()` and
+#' `get_point_mobject_class()` return the base classes for the active
+#' renderer, as upstream's `manim.mobject.utils`; with manimR's renderer
+#' they are [MobjectClass], [VMobjectClass] and [PMobjectClass].
+#'
+#' @return An R6 class generator.
 #' @export
+#' @examples
+#' get_mobject_class()$classname
+#' get_vectorized_mobject_class()$classname
+#' get_point_mobject_class()$classname
 get_mobject_class <- function() MobjectClass
 
-#' @rdname opengl_mobjects
+#' @rdname get_mobject_class
 #' @export
 get_vectorized_mobject_class <- function() VMobjectClass
 
-#' @rdname opengl_mobjects
+#' @rdname get_mobject_class
 #' @export
 get_point_mobject_class <- function() PMobjectClass

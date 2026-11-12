@@ -80,17 +80,7 @@
 \alias{OpenGLSurfaceClass}
 \alias{OpenGLSurfaceMeshClass}
 \alias{OpenGLTexturedSurfaceClass}
-\alias{get_mobject_class}
-\alias{get_vectorized_mobject_class}
-\alias{get_point_mobject_class}
 \title{OpenGL mobject classes}
-\usage{
-get_mobject_class()
-
-get_vectorized_mobject_class()
-
-get_point_mobject_class()
-}
 \arguments{
 \item{uv_surface}{A \code{\link[=Surface]{Surface()}}.}
 
@@ -141,11 +131,6 @@ upstream's texture coordinates. Upstream's shader shows
 \code{dark_image_file} on the side facing away from the light; manimR keeps
 it in \code{dark_image} but draws the light image on both sides.
 }
-
-\code{get_mobject_class()}, \code{get_vectorized_mobject_class()} and
-\code{get_point_mobject_class()} return the base classes for the active
-renderer, as upstream's \code{manim.mobject.utils}; with manimR's renderer
-they are \link{MobjectClass}, \link{VMobjectClass} and \link{PMobjectClass}.
 }
 \examples{
 c1 <- OpenGLCircle(radius = 2)

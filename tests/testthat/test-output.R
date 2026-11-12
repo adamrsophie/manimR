@@ -133,6 +133,17 @@ test_that("manim.cfg files and the command line set upstream's options", {
     expect_identical(cfg("video_encoder_options"), list(crf = "30"))
   })
   expect_error(digest_config_file(tempfile()), "valid config file")
+  # A section may set one key; upstream's default.cfg keys and %% escapes read.
+  writeLines(c("[CLI]", "tex_template = ", "[video_encoder]", "codec = libx264",
+               "[jupyter]", "media_width = 50%%"), f)
+  tempconfig(list(), {
+    digest_config_file(f)
+    expect_identical(cfg("video_codec"), "libx264")
+    expect_identical(cfg("media_width"), "50%")
+  })
+  d <- withr_tempdir()
+  expect_output(path <- manim_cli(c("cfg", "export", "--directory", d)), "Configuration written")
+  expect_identical(normalizePath(dirname(path)), normalizePath(d))
   script <- tempfile(fileext = ".R")
   writeLines(c("A <- manim_scene(function(self) self$add(Circle()), name = 'A')",
                "B <- manim_scene(function(self) self$add(Square()), name = 'B')"), script)
