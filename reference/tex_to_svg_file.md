@@ -2,8 +2,8 @@
 
 Writes the expression into the template, compiles it and converts the
 result with `dvisvgm`, caching files in the `tex_dir` setting
-(`media/Tex`). The .aux, .dvi and .log files are deleted afterwards
-unless `manim_config(no_latex_cleanup = TRUE)`.
+(`<media_dir>/Tex`). The .aux, .dvi and .log files are deleted
+afterwards unless `manim_config(no_latex_cleanup = TRUE)`.
 
 ## Usage
 

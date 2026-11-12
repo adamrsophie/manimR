@@ -81,7 +81,10 @@ group of the selected submobjects.</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'Mobject'</span></span>
-<span><span class="va">x</span><span class="op">[[</span><span class="va">i</span>, <span class="va">...</span><span class="op">]</span><span class="op">]</span></span></code></pre></div>
+<span><span class="va">x</span><span class="op">[[</span><span class="va">i</span>, <span class="va">...</span><span class="op">]</span><span class="op">]</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'Mobject'</span></span>
+<span><span class="va">x</span><span class="op">$</span><span class="va">name</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -103,6 +106,10 @@ group of the selected submobjects.</p>
 <dt id="arg-value">value<a class="anchor" aria-label="anchor" href="#arg-value"></a></dt>
 <dd><p>A mobject to store under key <code>i</code> of a <a href="VDictClass.html">VDict</a>.</p></dd>
 
+
+<dt id="arg-name">name<a class="anchor" aria-label="anchor" href="#arg-name"></a></dt>
+<dd><p>A field or method name.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -110,7 +117,8 @@ group of the selected submobjects.</p>
 <code>[[</code> returns a submobject, a field or an entry. <code><a href="https://rdrr.io/r/base/length.html" class="external-link">length()</a></code> returns the
 number of submobjects, plus one when the mobject has points of its own.
 The assignment forms return the changed mobject; <code>mob[[i]] &lt;- value</code> with
-a position does what <code>mob[i] &lt;- value</code> does.</p>
+a position does what <code>mob[i] &lt;- value</code> does. <code>$</code> returns the field or
+method, or the generated getter or setter function.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -121,6 +129,10 @@ entries as a group with <code>vd[c("a", "b")]</code>) or a vertex of a <a href="
 <code>vd["square"] &lt;- Square()</code> adds or replaces an entry. With <code>[[</code>, a
 character key returns the field or method of that name when there is one,
 as for any environment, and otherwise the dictionary entry or vertex.</p>
+<p><code>mob$name</code> reads a field or method. As upstream's compatibility layer, an
+unknown <code>mob$get_x()</code> returns the field <code>x</code> and an unknown
+<code>mob$set_x(value)</code> sets it, each with a deprecation warning; other unknown
+names give <code>NULL</code>, as for any environment.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

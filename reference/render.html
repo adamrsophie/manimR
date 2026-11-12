@@ -106,8 +106,11 @@ frame), <code>"png-sequence"</code> (every frame) or <code>"none"</code>.</p></d
 <dd><p>Name of the artifact. A relative name is placed in the
 video directory (or the images directory for PNG output), as upstream's
 <code>-o</code>; an absolute path is used as it is. Defaults to the scene name in
-<code>media/videos/&lt;module&gt;/&lt;quality&gt;/</code> (videos) or <code>media/images/&lt;module&gt;/</code>
-(images).</p></dd>
+<code>&lt;media_dir&gt;/videos/&lt;module&gt;/&lt;quality&gt;/</code> (videos) or
+<code>&lt;media_dir&gt;/images/&lt;module&gt;/</code> (images). The media folder is in the
+session's temporary directory unless <code>media_dir</code> is set, for example
+<code>manim_config(media_dir = "media")</code> to keep the output in the working
+directory.</p></dd>
 
 
 <dt id="arg-save-last-frame">save_last_frame<a class="anchor" aria-label="anchor" href="#arg-save-last-frame"></a></dt>
@@ -124,7 +127,7 @@ available). Defaults to the <code>preview</code> setting.</p></dd>
 
 
 <dt id="arg-module-name">module_name<a class="anchor" aria-label="anchor" href="#arg-module-name"></a></dt>
-<dd><p>Folder name under <code>media/videos/</code> and <code>media/images/</code>;
+<dd><p>Folder name under <code>&lt;media_dir&gt;/videos/</code> and <code>&lt;media_dir&gt;/images/</code>;
 <code><a href="render_file.html">render_file()</a></code> uses the script name. Defaults to <code>"manimR"</code>.</p></dd>
 
 
@@ -148,11 +151,12 @@ available). Defaults to the <code>preview</code> setting.</p></dd>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># The last frame as a PNG file in the session's temporary directory.</span></span></span>
 <span class="r-in"><span><span class="fu">render</span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="va">self</span><span class="op">)</span> <span class="va">self</span><span class="op">$</span><span class="fu">play</span><span class="op">(</span><span class="fu"><a href="creation.html">Create</a></span><span class="op">(</span><span class="fu"><a href="geometry.html">Circle</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>, quality <span class="op">=</span> <span class="st">"l"</span>, format <span class="op">=</span> <span class="st">"png"</span>,</span></span>
 <span class="r-in"><span>       media_dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO File ready at '/tmp/RtmpHKabBp/images/manimR/Scene_manimR_v0.1.0.png'</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO File ready at '/tmp/RtmpSsOIQi/images/manimR/Scene_manimR_v0.1.0.png'</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> INFO Rendered Scene</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Played 1 animations</span>
 <span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span><span class="co"># A video in the folder media of the working directory; this needs ffmpeg.</span></span></span>
+<span class="r-in"><span><span class="co"># A video in the media folder (by default in the session's temporary</span></span></span>
+<span class="r-in"><span><span class="co"># directory); this needs ffmpeg.</span></span></span>
 <span class="r-in"><span><span class="fu">render</span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="va">self</span><span class="op">)</span> <span class="va">self</span><span class="op">$</span><span class="fu">play</span><span class="op">(</span><span class="fu"><a href="creation.html">Create</a></span><span class="op">(</span><span class="fu"><a href="geometry.html">Circle</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>, quality <span class="op">=</span> <span class="st">"l"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 </code></pre></div>

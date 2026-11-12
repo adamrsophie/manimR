@@ -783,7 +783,9 @@ accept lists, so the star is not needed:</p>
 </tr>
 <tr class="even">
 <td><code>for m in group:</code></td>
-<td><code>for (m in group$submobjects)</code></td>
+<td>
+<code>for (m in as.list(group))</code> (the mobject first when it
+has points)</td>
 </tr>
 <tr class="odd">
 <td><code>group.submobjects[0]</code></td>
@@ -810,8 +812,12 @@ accept lists, so the star is not needed:</p>
 <tr class="odd">
 <td>
 <code>a + b</code> (two other mobjects)</td>
-<td>
-<code>a + b</code> (a <code>Group</code>)</td>
+<td>an error, as upstream; use <code>Group(a, b)</code>
+</td>
+</tr>
+<tr class="even">
+<td><code>bool(tracker)</code></td>
+<td><code>as.logical(tracker)</code></td>
 </tr>
 </tbody>
 </table>
@@ -1647,7 +1653,10 @@ Pango, so font names are those your system knows
 <li>
 <strong>Output paths.</strong> Videos go to
 <code>media/videos/&lt;script name&gt;/&lt;quality&gt;/</code> as with
-Python manim. Scenes rendered from the console, without a script, use
+Python manim, but the media folder is in the R session’s temporary
+directory unless you set <code>manim_config(media_dir = "media")</code>;
+<code><a href="../reference/manim_cli.html">manim_cli()</a></code> uses <code>./media</code> as the Python command
+line does. Scenes rendered from the console, without a script, use
 <code>manimR</code> as the folder name.</li>
 <li>
 <strong>Plotting a mobject.</strong> <code>plot(mob)</code> draws

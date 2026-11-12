@@ -86,10 +86,10 @@ Code(
 
   Named list of
   [`Text()`](https://adamrsophie.github.io/manimR/reference/TextClass.md)
-  arguments for the code and line numbers: `font` (default `"mono"`),
-  `font_size` (24), `line_spacing` (0.5, extra space between lines as a
-  fraction of the font size, as upstream), `disable_ligatures`, and any
-  other
+  arguments for the code and line numbers: `font` (default
+  `"Monospace"`, drawn with R's `"mono"` family), `font_size` (24),
+  `line_spacing` (0.5, extra space between lines as a fraction of the
+  font size, as upstream), `disable_ligatures`, and any other
   [`Text()`](https://adamrsophie.github.io/manimR/reference/TextClass.md)
   option such as `weight` or `slant`. `color` is ignored; colors come
   from the style. `alignment`, `width` and `height` are ignored.

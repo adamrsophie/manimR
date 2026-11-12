@@ -4,6 +4,8 @@ A LaTeX document template used by
 [`Tex()`](https://adamrsophie.github.io/manimR/reference/tex.md) and
 [`MathTex()`](https://adamrsophie.github.io/manimR/reference/tex.md).
 Change the default with `manim_config(tex_template = TexTemplate(...))`.
+Two templates are `==` when every field matches, as upstream's dataclass
+equality.
 
 ## Usage
 

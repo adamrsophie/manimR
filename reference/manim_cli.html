@@ -116,17 +116,25 @@ both. The OpenGL window options are accepted; asking for a live preview
 is an error, as with upstream's Cairo renderer. Options can also be
 written <code>--name=value</code>, and <code>render</code> may come first, as in <code>manim render</code>.</p>
 <p>The other subcommands of <code>manim</code>:</p><ul><li><p><code>checkhealth</code> reports the programs manimR uses (<code><a href="manim_check.html">manim_check()</a></code>).</p></li>
-<li><p><code>cfg show</code> prints the settings, <code>cfg write</code> writes them to <code>manim.cfg</code>
-in the working directory and <code>cfg export --directory DIR</code> into <code>DIR</code>.</p></li>
-<li><p><code>init project NAME</code> creates a project folder with <code>main.R</code> and a
-<code>manim.cfg</code> (upstream's default settings: 1920 x 1080 at 30 fps);
-<code>init scene NAME [FILE]</code> appends a scene template to <code>FILE</code> (<code>main.R</code>).</p></li>
+<li><p><code>cfg show</code> prints the config files read and every setting of
+<code><a href="make_config_parser.html">make_config_parser()</a></code>. <code>cfg write [-l user|cwd] [-o]</code> asks for each
+value (Enter keeps it) and writes the user wide file or <code>manim.cfg</code> in
+the working directory; <code>-o</code> opens the file instead of asking.
+<code>cfg export [-d DIR]</code> runs <code>cfg write</code> and copies its file into <code>DIR</code>.</p></li>
+<li><p><code>init project [NAME] [-d]</code> asks for a template, the frame rate,
+background and resolution (<code>-d</code> takes upstream's defaults: 1920 x 1080
+at 30 fps) and creates <code>NAME</code> with <code>main.R</code> and <code>manim.cfg</code>.
+<code>init scene NAME [FILE]</code> asks for a template and appends it to <code>FILE</code>
+(<code>main.R</code>). See <code><a href="get_template_path.html">get_template_names()</a></code>.</p></li>
 <li><p><code>plugins -l</code> lists installed plugins (<code><a href="get_plugins.html">list_plugins()</a></code>).</p></li>
 <li><p><code>cache clear FILE SCENE ...</code> deletes the partial movie files of those
-scenes, for the quality given with <code>-q</code> and the media directory given
-with <code>--media-dir</code>.</p></li>
-<li><p><code>--version</code> prints the version.</p></li>
-</ul></div>
+scenes, for the quality (<code>-q</code>), resolution (<code>-r W,H</code>), frame rate
+(<code>--fps</code>), media directory (<code>--media-dir</code>) and config file (<code>-c</code>)
+given.</p></li>
+<li><p><code>--version</code> prints the version; every command starts with the same
+splash line unless <code>--hide-splash</code> is given.</p></li>
+</ul><p>Outside an interactive session every prompt takes its default.</p>
+    </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>

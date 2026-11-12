@@ -168,7 +168,11 @@ scene with no animations is saved as its last frame), `"mp4"`, `"mov"`,
 `save_last_frame = TRUE` means the same), `"png-sequence"` (every frame)
 or `"none"`; `dry_run = TRUE` renders without writing files. Output goes
 to `media/videos/<module>/<quality>/<Scene>.mp4` and
-`media/images/<module>/` like Manim, and the directory settings
+`media/images/<module>/` like Manim; the media folder is in the R
+session’s temporary directory unless you set `media_dir` (for example
+`manim_config(media_dir = "media")`), while
+[`manim_cli()`](https://adamrsophie.github.io/manimR/reference/manim_cli.md)
+uses `./media` as Manim’s command line does. The directory settings
 (`video_dir`, `images_dir`, `partial_movie_dir`, `tex_dir`, …) take the
 same `{media_dir}`, `{module_name}`, `{quality}` and `{scene_name}`
 placeholders

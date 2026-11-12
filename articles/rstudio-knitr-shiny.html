@@ -267,9 +267,10 @@ found with <code><a href="../reference/find_scenes.html">find_scenes()</a></code
 that inherits from <code>Scene</code> (including
 <code>MovingCameraScene</code>, <code>ThreeDScene</code> and your own
 scene base classes). Output goes to
-<code>media/videos/&lt;file name&gt;/&lt;quality&gt;/</code> next to
-your working directory, exactly as <code><a href="../reference/render_file.html">render_file()</a></code> writes
-it.</p>
+<code>media/videos/&lt;file name&gt;/&lt;quality&gt;/</code> in the
+media folder (in the session’s temporary directory unless
+<code>media_dir</code> is set), exactly as <code><a href="../reference/render_file.html">render_file()</a></code>
+writes it.</p>
 <p>The template inserted by <code><a href="../reference/rstudio_addins.html">addin_insert_template()</a></code> is the
 classic first scene:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
@@ -1068,7 +1069,7 @@ rendered into a temporary media folder:</p>
 <span><span class="co">#&gt; [1] "Spin_manimR_v0.1.0.png"</span></span></code></pre></div>
 <div class="sourceCode" id="cb41"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/manim_cli.html">manim_cli</a></span><span class="op">(</span><span class="st">"--version"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; manimR 0.1.0</span></span></code></pre></div>
+<span><span class="co">#&gt; manimR v0.1.0</span></span></code></pre></div>
 <p>On a server without a display, everything above works unchanged:
 manimR draws with the ragg graphics device and writes videos with
 FFmpeg, so no window system is needed.</p>

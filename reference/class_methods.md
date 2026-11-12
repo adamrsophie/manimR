@@ -43,6 +43,16 @@ return, as the list above describes.
   highlighting styles (all of Pygments' when it is available, see
   [`Code()`](https://adamrsophie.github.io/manimR/reference/CodeClass.md)).
 
+- `CodeClass$default_background_config` and
+  `CodeClass$default_paragraph_config` are the class attributes that
+  hold the defaults of `background_config` and `paragraph_config`;
+  changing them changes later
+  [`Code()`](https://adamrsophie.github.io/manimR/reference/CodeClass.md)
+  objects.
+
+- `CairoRendererClass$capabilities`: the optional session features of
+  the renderer (`live_preview = FALSE`).
+
 - `GraphClass$from_igraph(graph, ...)` and
   `DiGraphClass$from_igraph(graph, ...)`: a
   [`Graph()`](https://adamrsophie.github.io/manimR/reference/GenericGraphClass.md)

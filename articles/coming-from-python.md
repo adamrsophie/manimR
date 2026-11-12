@@ -376,12 +376,13 @@ the star is not needed:
 | `group[-1]` | `group[length(group)]` |
 | `group[1:3]` | `group[2:3]` |
 | `group[::2]` | `group[seq(1, length(group), by = 2)]` |
-| `for m in group:` | `for (m in group$submobjects)` |
+| `for m in group:` | `for (m in as.list(group))` (the mobject first when it has points) |
 | `group.submobjects[0]` | `group$submobjects[[1]]` or `group[[1]]` |
 | `group.add(m)` | `group$add(m)` |
 | `group[1] = m` | `group[2] <- m` |
 | `group + m`, `group - m` (a `VGroup`) | `group + m`, `group - m` |
-| `a + b` (two other mobjects) | `a + b` (a `Group`) |
+| `a + b` (two other mobjects) | an error, as upstream; use `Group(a, b)` |
+| `bool(tracker)` | `as.logical(tracker)` |
 
 Indices start at 1, and a negative index means something different: in
 Python `group[-1]` is the last element, while in R `group[-1]` is every
@@ -849,8 +850,12 @@ plot(Text("Hello", font_size = 96, t2c = list("[1:3]" = YELLOW)))
   names are those your system knows (`TextClass$font_list()` lists
   them).
 - **Output paths.** Videos go to `media/videos/<script name>/<quality>/`
-  as with Python manim. Scenes rendered from the console, without a
-  script, use `manimR` as the folder name.
+  as with Python manim, but the media folder is in the R session’s
+  temporary directory unless you set
+  `manim_config(media_dir = "media")`;
+  [`manim_cli()`](https://adamrsophie.github.io/manimR/reference/manim_cli.md)
+  uses `./media` as the Python command line does. Scenes rendered from
+  the console, without a script, use `manimR` as the folder name.
 - **Plotting a mobject.** `plot(mob)` draws one frame in the Plots pane;
   Python manim has no counterpart, and it is the quickest way to check a
   layout.

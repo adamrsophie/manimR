@@ -53,19 +53,29 @@ The other subcommands of `manim`:
 - `checkhealth` reports the programs manimR uses
   ([`manim_check()`](https://adamrsophie.github.io/manimR/reference/manim_check.md)).
 
-- `cfg show` prints the settings, `cfg write` writes them to `manim.cfg`
-  in the working directory and `cfg export --directory DIR` into `DIR`.
+- `cfg show` prints the config files read and every setting of
+  [`make_config_parser()`](https://adamrsophie.github.io/manimR/reference/make_config_parser.md).
+  `cfg write [-l user|cwd] [-o]` asks for each value (Enter keeps it)
+  and writes the user wide file or `manim.cfg` in the working directory;
+  `-o` opens the file instead of asking. `cfg export [-d DIR]` runs
+  `cfg write` and copies its file into `DIR`.
 
-- `init project NAME` creates a project folder with `main.R` and a
-  `manim.cfg` (upstream's default settings: 1920 x 1080 at 30 fps);
-  `init scene NAME [FILE]` appends a scene template to `FILE`
-  (`main.R`).
+- `init project [NAME] [-d]` asks for a template, the frame rate,
+  background and resolution (`-d` takes upstream's defaults: 1920 x 1080
+  at 30 fps) and creates `NAME` with `main.R` and `manim.cfg`.
+  `init scene NAME [FILE]` asks for a template and appends it to `FILE`
+  (`main.R`). See
+  [`get_template_names()`](https://adamrsophie.github.io/manimR/reference/get_template_path.md).
 
 - `plugins -l` lists installed plugins
   ([`list_plugins()`](https://adamrsophie.github.io/manimR/reference/get_plugins.md)).
 
 - `cache clear FILE SCENE ...` deletes the partial movie files of those
-  scenes, for the quality given with `-q` and the media directory given
-  with `--media-dir`.
+  scenes, for the quality (`-q`), resolution (`-r W,H`), frame rate
+  (`--fps`), media directory (`--media-dir`) and config file (`-c`)
+  given.
 
-- `--version` prints the version.
+- `--version` prints the version; every command starts with the same
+  splash line unless `--hide-splash` is given.
+
+Outside an interactive session every prompt takes its default.

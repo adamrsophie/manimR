@@ -57,9 +57,9 @@ basename(out)
 #> [1] "Demo.mp4"
 list.files(media, recursive = TRUE)
 #> [1] "videos/manimR/480p15/Demo.mp4"                                                                                     
-#> [2] "videos/manimR/480p15/partial_movie_files/Demo/543e02b8b2e720a4f3d1df47990c1ff89b614ea8d3c572ab32e4a49cd28fda83.mp4"
+#> [2] "videos/manimR/480p15/partial_movie_files/Demo/52324c93f168fa830bc5ad146d6a1db2b85e7b3b86c1ea6d17ffdb5e41e80ca4.mp4"
 #> [3] "videos/manimR/480p15/partial_movie_files/Demo/9b55cecaa9965807310a2e85add01281a5529943887082da41ed3566ad4bb978.mp4"
-#> [4] "videos/manimR/480p15/partial_movie_files/Demo/f3af2964df58885bfdaa68eeec47089fb36f19e5cba291f1091859f170237470.mp4"
+#> [4] "videos/manimR/480p15/partial_movie_files/Demo/a1e045b6c1894dd1af1eb7124053432ac1dff87a3a4c7095383693d6bb12f3f7.mp4"
 #> [5] "videos/manimR/480p15/partial_movie_files/Demo/partial_movie_file_list.txt"
 ```
 
@@ -273,8 +273,13 @@ the media folder, wherever the movie goes.
 
 ## The media directory
 
-All output lives under `media_dir`. With every feature in use, a project
-looks like this:
+All output lives under `media_dir`. By default it is a folder `media` in
+the R session’s temporary directory, so that rendering writes nothing to
+the working directory; set `manim_config(media_dir = "media")` to keep
+the output next to your scripts, as Python manim does.
+[`manim_cli()`](https://adamrsophie.github.io/manimR/reference/manim_cli.md),
+like upstream’s command line, uses `media` in the working directory.
+With every feature in use, a media folder looks like this:
 
     media/
       videos/<module>/<quality>/          the movies, such as Demo.mp4
@@ -913,7 +918,7 @@ Inside R, pass the arguments as a character vector:
 ``` r
 
 manim_cli("--version")
-#> manimR 0.1.0
+#> manimR v0.1.0
 ```
 
 ``` r

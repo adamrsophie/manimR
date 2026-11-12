@@ -102,11 +102,13 @@ also available as <code>config$digest_file()</code>.</p>
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>As upstream does on import, manimR reads two files when it is loaded, if
 they exist: the user wide file and the folder wide <code>manim.cfg</code> of the
-working directory, in that order. <code>config_file_paths()</code> gives their
-locations: <code>~/.config/manim/manim.cfg</code> (on Windows
-<code>~/AppData/Roaming/Manim/manim.cfg</code>) and <code>manim.cfg</code>. Upstream's library
-wide defaults are built into manimR. <code><a href="manim_cli.html">manim_cli()</a></code> reads the working
-directory's file again, or the one given with <code>-c</code>/<code>--config_file</code>.</p>
+working directory, in that order. <code>config_file_paths()</code> gives the three
+locations of upstream: the library wide <code>default.cfg</code> (shipped with
+manimR, whose values are its built in defaults),
+<code>~/.config/manim/manim.cfg</code> (on Windows
+<code>~/AppData/Roaming/Manim/manim.cfg</code>) and <code>manim.cfg</code>. <code><a href="manim_cli.html">manim_cli()</a></code> reads
+the working directory's file again, or the one given with
+<code>-c</code>/<code>--config_file</code>. <code><a href="make_config_parser.html">make_config_parser()</a></code> merges the three files.</p>
     </div>
 
     <div class="section level2">

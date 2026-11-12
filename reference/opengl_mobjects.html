@@ -3,13 +3,23 @@
 OpenGLCircle or OpenGLVGroup. manimR draws every mobject with grid, so
 each of them is a subclass of its Cairo counterpart that takes the same
 arguments: OpenGLCircle() is a Circle() and inherits(x, &quot;OpenGLCircle&quot;) is TRUE. Code written for the OpenGL renderer runs
-unchanged; the GPU pipeline itself (shaders, the OpenGL camera and window)
-is not part of manimR."><meta property="og:description" content="Upstream's OpenGL renderer has its own mobject classes, such as
+unchanged. The classes also have the methods of upstream's OpenGL
+mobjects, such as fix_in_frame(), set_gloss(), get_shader_data(),
+get_triangulation() and get_shader_wrapper_list(): they compute the
+data upstream's renderer sends to the GPU (see ShaderWrapper()), from
+manimR's cubic curves, which they split into upstream's quadratic ones.
+manimR draws with grid and has no OpenGL window or camera.
+OpenGLArrowTip() is, as upstream, an OpenGLTriangle pointing right."><meta property="og:description" content="Upstream's OpenGL renderer has its own mobject classes, such as
 OpenGLCircle or OpenGLVGroup. manimR draws every mobject with grid, so
 each of them is a subclass of its Cairo counterpart that takes the same
 arguments: OpenGLCircle() is a Circle() and inherits(x, &quot;OpenGLCircle&quot;) is TRUE. Code written for the OpenGL renderer runs
-unchanged; the GPU pipeline itself (shaders, the OpenGL camera and window)
-is not part of manimR."><meta property="og:image" content="https://adamrsophie.github.io/manimR/logo.svg"></head><body>
+unchanged. The classes also have the methods of upstream's OpenGL
+mobjects, such as fix_in_frame(), set_gloss(), get_shader_data(),
+get_triangulation() and get_shader_wrapper_list(): they compute the
+data upstream's renderer sends to the GPU (see ShaderWrapper()), from
+manimR's cubic curves, which they split into upstream's quadratic ones.
+manimR draws with grid and has no OpenGL window or camera.
+OpenGLArrowTip() is, as upstream, an OpenGLTriangle pointing right."><meta property="og:image" content="https://adamrsophie.github.io/manimR/logo.svg"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -74,8 +84,13 @@ is not part of manimR."><meta property="og:image" content="https://adamrsophie.g
 <code>OpenGLCircle</code> or <code>OpenGLVGroup</code>. manimR draws every mobject with grid, so
 each of them is a subclass of its Cairo counterpart that takes the same
 arguments: <code>OpenGLCircle()</code> is a <code><a href="geometry.html">Circle()</a></code> and <code>inherits(x, "OpenGLCircle")</code> is <code>TRUE</code>. Code written for the OpenGL renderer runs
-unchanged; the GPU pipeline itself (shaders, the OpenGL camera and window)
-is not part of manimR.</p>
+unchanged. The classes also have the methods of upstream's OpenGL
+mobjects, such as <code>fix_in_frame()</code>, <code>set_gloss()</code>, <code>get_shader_data()</code>,
+<code>get_triangulation()</code> and <code>get_shader_wrapper_list()</code>: they compute the
+data upstream's renderer sends to the GPU (see <code><a href="ShaderWrapper.html">ShaderWrapper()</a></code>), from
+manimR's cubic curves, which they split into upstream's quadratic ones.
+manimR draws with grid and has no OpenGL window or camera.
+<code>OpenGLArrowTip()</code> is, as upstream, an <code>OpenGLTriangle</code> pointing right.</p>
     </div>
 
 

@@ -21,6 +21,13 @@ Scene classes and the scene manager.
   : Interactive scenes
 - [`Manager()`](https://adamrsophie.github.io/manimR/reference/Manager.md)
   : Render manager
+- [`MethodWithArgs()`](https://adamrsophie.github.io/manimR/reference/MethodWithArgs.md)
+  [`SceneInteractContinue()`](https://adamrsophie.github.io/manimR/reference/MethodWithArgs.md)
+  [`SceneInteractRerun()`](https://adamrsophie.github.io/manimR/reference/MethodWithArgs.md)
+  [`EndSceneEarlyException()`](https://adamrsophie.github.io/manimR/reference/MethodWithArgs.md)
+  [`RerunSceneException()`](https://adamrsophie.github.io/manimR/reference/MethodWithArgs.md)
+  [`MultiAnimationOverrideException()`](https://adamrsophie.github.io/manimR/reference/MethodWithArgs.md)
+  : Records of the interaction queue
 - [`Section()`](https://adamrsophie.github.io/manimR/reference/Section.md)
   : Scene sections
 - [`DefaultSectionType`](https://adamrsophie.github.io/manimR/reference/DefaultSectionType.md)
@@ -34,23 +41,49 @@ Render scenes to video, GIF and images, from R or the command line.
 
 - [`render()`](https://adamrsophie.github.io/manimR/reference/render.md)
   : Render a scene
+
 - [`render_file()`](https://adamrsophie.github.io/manimR/reference/render_file.md)
   : Render scenes from a script
+
 - [`find_scenes()`](https://adamrsophie.github.io/manimR/reference/find_scenes.md)
   : Find scenes defined in a file or environment
+
 - [`manim_cli()`](https://adamrsophie.github.io/manimR/reference/manim_cli.md)
   : Command line entry point
+
+- [`value_from_string()`](https://adamrsophie.github.io/manimR/reference/value_from_string.md)
+  [`replace_keys()`](https://adamrsophie.github.io/manimR/reference/value_from_string.md)
+  [`select_resolution()`](https://adamrsophie.github.io/manimR/reference/value_from_string.md)
+  [`update_cfg()`](https://adamrsophie.github.io/manimR/reference/value_from_string.md)
+  :
+
+  Command line helpers of `manim cfg` and `manim init`
+
+- [`get_template_path()`](https://adamrsophie.github.io/manimR/reference/get_template_path.md)
+  [`get_template_names()`](https://adamrsophie.github.io/manimR/reference/get_template_path.md)
+  [`add_import_statement()`](https://adamrsophie.github.io/manimR/reference/get_template_path.md)
+  [`copy_template_files()`](https://adamrsophie.github.io/manimR/reference/get_template_path.md)
+  : Scene templates
+
 - [`preview_output()`](https://adamrsophie.github.io/manimR/reference/preview_output.md)
   : Preview a rendered file
+
 - [`manim_check()`](https://adamrsophie.github.io/manimR/reference/manim_check.md)
   : Check system requirements
+
 - [`get_dir()`](https://adamrsophie.github.io/manimR/reference/get_dir.md)
   : Resolve a directory setting
+
 - [`digest_config_file()`](https://adamrsophie.github.io/manimR/reference/digest_config_file.md)
   [`config_file_paths()`](https://adamrsophie.github.io/manimR/reference/digest_config_file.md)
   : Read a manim.cfg file
+
+- [`make_config_parser()`](https://adamrsophie.github.io/manimR/reference/make_config_parser.md)
+  : Config parser of the library, user and folder files
+
 - [`plot(`*`<Mobject>`*`)`](https://adamrsophie.github.io/manimR/reference/plot.Mobject.md)
   : Plot a mobject
+
 - [`SceneFileWriter()`](https://adamrsophie.github.io/manimR/reference/CairoRenderer.md)
   [`CairoRenderer()`](https://adamrsophie.github.io/manimR/reference/CairoRenderer.md)
   : Cairo style renderer and scene file writer
@@ -109,6 +142,7 @@ The base classes, groups and indexing.
   [`` `[[<-`( ``*`<Mobject>`*`)`](https://adamrsophie.github.io/manimR/reference/sub-.Mobject.md)
   [`length(`*`<Mobject>`*`)`](https://adamrsophie.github.io/manimR/reference/sub-.Mobject.md)
   [`` `[[`( ``*`<Mobject>`*`)`](https://adamrsophie.github.io/manimR/reference/sub-.Mobject.md)
+  [`` `$`( ``*`<Mobject>`*`)`](https://adamrsophie.github.io/manimR/reference/sub-.Mobject.md)
   : Index submobjects
 - [`print_family()`](https://adamrsophie.github.io/manimR/reference/print_family.md)
   [`index_labels()`](https://adamrsophie.github.io/manimR/reference/print_family.md)
@@ -508,6 +542,12 @@ The base classes, groups and indexing.
   [`OpenGLSurfaceMeshClass`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
   [`OpenGLTexturedSurfaceClass`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
   : OpenGL mobject classes
+- [`get_shader_dir()`](https://adamrsophie.github.io/manimR/reference/ShaderWrapper.md)
+  [`find_file()`](https://adamrsophie.github.io/manimR/reference/ShaderWrapper.md)
+  [`get_shader_code_from_file()`](https://adamrsophie.github.io/manimR/reference/ShaderWrapper.md)
+  [`get_colormap_code()`](https://adamrsophie.github.io/manimR/reference/ShaderWrapper.md)
+  [`ShaderWrapper()`](https://adamrsophie.github.io/manimR/reference/ShaderWrapper.md)
+  : Shader wrappers
 - [`get_mobject_class()`](https://adamrsophie.github.io/manimR/reference/get_mobject_class.md)
   [`get_vectorized_mobject_class()`](https://adamrsophie.github.io/manimR/reference/get_mobject_class.md)
   [`get_point_mobject_class()`](https://adamrsophie.github.io/manimR/reference/get_mobject_class.md)
@@ -880,6 +920,7 @@ The base classes, groups and indexing.
   [`DEFAULT_SMALL_DOT_RADIUS`](https://adamrsophie.github.io/manimR/reference/constants.md)
   [`DEFAULT_DASH_LENGTH`](https://adamrsophie.github.io/manimR/reference/constants.md)
   [`DEFAULT_ARROW_TIP_LENGTH`](https://adamrsophie.github.io/manimR/reference/constants.md)
+  [`DEFAULT_ARROW_TIP_WIDTH`](https://adamrsophie.github.io/manimR/reference/constants.md)
   [`DEFAULT_WAIT_TIME`](https://adamrsophie.github.io/manimR/reference/constants.md)
   [`DEFAULT_POINTWISE_FUNCTION_RUN_TIME`](https://adamrsophie.github.io/manimR/reference/constants.md)
   [`SCALE_FACTOR_PER_FONT_POINT`](https://adamrsophie.github.io/manimR/reference/constants.md)

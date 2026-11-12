@@ -8,6 +8,11 @@
   `tests/testthat/test-api-coverage.R`). Every upstream class has an R6
   generator `FooClass`, including the ones upstream defines only to
   preset arguments.
+- Rendered output and the LaTeX cache go to a `media` folder in the R
+  session’s temporary directory unless `media_dir` is set, so nothing is
+  written to the working directory by default;
+  [`manim_cli()`](https://adamrsophie.github.io/manimR/reference/manim_cli.md)
+  writes to `./media` as Manim’s command line does.
 - Output follows Manim 0.22’s render sessions: `format` is `"auto"`,
   `"mp4"`, `"mov"`, `"webm"`, `"gif"`, `"png"` (last frame),
   `"png-sequence"` or `"none"`, with `dry_run`, directory templates
@@ -57,7 +62,11 @@
   [`OpenGLSurfaceMesh()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
   and
   [`OpenGLTexturedSurface()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
-  are ported to grid.
+  are ported to grid. They also have the methods and argument names of
+  upstream’s OpenGL classes, including the CPU side of its GPU pipeline:
+  shader data, triangulation, uniforms and
+  [`ShaderWrapper()`](https://adamrsophie.github.io/manimR/reference/ShaderWrapper.md),
+  with upstream’s GLSL files.
 - Images are drawn through the homography of their corners with Pillow’s
   nearest, bilinear and bicubic filters, and an image seen edge on is
   skipped as upstream.

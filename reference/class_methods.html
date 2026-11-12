@@ -92,6 +92,12 @@ is read from a <code>.tex</code> file.</p></li>
 <li><p><code>CodeClass$get_styles_list()</code> and <code>CodeClass$get_pygments_style(name)</code>:
 the names and colors of the highlighting styles (all of Pygments' when
 it is available, see <code><a href="CodeClass.html">Code()</a></code>).</p></li>
+<li><p><code>CodeClass$default_background_config</code> and
+<code>CodeClass$default_paragraph_config</code> are the class attributes that
+hold the defaults of <code>background_config</code> and <code>paragraph_config</code>;
+changing them changes later <code><a href="CodeClass.html">Code()</a></code> objects.</p></li>
+<li><p><code>CairoRendererClass$capabilities</code>: the optional session features of the
+renderer (<code>live_preview = FALSE</code>).</p></li>
 <li><p><code>GraphClass$from_igraph(graph, ...)</code> and <code>DiGraphClass$from_igraph(graph, ...)</code>: a <code><a href="GenericGraphClass.html">Graph()</a></code> or <code><a href="GenericGraphClass.html">DiGraph()</a></code> with the vertices (by name when they
 have names) and edges of an igraph graph, the R counterpart of
 upstream's <code>Graph.from_networkx()</code>; <code>...</code> goes to the constructor, for

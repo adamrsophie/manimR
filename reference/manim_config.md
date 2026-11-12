@@ -57,7 +57,10 @@ The settings, with upstream's names and defaults:
 
 - Directories, with `{name}` placeholders resolved by
   [`get_dir()`](https://adamrsophie.github.io/manimR/reference/get_dir.md):
-  `media_dir` ("media"), `video_dir`
+  `media_dir` (a folder `media` in the session's temporary directory;
+  set it, for example to `"media"`, to keep the output;
+  [`manim_cli()`](https://adamrsophie.github.io/manimR/reference/manim_cli.md)
+  uses `"media"` in the working directory, as upstream), `video_dir`
   ("{media_dir}/videos/{module_name}/{quality}"), `images_dir`,
   `sections_dir`, `partial_movie_dir`, `tex_dir`, `text_dir`, `log_dir`,
   `assets_dir` (where sounds and images are looked up), `input_file`

@@ -49,8 +49,11 @@ render(
   Name of the artifact. A relative name is placed in the video directory
   (or the images directory for PNG output), as upstream's `-o`; an
   absolute path is used as it is. Defaults to the scene name in
-  `media/videos/<module>/<quality>/` (videos) or
-  `media/images/<module>/` (images).
+  `<media_dir>/videos/<module>/<quality>/` (videos) or
+  `<media_dir>/images/<module>/` (images). The media folder is in the
+  session's temporary directory unless `media_dir` is set, for example
+  `manim_config(media_dir = "media")` to keep the output in the working
+  directory.
 
 - save_last_frame:
 
@@ -67,7 +70,7 @@ render(
 
 - module_name:
 
-  Folder name under `media/videos/` and `media/images/`;
+  Folder name under `<media_dir>/videos/` and `<media_dir>/images/`;
   [`render_file()`](https://adamrsophie.github.io/manimR/reference/render_file.md)
   uses the script name. Defaults to `"manimR"`.
 
@@ -93,11 +96,12 @@ when nothing is written (`format = "none"` or `dry_run`).
 # The last frame as a PNG file in the session's temporary directory.
 render(function(self) self$play(Create(Circle())), quality = "l", format = "png",
        media_dir = tempdir())
-#> INFO File ready at '/tmp/RtmpHKabBp/images/manimR/Scene_manimR_v0.1.0.png'
+#> INFO File ready at '/tmp/RtmpSsOIQi/images/manimR/Scene_manimR_v0.1.0.png'
 #> INFO Rendered Scene
 #> Played 1 animations
 if (FALSE) { # \dontrun{
-# A video in the folder media of the working directory; this needs ffmpeg.
+# A video in the media folder (by default in the session's temporary
+# directory); this needs ffmpeg.
 render(function(self) self$play(Create(Circle())), quality = "l")
 } # }
 ```

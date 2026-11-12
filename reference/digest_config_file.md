@@ -30,13 +30,16 @@ config_file_paths()
 
 As upstream does on import, manimR reads two files when it is loaded, if
 they exist: the user wide file and the folder wide `manim.cfg` of the
-working directory, in that order. `config_file_paths()` gives their
-locations: `~/.config/manim/manim.cfg` (on Windows
-`~/AppData/Roaming/Manim/manim.cfg`) and `manim.cfg`. Upstream's library
-wide defaults are built into manimR.
+working directory, in that order. `config_file_paths()` gives the three
+locations of upstream: the library wide `default.cfg` (shipped with
+manimR, whose values are its built in defaults),
+`~/.config/manim/manim.cfg` (on Windows
+`~/AppData/Roaming/Manim/manim.cfg`) and `manim.cfg`.
 [`manim_cli()`](https://adamrsophie.github.io/manimR/reference/manim_cli.md)
 reads the working directory's file again, or the one given with
 `-c`/`--config_file`.
+[`make_config_parser()`](https://adamrsophie.github.io/manimR/reference/make_config_parser.md)
+merges the three files.
 
 ## Examples
 

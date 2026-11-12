@@ -499,9 +499,12 @@ save only the final frame</td>
 </table>
 <p>Without <code>output_file</code>, the video goes to
 <code>media/videos/&lt;module&gt;/&lt;quality&gt;/&lt;Scene&gt;.mp4</code>
-in the working directory, where <code>&lt;quality&gt;</code> is a folder
-such as <code>480p15</code>. Use low quality while you work and high
-quality for the final version.</p>
+in the media folder, where <code>&lt;quality&gt;</code> is a folder such
+as <code>480p15</code>. The media folder is in the session’s temporary
+directory, so nothing is written to your working directory unless you
+ask: <code>manim_config(media_dir = "media")</code> keeps the output in
+a <code>media</code> folder there, as Python manim does. Use low quality
+while you work and high quality for the final version.</p>
 <p>A bare function works as well, which is handy at the console. Such a
 scene is called <code>Scene</code> unless you name it with
 <code>scene_name</code>:</p>

@@ -6,8 +6,15 @@ so each of them is a subclass of its Cairo counterpart that takes the
 same arguments: `OpenGLCircle()` is a
 [`Circle()`](https://adamrsophie.github.io/manimR/reference/geometry.md)
 and `inherits(x, "OpenGLCircle")` is `TRUE`. Code written for the OpenGL
-renderer runs unchanged; the GPU pipeline itself (shaders, the OpenGL
-camera and window) is not part of manimR.
+renderer runs unchanged. The classes also have the methods of upstream's
+OpenGL mobjects, such as `fix_in_frame()`, `set_gloss()`,
+`get_shader_data()`, `get_triangulation()` and
+`get_shader_wrapper_list()`: they compute the data upstream's renderer
+sends to the GPU (see
+[`ShaderWrapper()`](https://adamrsophie.github.io/manimR/reference/ShaderWrapper.md)),
+from manimR's cubic curves, which they split into upstream's quadratic
+ones. manimR draws with grid and has no OpenGL window or camera.
+`OpenGLArrowTip()` is, as upstream, an `OpenGLTriangle` pointing right.
 
 ## Arguments
 

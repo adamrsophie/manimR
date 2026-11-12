@@ -162,8 +162,9 @@ document is written to a temporary file first. The scenes are found with
 [`find_scenes()`](https://adamrsophie.github.io/manimR/reference/find_scenes.md),
 which looks for every R6 class that inherits from `Scene` (including
 `MovingCameraScene`, `ThreeDScene` and your own scene base classes).
-Output goes to `media/videos/<file name>/<quality>/` next to your
-working directory, exactly as
+Output goes to `media/videos/<file name>/<quality>/` in the media folder
+(in the session’s temporary directory unless `media_dir` is set),
+exactly as
 [`render_file()`](https://adamrsophie.github.io/manimR/reference/render_file.md)
 writes it.
 
@@ -983,7 +984,7 @@ basename(out)
 ``` r
 
 manim_cli("--version")
-#> manimR 0.1.0
+#> manimR v0.1.0
 ```
 
 On a server without a display, everything above works unchanged: manimR

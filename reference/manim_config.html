@@ -118,7 +118,9 @@ without writing files, <code>save_sections</code> also writes one video per sect
 <code>from_animation_number</code> and <code>upto_animation_number</code> (-1: all) select
 animations.</p></li>
 <li><p>Directories, with <code>{name}</code> placeholders resolved by <code><a href="get_dir.html">get_dir()</a></code>:
-<code>media_dir</code> ("media"), <code>video_dir</code>
+<code>media_dir</code> (a folder <code>media</code> in the session's temporary directory; set
+it, for example to <code>"media"</code>, to keep the output; <code><a href="manim_cli.html">manim_cli()</a></code> uses
+<code>"media"</code> in the working directory, as upstream), <code>video_dir</code>
 ("{media_dir}/videos/{module_name}/{quality}"), <code>images_dir</code>, <code>sections_dir</code>,
 <code>partial_movie_dir</code>, <code>tex_dir</code>, <code>text_dir</code>, <code>log_dir</code>, <code>assets_dir</code>
 (where sounds and images are looked up), <code>input_file</code> (the script

@@ -2,7 +2,9 @@
 
 A `ValueTracker` stores a number that can be animated, for example with
 `tracker$animate$set_value(5)`, and read in updaters with `get_value()`.
-`ComplexValueTracker` stores a complex number.
+`ComplexValueTracker` stores a complex number. The arithmetic operators
+return a new tracker, and `as.logical(t)` is `TRUE` when the value is
+not zero, as upstream's `bool(t)`.
 
 ## Usage
 

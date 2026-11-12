@@ -41,6 +41,7 @@
 <url><loc>https://adamrsophie.github.io/manimR/reference/MappingCameraClass.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/MarkupText.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/MatrixClass.html</loc></url>
+<url><loc>https://adamrsophie.github.io/manimR/reference/MethodWithArgs.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/MobjectClass.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/MovingCameraClass.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/MovingCameraScene.html</loc></url>
@@ -54,6 +55,7 @@
 <url><loc>https://adamrsophie.github.io/manimR/reference/Scene.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/ScreenRectangleClass.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/Section.html</loc></url>
+<url><loc>https://adamrsophie.github.io/manimR/reference/ShaderWrapper.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/TableClass.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/TexTemplateClass.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/TexTemplateLibrary.html</loc></url>
@@ -101,6 +103,7 @@
 <url><loc>https://adamrsophie.github.io/manimR/reference/get_quadratic_approximation_of_cubic.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/get_shaded_rgb.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/get_smooth_cubic_bezier_handle_points.html</loc></url>
+<url><loc>https://adamrsophie.github.io/manimR/reference/get_template_path.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/graph_scale.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/growing.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/image_helpers.html</loc></url>
@@ -116,6 +119,7 @@
 <url><loc>https://adamrsophie.github.io/manimR/reference/knitr_manim_engine.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/list_helpers.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/logger.html</loc></url>
+<url><loc>https://adamrsophie.github.io/manimR/reference/make_config_parser.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/manimOutput.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/manim_check.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/manim_cli.html</loc></url>
@@ -167,6 +171,7 @@
 <url><loc>https://adamrsophie.github.io/manimR/reference/update_animations.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/updater_helpers.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/upstream_modules.html</loc></url>
+<url><loc>https://adamrsophie.github.io/manimR/reference/value_from_string.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/with_manim_config.html</loc></url>
 </urlset>
 

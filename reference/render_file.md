@@ -3,7 +3,7 @@
 Sources `file` and renders the named scenes (all scenes when `scenes` is
 `NULL`), each with its own copy of the settings, as `manim render` does.
 The script's name is the module name of the output directories
-(`media/videos/<file name>/<quality>/`).
+(`<media_dir>/videos/<file name>/<quality>/`).
 
 ## Usage
 
@@ -52,11 +52,12 @@ writeLines(c(
 # The last frame as a PNG file in the session's temporary directory.
 render_file(file, "SquareToCircle", quality = "l", format = "png", media_dir = tempdir())
 #> Rendering SquareToCircle ...
-#> INFO File ready at '/tmp/RtmpHKabBp/images/file234212897bb4/SquareToCircle_manimR_v0.1.0.png'
+#> INFO File ready at '/tmp/RtmpSsOIQi/images/file242f584073d9/SquareToCircle_manimR_v0.1.0.png'
 #> INFO Rendered SquareToCircle
 #> Played 1 animations
 if (FALSE) { # \dontrun{
-# A video in the folder media of the working directory; this needs ffmpeg.
+# A video in the media folder (by default in the session's temporary
+# directory); this needs ffmpeg.
 render_file(file, "SquareToCircle", quality = "l", preview = TRUE)
 } # }
 ```
