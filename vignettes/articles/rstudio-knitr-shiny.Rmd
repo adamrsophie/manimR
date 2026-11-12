@@ -138,8 +138,9 @@ before rendering, so you never render stale code; an untitled document is
 written to a temporary file first. The scenes are found with `find_scenes()`,
 which looks for every R6 class that inherits from `Scene` (including
 `MovingCameraScene`, `ThreeDScene` and your own scene base classes). Output
-goes to `media/videos/<file name>/<quality>/` next to your working directory,
-exactly as `render_file()` writes it.
+goes to `media/videos/<file name>/<quality>/` in the media folder (in the
+session's temporary directory unless `media_dir` is set), exactly as
+`render_file()` writes it.
 
 The template inserted by `addin_insert_template()` is the classic first scene:
 

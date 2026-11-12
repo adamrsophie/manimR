@@ -120,7 +120,8 @@ MovingCamera <- constructor(MovingCameraClass)
 #' # The last frame as a PNG file in the session's temporary directory.
 #' render(Zoom, quality = "l", format = "png", media_dir = tempdir())
 #' \dontrun{
-#' # A video in the folder media of the working directory; this needs ffmpeg.
+#' # A video in the media folder (by default in the session's temporary
+#' # directory); this needs ffmpeg.
 #' render(Zoom, quality = "l")
 #' }
 MovingCameraScene <- R6::R6Class("MovingCameraScene", inherit = Scene, lock_objects = FALSE,
@@ -275,7 +276,8 @@ MultiCamera <- constructor(MultiCameraClass)
 #' # The last frame as a PNG file in the session's temporary directory.
 #' render(UseZoomedScene, quality = "l", format = "png", media_dir = tempdir())
 #' \dontrun{
-#' # A video in the folder media of the working directory; this needs ffmpeg.
+#' # A video in the media folder (by default in the session's temporary
+#' # directory); this needs ffmpeg.
 #' render(UseZoomedScene, quality = "l")
 #' }
 ZoomedScene <- R6::R6Class("ZoomedScene", inherit = MovingCameraScene, lock_objects = FALSE,

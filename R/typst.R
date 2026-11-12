@@ -33,7 +33,7 @@ typst_executable <- function() unname(Sys.which(path.expand(cfg("typst") %||% "t
 #' Writes the markup into a minimal Typst document (auto sized page, no
 #' margin, 10pt text) and compiles it with the `typst` command line
 #' compiler. The `.typ` source and the `.svg` result are cached in
-#' the `tex_dir` setting (`media/Tex`) under a hash of the full source. Set the compiler path with
+#' the `tex_dir` setting (`<media_dir>/Tex`) under a hash of the full source. Set the compiler path with
 #' `manim_config(typst = "/path/to/typst")` when it is not on the `PATH`.
 #'
 #' @param typst_code Body of the Typst document.

@@ -441,7 +441,9 @@ init_scene <- function(scene_name, file_name = NULL) {
 #' * `get_template_path()` is the folder of the templates.
 #' * `get_template_names()` lists them.
 #' * `copy_template_files(project_dir, template_name)` copies the template
-#'   `manim.cfg` and the scene, as `main.R`, into `project_dir`.
+#'   `manim.cfg` and the scene, as `main.R`, into `project_dir`. Unlike
+#'   upstream, `project_dir` has no default, so nothing is written to the
+#'   working directory unless asked.
 #' * `add_import_statement(file)` puts `library(manimR)` on the first line
 #'   of `file`.
 #'
@@ -477,7 +479,7 @@ add_import_statement <- function(file) {
 
 #' @rdname get_template_path
 #' @export
-copy_template_files <- function(project_dir = ".", template_name = "Default") {
+copy_template_files <- function(project_dir, template_name = "Default") {
   cfg_path <- file.path(get_template_path(), "template.cfg")
   scene_path <- file.path(get_template_path(), paste0(template_name, ".mtp"))
   if (!file.exists(cfg_path)) stop(cfg_path, " : file does not exist", call. = FALSE)

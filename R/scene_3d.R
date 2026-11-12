@@ -30,7 +30,8 @@
 #'     self$wait(2)
 #'   }))
 #' \dontrun{
-#' # A video in the folder media of the working directory; this needs ffmpeg.
+#' # A video in the media folder (by default in the session's temporary
+#' # directory); this needs ffmpeg.
 #' render(Spin, quality = "l")
 #' }
 ThreeDScene <- R6::R6Class("ThreeDScene", inherit = Scene, lock_objects = FALSE,

@@ -34,8 +34,11 @@ frame), \code{"png-sequence"} (every frame) or \code{"none"}.}
 \item{output_file}{Name of the artifact. A relative name is placed in the
 video directory (or the images directory for PNG output), as upstream's
 \code{-o}; an absolute path is used as it is. Defaults to the scene name in
-\verb{media/videos/<module>/<quality>/} (videos) or \verb{media/images/<module>/}
-(images).}
+\verb{<media_dir>/videos/<module>/<quality>/} (videos) or
+\verb{<media_dir>/images/<module>/} (images). The media folder is in the
+session's temporary directory unless \code{media_dir} is set, for example
+\code{manim_config(media_dir = "media")} to keep the output in the working
+directory.}
 
 \item{save_last_frame}{\code{TRUE} is short for \code{format = "png"}.}
 
@@ -44,7 +47,7 @@ available). Defaults to the \code{preview} setting.}
 
 \item{transparent}{Render with a transparent background.}
 
-\item{module_name}{Folder name under \verb{media/videos/} and \verb{media/images/};
+\item{module_name}{Folder name under \verb{<media_dir>/videos/} and \verb{<media_dir>/images/};
 \code{\link[=render_file]{render_file()}} uses the script name. Defaults to \code{"manimR"}.}
 
 \item{scene_name}{Name used for output files; defaults to the scene class name.}
@@ -64,7 +67,8 @@ Renders a scene to a video or image file, like \verb{manim render} does.
 render(function(self) self$play(Create(Circle())), quality = "l", format = "png",
        media_dir = tempdir())
 \dontrun{
-# A video in the folder media of the working directory; this needs ffmpeg.
+# A video in the media folder (by default in the session's temporary
+# directory); this needs ffmpeg.
 render(function(self) self$play(Create(Circle())), quality = "l")
 }
 }

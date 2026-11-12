@@ -48,7 +48,7 @@ find_scenes <- function(file = NULL, envir = NULL) {
 #' Sources `file` and renders the named scenes (all scenes when `scenes` is
 #' `NULL`), each with its own copy of the settings, as `manim render` does.
 #' The script's name is the module name of the output directories
-#' (`media/videos/<file name>/<quality>/`).
+#' (`<media_dir>/videos/<file name>/<quality>/`).
 #'
 #' @param file Path to an R script defining [Scene] subclasses.
 #' @param scenes Scene class names; `NULL` renders all.
@@ -68,7 +68,8 @@ find_scenes <- function(file = NULL, envir = NULL) {
 #' # The last frame as a PNG file in the session's temporary directory.
 #' render_file(file, "SquareToCircle", quality = "l", format = "png", media_dir = tempdir())
 #' \dontrun{
-#' # A video in the folder media of the working directory; this needs ffmpeg.
+#' # A video in the media folder (by default in the session's temporary
+#' # directory); this needs ffmpeg.
 #' render_file(file, "SquareToCircle", quality = "l", preview = TRUE)
 #' }
 render_file <- function(file, scenes = NULL, ..., found = NULL) {
@@ -330,6 +331,8 @@ manim_cli <- function(args = commandArgs(trailingOnly = TRUE)) {
   # A .cfg file as FILE is the config file, and names the script itself.
   if (tolower(tools::file_ext(file)) == "cfg") config_file <- file
   with_manim_config(list(), {
+    # As upstream's command line, the media folder is ./media unless set.
+    if (identical(cfg("media_dir"), default_media_dir())) manim_config(media_dir = "media")
     if (!is.null(config_file)) {
       digest_config_file(config_file)
     } else if (file.exists("manim.cfg")) {
@@ -451,6 +454,8 @@ cli_subcommand <- function(args) {
       config_file <- if (is_cfg) pos[1] else settings$config_file
       settings$config_file <- NULL
       with_manim_config(list(), {
+        # As upstream's command line, the media folder is ./media unless set.
+        if (identical(cfg("media_dir"), default_media_dir())) manim_config(media_dir = "media")
         if (!is.null(config_file)) digest_config_file(config_file)
         input <- cfg("input_file")
         if (is.null(input) || !nzchar(input)) {

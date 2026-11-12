@@ -416,3 +416,21 @@ test_that("config has upstream's digest_file, get_dir and update methods", {
     expect_match(config$get_dir("video_dir", module_name = "m"), "videos")
   })
 })
+
+test_that("the default media folder is in the session's temporary directory", {
+  wd <- withr_tempdir()
+  old_wd <- setwd(wd)
+  on.exit(setwd(old_wd), add = TRUE)
+  with_manim_config(list(media_dir = default_media_dir()), {
+    expect_true(startsWith(get_dir("tex_dir"), tempdir()))
+    out <- render(function(self) self$add(Circle()), quality = "l", format = "png", preview = FALSE)
+    expect_true(startsWith(normalizePath(out), normalizePath(default_media_dir())))
+    expect_false(dir.exists(file.path(wd, "media")))
+    # The command line writes ./media, as upstream's.
+    f <- file.path(wd, "scene.R")
+    writeLines(c("library(manimR)", "A <- manim_scene(function(self) self$add(Circle()))"), f)
+    capture.output(manim_cli(c("--hide-splash", "render", f, "A", "-s", "-ql", "-v", "warning")))
+    expect_true(dir.exists(file.path(wd, "media", "images")))
+    expect_equal(cfg("media_dir"), default_media_dir())
+  })
+})

@@ -245,8 +245,12 @@ media folder, wherever the movie goes.
 
 ## The media directory
 
-All output lives under `media_dir`. With every feature in use, a project
-looks like this:
+All output lives under `media_dir`. By default it is a folder `media` in the
+R session's temporary directory, so that rendering writes nothing to the
+working directory; set `manim_config(media_dir = "media")` to keep the
+output next to your scripts, as Python manim does. `manim_cli()`, like
+upstream's command line, uses `media` in the working directory. With every
+feature in use, a media folder looks like this:
 
 ```
 media/

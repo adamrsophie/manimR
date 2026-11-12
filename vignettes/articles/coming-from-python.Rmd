@@ -729,8 +729,11 @@ plot(Text("Hello", font_size = 96, t2c = list("[1:3]" = YELLOW)))
   `textshaping` instead of Pango, so font names are those your system
   knows (`TextClass$font_list()` lists them).
 * **Output paths.** Videos go to `media/videos/<script name>/<quality>/`
-  as with Python manim. Scenes rendered from the console, without a script,
-  use `manimR` as the folder name.
+  as with Python manim, but the media folder is in the R session's
+  temporary directory unless you set `manim_config(media_dir = "media")`;
+  `manim_cli()` uses `./media` as the Python command line does. Scenes
+  rendered from the console, without a script, use `manimR` as the folder
+  name.
 * **Plotting a mobject.** `plot(mob)` draws one frame in the Plots pane;
   Python manim has no counterpart, and it is the quickest way to check a
   layout.

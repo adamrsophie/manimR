@@ -47,7 +47,8 @@ p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) + ggplot2::geom_point()
 chart <- as_mobject(p)
 }
 \dontrun{
-# A video in the folder media of the working directory; this needs ffmpeg.
+# A video in the media folder (by default in the session's temporary
+# directory); this needs ffmpeg.
 render(function(self) self$play(Create(chart)), quality = "l")
 }
 \dontshow{\}) # examplesIf}

@@ -31,7 +31,8 @@
 #' chart <- as_mobject(p)
 #' }
 #' \dontrun{
-#' # A video in the folder media of the working directory; this needs ffmpeg.
+#' # A video in the media folder (by default in the session's temporary
+#' # directory); this needs ffmpeg.
 #' render(function(self) self$play(Create(chart)), quality = "l")
 #' }
 as_mobject <- function(x, width = 7, height = 5, bg = "transparent", height_units = 6, ...) {

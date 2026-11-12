@@ -23,7 +23,8 @@ Zoom <- R6::R6Class("Zoom", inherit = MovingCameraScene, public = list(
 # The last frame as a PNG file in the session's temporary directory.
 render(Zoom, quality = "l", format = "png", media_dir = tempdir())
 \dontrun{
-# A video in the folder media of the working directory; this needs ffmpeg.
+# A video in the media folder (by default in the session's temporary
+# directory); this needs ffmpeg.
 render(Zoom, quality = "l")
 }
 }

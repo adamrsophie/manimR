@@ -333,8 +333,11 @@ The main arguments are:
 | `...` | Any other setting of `manim_config()`, such as `background_color` or `frame_rate` |
 
 Without `output_file`, the video goes to
-`media/videos/<module>/<quality>/<Scene>.mp4` in the working directory,
-where `<quality>` is a folder such as `480p15`. Use low quality while you
+`media/videos/<module>/<quality>/<Scene>.mp4` in the media folder,
+where `<quality>` is a folder such as `480p15`. The media folder is in the
+session's temporary directory, so nothing is written to your working
+directory unless you ask: `manim_config(media_dir = "media")` keeps the
+output in a `media` folder there, as Python manim does. Use low quality while you
 work and high quality for the final version.
 
 A bare function works as well, which is handy at the console. Such a scene

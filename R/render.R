@@ -17,13 +17,16 @@
 #' @param output_file Name of the artifact. A relative name is placed in the
 #'   video directory (or the images directory for PNG output), as upstream's
 #'   `-o`; an absolute path is used as it is. Defaults to the scene name in
-#'   `media/videos/<module>/<quality>/` (videos) or `media/images/<module>/`
-#'   (images).
+#'   `<media_dir>/videos/<module>/<quality>/` (videos) or
+#'   `<media_dir>/images/<module>/` (images). The media folder is in the
+#'   session's temporary directory unless `media_dir` is set, for example
+#'   `manim_config(media_dir = "media")` to keep the output in the working
+#'   directory.
 #' @param save_last_frame `TRUE` is short for `format = "png"`.
 #' @param preview Open the result when done (the RStudio Viewer when
 #'   available). Defaults to the `preview` setting.
 #' @param transparent Render with a transparent background.
-#' @param module_name Folder name under `media/videos/` and `media/images/`;
+#' @param module_name Folder name under `<media_dir>/videos/` and `<media_dir>/images/`;
 #'   [render_file()] uses the script name. Defaults to `"manimR"`.
 #' @param scene_name Name used for output files; defaults to the scene class name.
 #' @param ... Further [manim_config()] settings for this render, such as
@@ -36,7 +39,8 @@
 #' render(function(self) self$play(Create(Circle())), quality = "l", format = "png",
 #'        media_dir = tempdir())
 #' \dontrun{
-#' # A video in the folder media of the working directory; this needs ffmpeg.
+#' # A video in the media folder (by default in the session's temporary
+#' # directory); this needs ffmpeg.
 #' render(function(self) self$play(Create(Circle())), quality = "l")
 #' }
 render <- function(scene, quality = NULL, format = NULL, output_file = NULL, save_last_frame = NULL,

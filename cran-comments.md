@@ -31,10 +31,15 @@ Local `--as-cran` check: 0 errors | 0 warnings | 2 notes
   user. Each of these blocks starts with a comment that says what it needs.
   Examples that open a window or a 'shiny' application run in interactive
   sessions only.
-* `render()` writes a video below the folder `media` of the working
-  directory by default, as the Python library does, and only when the user
-  calls it. No example, test or vignette uses this default: they write below
-  `tempdir()`.
+* No function writes to the working directory or the home filespace by
+  default. The media folder, which holds rendered videos, images and the
+  LaTeX cache of `MathTex()`, is a folder below `tempdir()` unless the user
+  sets `media_dir` (for example `manim_config(media_dir = "media")`). The one
+  exception is `manim_cli()`, the command line front end that a user runs on
+  a script from a shell (`Rscript -e "manimR::manim_cli()" render file.R`):
+  like the Python command it mirrors, it writes below `./media`, because the
+  temporary directory of that process is deleted when it ends. The tests
+  that call it work in a directory below `tempdir()`.
 * Tests that call external programs (LaTeX, 'dvisvgm', 'ffmpeg', 'typst') and
   the ten slowest tests are skipped on CRAN. The vignette chunks that call
   LaTeX or 'ffmpeg' are not evaluated on CRAN. `Code()` highlights with

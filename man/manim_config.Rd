@@ -44,7 +44,9 @@ without writing files, \code{save_sections} also writes one video per section,
 \code{from_animation_number} and \code{upto_animation_number} (-1: all) select
 animations.
 \item Directories, with \code{{name}} placeholders resolved by \code{\link[=get_dir]{get_dir()}}:
-\code{media_dir} ("media"), \code{video_dir}
+\code{media_dir} (a folder \code{media} in the session's temporary directory; set
+it, for example to \code{"media"}, to keep the output; \code{\link[=manim_cli]{manim_cli()}} uses
+\code{"media"} in the working directory, as upstream), \code{video_dir}
 ("\{media_dir\}/videos/\{module_name\}/\{quality\}"), \code{images_dir}, \code{sections_dir},
 \code{partial_movie_dir}, \code{tex_dir}, \code{text_dir}, \code{log_dir}, \code{assets_dir}
 (where sounds and images are looked up), \code{input_file} (the script

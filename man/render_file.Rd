@@ -24,7 +24,7 @@ Output paths, invisibly.
 Sources \code{file} and renders the named scenes (all scenes when \code{scenes} is
 \code{NULL}), each with its own copy of the settings, as \verb{manim render} does.
 The script's name is the module name of the output directories
-(\verb{media/videos/<file name>/<quality>/}).
+(\verb{<media_dir>/videos/<file name>/<quality>/}).
 }
 \examples{
 file <- tempfile(fileext = ".R")
@@ -36,7 +36,8 @@ writeLines(c(
 # The last frame as a PNG file in the session's temporary directory.
 render_file(file, "SquareToCircle", quality = "l", format = "png", media_dir = tempdir())
 \dontrun{
-# A video in the folder media of the working directory; this needs ffmpeg.
+# A video in the media folder (by default in the session's temporary
+# directory); this needs ffmpeg.
 render_file(file, "SquareToCircle", quality = "l", preview = TRUE)
 }
 }

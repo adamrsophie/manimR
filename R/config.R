@@ -34,6 +34,11 @@ quality_spec <- function(q) {
   if (length(hit)) QUALITIES[[hit[1]]]
 }
 
+# The default media folder, in the session's temporary directory, so that
+# rendering writes nothing to the working directory unless asked to. Upstream
+# writes ./media; manim_cli() keeps that, as upstream's command line does.
+default_media_dir <- function() file.path(tempdir(), "media")
+
 default_config <- function() {
   list(
     quality = "h",
@@ -55,7 +60,7 @@ default_config <- function() {
     scene_names = character(),
     input_file = NULL,
     output_file = NULL,
-    media_dir = "media",
+    media_dir = default_media_dir(),
     log_dir = "{media_dir}/logs",
     log_to_file = FALSE,
     assets_dir = "./",
@@ -150,7 +155,9 @@ check_choice <- function(name, value, choices) {
 #'   `from_animation_number` and `upto_animation_number` (-1: all) select
 #'   animations.
 #' * Directories, with `{name}` placeholders resolved by [get_dir()]:
-#'   `media_dir` ("media"), `video_dir`
+#'   `media_dir` (a folder `media` in the session's temporary directory; set
+#'   it, for example to `"media"`, to keep the output; [manim_cli()] uses
+#'   `"media"` in the working directory, as upstream), `video_dir`
 #'   ("\{media_dir\}/videos/\{module_name\}/\{quality\}"), `images_dir`, `sections_dir`,
 #'   `partial_movie_dir`, `tex_dir`, `text_dir`, `log_dir`, `assets_dir`
 #'   (where sounds and images are looked up), `input_file` (the script

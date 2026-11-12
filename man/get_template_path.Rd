@@ -13,7 +13,7 @@ get_template_names()
 
 add_import_statement(file)
 
-copy_template_files(project_dir = ".", template_name = "Default")
+copy_template_files(project_dir, template_name = "Default")
 }
 \arguments{
 \item{file}{Path of an R file.}
@@ -35,7 +35,9 @@ R: \code{Default}, \code{Axes} and \code{MovingCamera}.
 \item \code{get_template_path()} is the folder of the templates.
 \item \code{get_template_names()} lists them.
 \item \code{copy_template_files(project_dir, template_name)} copies the template
-\code{manim.cfg} and the scene, as \code{main.R}, into \code{project_dir}.
+\code{manim.cfg} and the scene, as \code{main.R}, into \code{project_dir}. Unlike
+upstream, \code{project_dir} has no default, so nothing is written to the
+working directory unless asked.
 \item \code{add_import_statement(file)} puts \code{library(manimR)} on the first line
 of \code{file}.
 }

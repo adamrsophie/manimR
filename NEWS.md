@@ -5,6 +5,10 @@
   `from manim import *` (checked by `tests/testthat/test-api-coverage.R`).
   Every upstream class has an R6 generator `FooClass`, including the ones
   upstream defines only to preset arguments.
+* Rendered output and the LaTeX cache go to a `media` folder in the R
+  session's temporary directory unless `media_dir` is set, so nothing is
+  written to the working directory by default; `manim_cli()` writes to
+  `./media` as Manim's command line does.
 * Output follows Manim 0.22's render sessions: `format` is `"auto"`,
   `"mp4"`, `"mov"`, `"webm"`, `"gif"`, `"png"` (last frame),
   `"png-sequence"` or `"none"`, with `dry_run`, directory templates
