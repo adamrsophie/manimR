@@ -43,7 +43,7 @@ jobs:
         run: |
           tlmgr install babel-english lm amsmath amsfonts doublestroke setspace tipa \
             relsize jknapltx rsfs calligra wasysym ragged2e physics xcolor microtype \
-            preview standalone dvisvgm
+            preview standalone dvisvgm frcursive mathastext eulervm ec cm-super
           dvisvgm --version
 
       - name: Install typst
