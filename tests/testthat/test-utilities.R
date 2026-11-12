@@ -299,12 +299,15 @@ test_that("register_font makes a font file usable by Text", {
 
 test_that("register_font accepts a file of an installed family", {
   fonts <- systemfonts::system_fonts()
-  fams <- vapply(fonts$path, function(f) {
-    tryCatch(systemfonts::font_info(path = f)$family[1], error = function(e) "")
-  }, "", USE.NAMES = FALSE)
-  hit <- which(fams %in% fonts$family)
-  skip_if(!length(hit), "no installed font whose file reports a listed family")
-  expect_identical(register_font(fonts$path[hit[1]]), fams[hit[1]])
+  # Only single font files, and only until one is found: FreeType crashes on
+  # some of the system font files of macOS runners.
+  files <- fonts$path[fonts$index == 0 & grepl("\\.(ttf|otf)$", fonts$path, ignore.case = TRUE)]
+  for (f in utils::head(files, 20)) {
+    family <- tryCatch(systemfonts::font_info(path = f)$family[1], error = function(e) "")
+    if (family %in% fonts$family) break
+  }
+  skip_if(!length(files) || !family %in% fonts$family, "no installed font whose file reports a listed family")
+  expect_identical(register_font(f), family)
 })
 
 test_that("utility edge cases follow upstream", {
