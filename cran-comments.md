@@ -6,15 +6,18 @@
 
 ## R CMD check results
 
-0 errors | 0 warnings | 1 note
+Local `--as-cran` check: 0 errors | 0 warnings | 2 notes
 
 * This is a new submission.
+* Seven examples took more than 5 s elapsed time while the machine ran
+  other jobs; the CPU time of every example was under 2.1 s, and the
+  GitHub Actions checks did not list any example.
+* Installed size (INFO): 8.1 Mb, of which 7.0 Mb is the `R` directory. The
+  package is pure R code ported from a large library; it has no compiled
+  code and no data files.
 * Should the spelling check list Bezier, mobjects, updaters or addins in
   DESCRIPTION: Bezier is a proper name; mobjects, updaters and addins are
   terms of the library and of 'RStudio'.
-* The local check also listed seven examples above 5 s elapsed time while
-  the machine ran other jobs; the CPU time of every example was under
-  2.1 s.
 
 ## Notes for the reviewers
 
