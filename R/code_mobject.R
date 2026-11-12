@@ -240,7 +240,7 @@ code_guess_language <- function(code, file = NULL) {
 #' @param background_config Named list of arguments for the background
 #'   [SurroundingRectangle()]; `fill_color` defaults to the style's background.
 #' @param paragraph_config Named list of [Text()] arguments for the code and
-#'   line numbers: `font` (default `"mono"`), `font_size` (24),
+#'   line numbers: `font` (default `"Monospace"`, drawn with R's `"mono"` family), `font_size` (24),
 #'   `line_spacing` (0.5, extra space between lines as a fraction of the
 #'   font size, as upstream), `disable_ligatures`, and any other [Text()]
 #'   option such as `weight` or `slant`. `color` is ignored; colors come
@@ -300,8 +300,7 @@ CodeClass <- R6::R6Class("Code", inherit = VMobjectClass, lock_objects = FALSE,
       if (endsWith(code, "\n")) code_lines <- c(code_lines, "")
       rendered <- if (any(nzchar(trimws(code_lines)))) code_lines else rep("", length(code_lines))
 
-      pc <- labeled_merge(list(font = "mono", font_size = 24, line_spacing = 0.5, disable_ligatures = TRUE),
-                          paragraph_config)
+      pc <- labeled_merge(CodeClass$default_paragraph_config, paragraph_config)
       pc$color <- NULL
       if (tolower(pc$font) == "monospace") pc$font <- "mono"
       foreground <- if (is.na(style$text %||% NA)) BLACK else style$text
@@ -363,8 +362,7 @@ CodeClass <- R6::R6Class("Code", inherit = VMobjectClass, lock_objects = FALSE,
       }
       self$add(self$code_lines)
 
-      bc <- labeled_merge(list(buff = 0.3, fill_color = NULL, stroke_color = WHITE, corner_radius = 0.2,
-                               stroke_width = 1, fill_opacity = 1), background_config)
+      bc <- labeled_merge(CodeClass$default_background_config, background_config)
       if (is.null(bc$fill_color)) bc$fill_color <- style$background
       if (identical(background, "rectangle")) {
         self$background <- do.call(SurroundingRectangle, c(list(self, alignment_mobjects), bc))

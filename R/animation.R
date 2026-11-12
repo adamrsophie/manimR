@@ -276,7 +276,11 @@ animation_builder <- function(mobject) {
   if (!is.function(method)) stop("Mobject has no method '", name, "'", call. = FALSE)
   state$cannot_pass_args <- TRUE
   function(...) {
-    state$methods[[length(state$methods) + 1]] <- list(name = name, args = list(...))
+    a <- list(...)
+    named <- if (is.null(names(a))) rep(FALSE, length(a)) else nzchar(names(a))
+    mwa <- MethodWithArgs(method, a[!named], a[named])
+    attr(mwa, "name") <- name
+    state$methods[[length(state$methods) + 1]] <- mwa
     method(...)
     x
   }
@@ -286,7 +290,7 @@ animation_builder <- function(mobject) {
 print.manim_animation_builder <- function(x, ...) {
   state <- attr(x, "state")
   cat("<animation builder> ", class(state$mobject)[1], ": ",
-      paste(vapply(state$methods, `[[`, "", "name"), collapse = " -> "), "\n", sep = "")
+      paste(vapply(state$methods, attr, "", "name"), collapse = " -> "), "\n", sep = "")
   invisible(x)
 }
 

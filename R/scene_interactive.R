@@ -228,7 +228,12 @@ Scene$set("public", "interactive_embed", function(fps = 10) {
   if (!self$check_interactive_embed_is_valid()) return(invisible(self))
   self$interactive_mode <- TRUE
   on.exit(self$interactive_mode <- FALSE, add = TRUE)
+  self$rerun_requested <- FALSE
   run_interactive_gadget(self, fps)
+  if (isTRUE(self$rerun_requested)) {
+    self$rerun_requested <- FALSE
+    stop(RerunSceneException())
+  }
   invisible(self)
 })
 
@@ -313,6 +318,10 @@ interactive_app <- function(scene, fps = 10) {
   server <- function(input, output, session) {
     tick <- shiny::reactiveVal(0)
     last_time <- Sys.time()
+    handler <- RerunSceneHandler$new(scene$queue)
+    watched <- cfg("input_file")
+    if (!is.null(watched) && !nzchar(watched)) watched <- NULL
+    watched_time <- if (!is.null(watched) && file.exists(watched)) file.mtime(watched) else Sys.time()
     # isolate(): the timer observer must not depend on the counter it bumps.
     redraw <- function() shiny::isolate(tick(tick() + 1))
     shiny::observe({
@@ -320,6 +329,12 @@ interactive_app <- function(scene, fps = 10) {
       now <- Sys.time()
       dt <- as.numeric(difftime(now, last_time, units = "secs"))
       last_time <<- now
+      # A changed input file queues a rerun, as upstream's file watcher.
+      if (!is.null(watched) && file.exists(watched) && file.mtime(watched) > watched_time) {
+        watched_time <<- file.mtime(watched)
+        handler$on_modified()
+      }
+      scene$process_queue()
       scene$update_mobjects(dt)
       scene$update_meshes(dt)
       if (isTRUE(scene$quit_interaction)) shiny::stopApp(invisible(scene))

@@ -948,6 +948,11 @@ Group <- constructor(GroupClass)
 #' character key returns the field or method of that name when there is one,
 #' as for any environment, and otherwise the dictionary entry or vertex.
 #'
+#' `mob$name` reads a field or method. As upstream's compatibility layer, an
+#' unknown `mob$get_x()` returns the field `x` and an unknown
+#' `mob$set_x(value)` sets it, each with a deprecation warning; other unknown
+#' names give `NULL`, as for any environment.
+#'
 #' @param x A mobject.
 #' @param i Index.
 #' @param ... Ignored.
@@ -971,7 +976,8 @@ Group <- constructor(GroupClass)
 #'   `[[` returns a submobject, a field or an entry. `length()` returns the
 #'   number of submobjects, plus one when the mobject has points of its own.
 #'   The assignment forms return the changed mobject; `mob[[i]] <- value` with
-#'   a position does what `mob[i] <- value` does.
+#'   a position does what `mob[i] <- value` does. `$` returns the field or
+#'   method, or the generated getter or setter function.
 #' @rdname sub-.Mobject
 #' @param value A mobject to store under key `i` of a [VDict].
 #' @export
@@ -1012,26 +1018,30 @@ length.Mobject <- function(x) length(x$submobjects) + (nrow(x$points) > 0)
 
 #' @export
 `+.Mobject` <- function(e1, e2) {
-  # A group plus a mobject is a group of the same kind with one more member,
-  # as upstream's VGroup.__add__; other mobjects are grouped.
-  if (inherits(e1, c("VGroup", "Group"))) {
-    return(do.call(e1$get_group_class(), c(e1$submobjects, list(e2))))
+  # As upstream, only a VGroup adds (VGroup.__add__ gives a new VGroup with one
+  # more member); Mobject.__add__ raises NotImplementedError.
+  if (!missing(e2) && inherits(e1, "VGroup") && !inherits(e1, "VDict")) {
+    return(do.call(VGroup, c(e1$submobjects, list(e2))))
   }
-  Group(e1, e2)
+  stop("NotImplementedError: `+` needs a VGroup on the left; use Group() or $add() to group mobjects",
+       call. = FALSE)
 }
 
 #' @export
 `-.Mobject` <- function(e1, e2) {
-  if (missing(e2) || !inherits(e1, c("VGroup", "Group"))) {
-    stop("Only a member can be taken out of a VGroup or Group", call. = FALSE)
+  # VGroup.__sub__ gives a new VGroup without the member; Mobject.__sub__ raises.
+  if (!missing(e2) && inherits(e1, "VGroup") && !inherits(e1, "VDict")) {
+    out <- do.call(VGroup, e1$submobjects)
+    out$remove(e2)
+    return(out)
   }
-  out <- do.call(e1$get_group_class(), e1$submobjects)
-  out$remove(e2)
-  out
+  stop("NotImplementedError: `-` needs a VGroup on the left; use $remove() to take a member out", call. = FALSE)
 }
 
+# As upstream's Mobject.__iter__: the mobject itself first when it has points,
+# then its submobjects.
 #' @export
-as.list.Mobject <- function(x, ...) x$submobjects
+as.list.Mobject <- function(x, ...) x$split()
 
 # Port of Mobject.arrange_in_grid. Indices r and c are 0 based as upstream.
 arrange_in_grid_impl <- function(self, rows, cols, buff, cell_alignment, row_alignments, col_alignments,
@@ -1116,6 +1126,36 @@ arrange_in_grid_impl <- function(self, rows, cols, buff, cell_alignment, row_ali
     if (!is.null(dict) && i %in% names(dict)) return(dict[[i]])
   }
   .subset2(x, i)
+}
+
+#' @rdname sub-.Mobject
+#' @param name A field or method name.
+#' @export
+`$.Mobject` <- function(x, name) {
+  v <- .subset2(x, name)
+  if (!is.null(v) || !(startsWith(name, "get_") || startsWith(name, "set_")) || exists(name, envir = x, inherits = FALSE)) {
+    return(v)
+  }
+  # Upstream's Mobject.__getattr__ compatibility layer: an unknown get_x()
+  # reads the field x and an unknown set_x(value) sets it, with a
+  # deprecation warning.
+  field <- substring(name, 5)
+  if (startsWith(name, "get_")) {
+    return(function() {
+      warning(warningCondition("This method is not guaranteed to stay around. Please prefer getting the attribute normally.",
+                               class = "deprecatedWarning"))
+      if (!exists(field, envir = x, inherits = FALSE)) {
+        stop(class(x)[1], " object has no attribute '", field, "'", call. = FALSE)
+      }
+      .subset2(x, field)
+    })
+  }
+  function(value) {
+    warning(warningCondition(paste("This method is not guaranteed to stay around. Please prefer setting the attribute",
+                                   "normally or with Mobject.set()."), class = "deprecatedWarning"))
+    assign(field, value, envir = x)
+    invisible(x)
+  }
 }
 
 iter_family <- function(m, active) {

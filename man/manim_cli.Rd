@@ -45,15 +45,24 @@ written \code{--name=value}, and \code{render} may come first, as in \verb{manim
 The other subcommands of \code{manim}:
 \itemize{
 \item \code{checkhealth} reports the programs manimR uses (\code{\link[=manim_check]{manim_check()}}).
-\item \verb{cfg show} prints the settings, \verb{cfg write} writes them to \code{manim.cfg}
-in the working directory and \verb{cfg export --directory DIR} into \code{DIR}.
-\item \verb{init project NAME} creates a project folder with \code{main.R} and a
-\code{manim.cfg} (upstream's default settings: 1920 x 1080 at 30 fps);
-\verb{init scene NAME [FILE]} appends a scene template to \code{FILE} (\code{main.R}).
+\item \verb{cfg show} prints the config files read and every setting of
+\code{\link[=make_config_parser]{make_config_parser()}}. \verb{cfg write [-l user|cwd] [-o]} asks for each
+value (Enter keeps it) and writes the user wide file or \code{manim.cfg} in
+the working directory; \code{-o} opens the file instead of asking.
+\verb{cfg export [-d DIR]} runs \verb{cfg write} and copies its file into \code{DIR}.
+\item \verb{init project [NAME] [-d]} asks for a template, the frame rate,
+background and resolution (\code{-d} takes upstream's defaults: 1920 x 1080
+at 30 fps) and creates \code{NAME} with \code{main.R} and \code{manim.cfg}.
+\verb{init scene NAME [FILE]} asks for a template and appends it to \code{FILE}
+(\code{main.R}). See \code{\link[=get_template_names]{get_template_names()}}.
 \item \code{plugins -l} lists installed plugins (\code{\link[=list_plugins]{list_plugins()}}).
 \item \verb{cache clear FILE SCENE ...} deletes the partial movie files of those
-scenes, for the quality given with \code{-q} and the media directory given
-with \code{--media-dir}.
-\item \code{--version} prints the version.
+scenes, for the quality (\code{-q}), resolution (\verb{-r W,H}), frame rate
+(\code{--fps}), media directory (\code{--media-dir}) and config file (\code{-c})
+given.
+\item \code{--version} prints the version; every command starts with the same
+splash line unless \code{--hide-splash} is given.
 }
+
+Outside an interactive session every prompt takes its default.
 }

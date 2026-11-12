@@ -32,6 +32,12 @@ is read from a \code{.tex} file.
 \item \code{CodeClass$get_styles_list()} and \code{CodeClass$get_pygments_style(name)}:
 the names and colors of the highlighting styles (all of Pygments' when
 it is available, see \code{\link[=Code]{Code()}}).
+\item \code{CodeClass$default_background_config} and
+\code{CodeClass$default_paragraph_config} are the class attributes that
+hold the defaults of \code{background_config} and \code{paragraph_config};
+changing them changes later \code{\link[=Code]{Code()}} objects.
+\item \code{CairoRendererClass$capabilities}: the optional session features of the
+renderer (\code{live_preview = FALSE}).
 \item \code{GraphClass$from_igraph(graph, ...)} and \code{DiGraphClass$from_igraph(graph, ...)}: a \code{\link[=Graph]{Graph()}} or \code{\link[=DiGraph]{DiGraph()}} with the vertices (by name when they
 have names) and edges of an igraph graph, the R counterpart of
 upstream's \code{Graph.from_networkx()}; \code{...} goes to the constructor, for

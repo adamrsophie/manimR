@@ -202,16 +202,25 @@ prompt_scene_choice <- function(names, input = NULL) {
 #'
 #' The other subcommands of `manim`:
 #' * `checkhealth` reports the programs manimR uses ([manim_check()]).
-#' * `cfg show` prints the settings, `cfg write` writes them to `manim.cfg`
-#'   in the working directory and `cfg export --directory DIR` into `DIR`.
-#' * `init project NAME` creates a project folder with `main.R` and a
-#'   `manim.cfg` (upstream's default settings: 1920 x 1080 at 30 fps);
-#'   `init scene NAME [FILE]` appends a scene template to `FILE` (`main.R`).
+#' * `cfg show` prints the config files read and every setting of
+#'   [make_config_parser()]. `cfg write [-l user|cwd] [-o]` asks for each
+#'   value (Enter keeps it) and writes the user wide file or `manim.cfg` in
+#'   the working directory; `-o` opens the file instead of asking.
+#'   `cfg export [-d DIR]` runs `cfg write` and copies its file into `DIR`.
+#' * `init project [NAME] [-d]` asks for a template, the frame rate,
+#'   background and resolution (`-d` takes upstream's defaults: 1920 x 1080
+#'   at 30 fps) and creates `NAME` with `main.R` and `manim.cfg`.
+#'   `init scene NAME [FILE]` asks for a template and appends it to `FILE`
+#'   (`main.R`). See [get_template_names()].
 #' * `plugins -l` lists installed plugins ([list_plugins()]).
 #' * `cache clear FILE SCENE ...` deletes the partial movie files of those
-#'   scenes, for the quality given with `-q` and the media directory given
-#'   with `--media-dir`.
-#' * `--version` prints the version.
+#'   scenes, for the quality (`-q`), resolution (`-r W,H`), frame rate
+#'   (`--fps`), media directory (`--media-dir`) and config file (`-c`)
+#'   given.
+#' * `--version` prints the version; every command starts with the same
+#'   splash line unless `--hide-splash` is given.
+#'
+#' Outside an interactive session every prompt takes its default.
 #'
 #' @param args Character vector of arguments; defaults to the trailing
 #'   command line arguments.
@@ -229,9 +238,17 @@ manim_cli <- function(args = commandArgs(trailingOnly = TRUE)) {
     if (grepl("^--[A-Za-z_-]+=", a)) c(sub("=.*$", "", a), sub("^[^=]*=", "", a)) else a
   }))
   if (args[1] %in% c("--version", "version")) {
-    cat("manimR", as.character(utils::packageVersion("manimR")), "\n")
+    show_splash(TRUE)
     return(invisible(utils::packageVersion("manimR")))
   }
+  # --show-splash (the default) and --hide-splash, as upstream's main group.
+  splash <- !"--hide-splash" %in% args
+  args <- args[!args %in% c("--show-splash", "--hide-splash")]
+  if (!length(args)) {
+    cat(usage)
+    return(invisible(NULL))
+  }
+  show_splash(splash)
   if (args[1] %in% c("checkhealth", "cfg", "init", "plugins", "cache")) return(cli_subcommand(args))
   if (args[1] == "render") args <- args[-1]
   # Expand clustered short flags such as -pql into -p -ql, like manim's CLI.
@@ -346,36 +363,11 @@ manim_cli <- function(args = commandArgs(trailingOnly = TRUE)) {
   invisible(out)
 }
 
-# The scene template of `manim init`, as an R scene.
-scene_template_code <- function(name = "DefaultTemplate") {
-  sprintf(paste(
-    "%s <- R6::R6Class(\"%s\", inherit = Scene,",
-    "  public = list(",
-    "    construct = function() {",
-    "      circle <- Circle()",
-    "      circle$set_fill(PINK, opacity = 0.5)",
-    "      square <- Square()",
-    "      square$flip(RIGHT)",
-    "      square$rotate(-3 * TAU / 8)",
-    "      self$play(Create(square))",
-    "      self$play(Transform(square, circle))",
-    "      self$play(FadeOut(square))",
-    "    }",
-    "  )",
-    ")",
-    sep = "\n"), name, name)
-}
-
-# Writes the settings that differ from upstream's library defaults to a
-# manim.cfg [CLI] section.
-write_cfg_file <- function(path, settings) {
-  lines <- c("[CLI]", vapply(names(settings), function(k) {
-    v <- settings[[k]]
-    v <- if (is.logical(v)) (if (v) "True" else "False") else paste(v, collapse = ",")
-    paste(k, "=", gsub("%", "%%", v, fixed = TRUE))
-  }, ""))
-  writeLines(lines, path)
-  invisible(path)
+# The splash message of upstream's main group: the version, before any
+# command.
+show_splash <- function(value) {
+  if (isTRUE(value)) cat("manimR v", as.character(utils::packageVersion("manimR")), "\n\n", sep = "")
+  invisible(NULL)
 }
 
 cli_subcommand <- function(args) {
@@ -391,48 +383,33 @@ cli_subcommand <- function(args) {
       invisible(ok)
     },
     cfg = {
-      sub_cmd <- rest[1] %||% "show"
-      if (sub_cmd == "show") {
-        print(config)
-        return(invisible(manim_config()))
-      }
-      keep <- c("frame_rate", "pixel_width", "pixel_height", "background_color", "background_opacity", "media_dir",
-                "format", "save_sections", "disable_caching", "verbosity", "zero_pad")
-      current <- manim_config()[keep]
-      dir <- if (sub_cmd == "export") opt(c("-d", "--directory", "--dir"), ".") else "."
-      if (!sub_cmd %in% c("write", "export")) stop("Unknown cfg subcommand '", sub_cmd, "'", call. = FALSE)
-      dir.create(dir, recursive = TRUE, showWarnings = FALSE)
-      path <- write_cfg_file(file.path(dir, "manim.cfg"), current)
-      cat("Configuration written to", path, "\n")
-      invisible(path)
+      sub_cmd <- rest[1] %||% ""
+      flag <- function(names) any(rest[-1] %in% names)
+      switch(sub_cmd,
+        show = cfg_show(),
+        write = {
+          level <- opt(c("-l", "--level"))
+          if (!is.null(level)) {
+            level <- tolower(level)
+            if (!level %in% c("user", "cwd")) stop("Invalid value for '-l' / '--level': '", level,
+                                                   "' is not one of 'user', 'cwd'.", call. = FALSE)
+          }
+          cfg_write(level, openfile = flag(c("-o", "--open")))
+        },
+        export = cfg_export(opt(c("-d", "--directory", "--dir"), ".")),
+        stop("Use `cfg show`, `cfg write [-l user|cwd] [-o]` or `cfg export [-d DIR]`.", call. = FALSE)
+      )
     },
     init = {
       what <- rest[1] %||% ""
+      pos <- rest[-1][!startsWith(rest[-1], "-")]
       if (what == "project") {
-        name <- rest[2]
-        if (is.na(name) || startsWith(name, "-")) stop("init project needs a PROJECT_NAME.", call. = FALSE)
-        if (dir.exists(name)) stop("Folder ", name, " exists. Please type another name.", call. = FALSE)
-        dir.create(name, recursive = TRUE)
-        writeLines(c("library(manimR)", "", scene_template_code()), file.path(name, "main.R"))
-        write_cfg_file(file.path(name, "manim.cfg"),
-                       list(frame_rate = 30, background_color = "BLACK", background_opacity = 1,
-                            scene_names = "DefaultTemplate", pixel_height = 1080, pixel_width = 1920))
-        cat("Created project", name, "\n")
-        invisible(normalizePath(name))
+        init_project(pos[1], default_settings = any(rest[-1] %in% c("-d", "--default")))
       } else if (what == "scene") {
-        name <- rest[2]
-        if (is.na(name)) stop("init scene needs a SCENE name.", call. = FALSE)
-        file <- rest[3] %||% "main.R"
-        if (is.na(file)) file <- "main.R"
-        if (!grepl("\\.[Rr]$", file)) file <- paste0(file, ".R")
-        if (file.exists(file)) {
-          cat("\n\n", scene_template_code(name), "\n", file = file, append = TRUE, sep = "")
-        } else {
-          writeLines(c("library(manimR)", "", scene_template_code(name)), file)
-        }
-        invisible(file)
+        if (is.na(pos[1])) stop("init scene needs a SCENE name.", call. = FALSE)
+        init_scene(pos[1], pos[2])
       } else {
-        stop("Use `init project NAME` or `init scene NAME [FILE]`.", call. = FALSE)
+        stop("Use `init project [NAME] [-d]` or `init scene NAME [FILE]`.", call. = FALSE)
       }
     },
     plugins = {
@@ -455,23 +432,38 @@ cli_subcommand <- function(args) {
         } else if (a %in% c("-c", "--config-file", "--config_file")) {
           settings$config_file <- rest[i + 1]
           i <- i + 1
+        } else if (a %in% c("-r", "--resolution")) {
+          wh <- as.integer(strsplit(rest[i + 1], "[;,-]")[[1]])
+          if (length(wh) != 2 || anyNA(wh)) stop("Resolution must be given as 'W,H', 'W;H' or 'W-H'.", call. = FALSE)
+          settings$pixel_width <- wh[1]
+          settings$pixel_height <- wh[2]
+          i <- i + 1
+        } else if (a %in% c("--fps", "--frame-rate", "--frame_rate")) {
+          settings$frame_rate <- as.numeric(rest[i + 1])
+          i <- i + 1
         } else {
           pos <- c(pos, a)
         }
         i <- i + 1
       }
       if (length(pos) < 2) stop("cache clear needs FILE and at least one SCENE.", call. = FALSE)
-      config_file <- settings$config_file
+      is_cfg <- tolower(tools::file_ext(pos[1])) == "cfg"
+      config_file <- if (is_cfg) pos[1] else settings$config_file
       settings$config_file <- NULL
       with_manim_config(list(), {
         if (!is.null(config_file)) digest_config_file(config_file)
+        input <- cfg("input_file")
+        if (is.null(input) || !nzchar(input)) {
+          if (is_cfg) stop("A configuration file must define input_file.", call. = FALSE)
+          input <- pos[1]
+        }
         if (length(settings)) do.call(manim_config, settings)
-        module <- tools::file_path_sans_ext(basename(pos[1]))
+        module <- tools::file_path_sans_ext(basename(input))
         cleared <- vapply(pos[-1], function(scene) {
           dir <- get_dir("partial_movie_dir", module_name = module, scene_name = scene)
           n <- length(list.files(dir))
           unlink(dir, recursive = TRUE)
-          cat("Cleared", n, "cached files for", scene, "in", dir, "\n")
+          cat("Removed ", n, " cached segment(s) for ", scene, " from ", dir, ".\n", sep = "")
           dir
         }, "")
         invisible(cleared)

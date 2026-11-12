@@ -8,6 +8,8 @@ DEFAULT_TEX_PREAMBLE <- "\\usepackage[english]{babel}\n\\usepackage{amsmath}\n\\
 #' @title TexTemplate
 #' @description A LaTeX document template used by [Tex()] and [MathTex()].
 #'   Change the default with `manim_config(tex_template = TexTemplate(...))`.
+#'   Two templates are `==` when every field matches, as upstream's dataclass
+#'   equality.
 #' @param tex_compiler Compiler, `"latex"` by default (or `"xelatex"`, `"lualatex"`).
 #' @param output_format `".dvi"` (latex), `".xdv"` (xelatex) or `".pdf"`.
 #' @param documentclass The `\documentclass` line.
@@ -79,6 +81,19 @@ TexTemplateClass <- R6::R6Class("TexTemplate", lock_objects = FALSE,
 #' @rdname TexTemplateClass
 #' @export
 TexTemplate <- constructor(TexTemplateClass)
+
+# The dataclass equality of upstream's TexTemplate: same class and the same
+# fields, in order.
+TEX_TEMPLATE_FIELDS <- c("custom_body", "tex_compiler", "description", "output_format", "documentclass", "preamble",
+                         "placeholder_text", "post_doc_commands")
+
+#' @export
+Ops.TexTemplate <- function(e1, e2) {
+  if (!.Generic %in% c("==", "!=")) stop("`", .Generic, "` is not defined for a TexTemplate", call. = FALSE)
+  fields <- function(t) lapply(TEX_TEMPLATE_FIELDS, function(f) .subset2(t, f) %||% "")
+  same <- identical(class(e1), class(e2)) && identical(fields(e1), fields(e2))
+  if (.Generic == "==") same else !same
+}
 texcode_for_environment <- function(environment) {
   env <- sub("^\\\\begin", "", environment)
   env <- sub("^\\{", "", env)

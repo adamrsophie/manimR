@@ -63,11 +63,17 @@ render <- function(scene, quality = NULL, format = NULL, output_file = NULL, sav
     }
   }
   out <- with_manim_config(settings, {
-    obj <- instantiate_scene(scene)
-    if (!is.null(scene_name)) obj$scene_name_override <- scene_name
-    # The output settings of this call apply to a scene created earlier too.
-    if (is_instance || !is.null(scene_name)) obj$init_output()
-    obj$get_manager()$render()
+    repeat {
+      obj <- instantiate_scene(scene)
+      if (!is.null(scene_name)) obj$scene_name_override <- scene_name
+      # The output settings of this call apply to a scene created earlier too.
+      if (is_instance || !is.null(scene_name)) obj$init_output()
+      res <- obj$get_manager()$render()
+      # An interactive rerun renders a new scene of the same class, as
+      # upstream's command line does.
+      if (!isTRUE(res) || is_instance) break
+    }
+    if (isTRUE(res)) NULL else res
   })
   if (is.null(out)) return(invisible(NULL))
   invisible(structure(normalizePath(out, mustWork = FALSE), class = "manim_output"))

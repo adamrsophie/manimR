@@ -39,10 +39,15 @@ output_spec <- function(format, transparent = FALSE, save_sections = FALSE, fall
        segment_extension = segment)
 }
 
+# Upstream's RendererCapabilities: the optional session features a renderer
+# implements.
+RendererCapabilities <- function(live_preview = FALSE) list(live_preview = isTRUE(live_preview))
+
 # Upstream's resolve_render_session(): output, presentation and encoder
-# settings from the current configuration. The Cairo style renderer has no
-# live preview window (manimR's interactive window is scene$interactive_embed()).
-resolve_render_session <- function(renderer_name = "CairoRenderer") {
+# settings from the current configuration, checked against what the renderer
+# can do. The Cairo style renderer has no live preview window (manimR's
+# interactive window is scene$interactive_embed()).
+resolve_render_session <- function(capabilities = RendererCapabilities(), renderer_name = "CairoRenderer") {
   live <- isTRUE(cfg("live_preview")) || isTRUE(cfg("enable_gui"))
   dry <- isTRUE(cfg("dry_run"))
   transparent <- isTRUE(cfg("transparent"))
@@ -65,10 +70,12 @@ resolve_render_session <- function(renderer_name = "CairoRenderer") {
   output <- output_spec(fmt, transparent, sections, fallback)
   presentation <- list(open_after_render = isTRUE(cfg("preview")), live_preview = live,
                        show_in_file_browser = isTRUE(cfg("show_in_file_browser")))
-  if (live) {
+  if (live && !isTRUE(capabilities$live_preview)) {
     stop(renderer_name, " does not support live preview. Use scene$interactive_embed() for an interactive ",
          "window, or remove live_preview.", call. = FALSE)
   }
+  if (live && dry) stop("live_preview cannot be combined with dry_run.", call. = FALSE)
+  if (live && output$is_still) stop("Live preview cannot be combined with last-frame PNG output.", call. = FALSE)
   if (presentation$open_after_render && !output$enabled) {
     stop("preview requires a media artifact; it cannot be combined with format = \"none\" or dry_run.", call. = FALSE)
   }
@@ -328,10 +335,13 @@ resolve_output_plan <- function(layout, output, scene_name, requested_output_nam
   primary <- output_path(layout$video_dir, name, output$artifact_extension)
   if (output$is_gif && default_name) primary <- versioned_path(primary)
   plan$primary_artifact <- primary
-  plan$fallback_image <- if (output$fallback_to_still) png
-  plan$segment_cache_dir <- layout$partial_movie_dir
-  plan$sections_dir <- layout$sections_dir
-  plan$section_index <- if (!is.null(layout$sections_dir)) file.path(layout$sections_dir, paste0(plan$output_stem, ".json"))
+  # `[<-` with list() keeps fields whose value is NULL, as the dataclass does.
+  plan["fallback_image"] <- list(if (output$fallback_to_still) png)
+  plan["segment_cache_dir"] <- list(layout$partial_movie_dir)
+  plan["sections_dir"] <- list(layout$sections_dir)
+  plan["section_index"] <- list(if (!is.null(layout$sections_dir)) {
+    file.path(layout$sections_dir, paste0(plan$output_stem, ".json"))
+  })
   plan$subcaption_file <- with_suffix(primary, ".srt")
   plan$concat_manifest <- file.path(layout$partial_movie_dir, "partial_movie_file_list.txt")
   plan$segment_extension <- output$segment_extension
@@ -485,11 +495,13 @@ digest_cfg <- function(parsed) {
 #'
 #' As upstream does on import, manimR reads two files when it is loaded, if
 #' they exist: the user wide file and the folder wide `manim.cfg` of the
-#' working directory, in that order. `config_file_paths()` gives their
-#' locations: `~/.config/manim/manim.cfg` (on Windows
-#' `~/AppData/Roaming/Manim/manim.cfg`) and `manim.cfg`. Upstream's library
-#' wide defaults are built into manimR. [manim_cli()] reads the working
-#' directory's file again, or the one given with `-c`/`--config_file`.
+#' working directory, in that order. `config_file_paths()` gives the three
+#' locations of upstream: the library wide `default.cfg` (shipped with
+#' manimR, whose values are its built in defaults),
+#' `~/.config/manim/manim.cfg` (on Windows
+#' `~/AppData/Roaming/Manim/manim.cfg`) and `manim.cfg`. [manim_cli()] reads
+#' the working directory's file again, or the one given with
+#' `-c`/`--config_file`. [make_config_parser()] merges the three files.
 #'
 #' @param filename Path to the `.cfg` file.
 #' @return `digest_config_file()` returns the settings applied, invisibly;
@@ -517,14 +529,16 @@ config_file_paths <- function() {
   } else {
     file.path(path.expand("~"), ".config", "manim", "manim.cfg")
   }
-  c(user_wide = user_wide, folder_wide = "manim.cfg")
+  c(library_wide = system.file("default.cfg", package = "manimR", mustWork = TRUE), user_wide = user_wide,
+    folder_wide = "manim.cfg")
 }
 
 # Applies the user wide and folder wide config files that exist, as
-# upstream's make_config_parser() at import. A broken file gives a warning
-# rather than stopping the package from loading.
+# upstream's make_config_parser() at import. The library wide file holds the
+# defaults manimR is built with. A broken file gives a warning rather than
+# stopping the package from loading.
 digest_startup_config_files <- function() {
-  for (path in config_file_paths()) {
+  for (path in config_file_paths()[c("user_wide", "folder_wide")]) {
     if (file.exists(path) && !dir.exists(path)) {
       tryCatch(digest_config_file(path), error = function(e) {
         warning("Could not read config file ", path, ": ", conditionMessage(e), call. = FALSE)

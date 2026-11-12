@@ -648,3 +648,13 @@ test_that("OpenGL mobject classes are their Cairo counterparts", {
   expect_equal(toupper(cols), c("#0000FF", "#FF0000", "#FFFFFF", "#00FF00"))
   expect_identical(get_vectorized_mobject_class(), VMobjectClass)
 })
+
+test_that("Code reads its defaults from the class attributes", {
+  expect_equal(CodeClass$default_paragraph_config$font, "Monospace")
+  old <- CodeClass$default_background_config
+  on.exit(CodeClass$default_background_config <- old)
+  a <- Code(code_string = "x <- 1", language = "r", background = "rectangle")
+  CodeClass$default_background_config$buff <- 1
+  b <- Code(code_string = "x <- 1", language = "r", background = "rectangle")
+  expect_gt(b$background$width, a$background$width + 1)
+})

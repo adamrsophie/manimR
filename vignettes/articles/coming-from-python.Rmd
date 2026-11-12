@@ -362,12 +362,13 @@ star is not needed:
 | `group[-1]` | `group[length(group)]` |
 | `group[1:3]` | `group[2:3]` |
 | `group[::2]` | `group[seq(1, length(group), by = 2)]` |
-| `for m in group:` | `for (m in group$submobjects)` |
+| `for m in group:` | `for (m in as.list(group))` (the mobject first when it has points) |
 | `group.submobjects[0]` | `group$submobjects[[1]]` or `group[[1]]` |
 | `group.add(m)` | `group$add(m)` |
 | `group[1] = m` | `group[2] <- m` |
 | `group + m`, `group - m` (a `VGroup`) | `group + m`, `group - m` |
-| `a + b` (two other mobjects) | `a + b` (a `Group`) |
+| `a + b` (two other mobjects) | an error, as upstream; use `Group(a, b)` |
+| `bool(tracker)` | `as.logical(tracker)` |
 
 Indices start at 1, and a negative index means something different: in
 Python `group[-1]` is the last element, while in R `group[-1]` is every

@@ -15,10 +15,10 @@ py_truthy <- function(x) {
   TRUE
 }
 
-# The elements of a list or vector as a list; a mobject gives its
-# submobjects, as iterating over it does upstream.
+# The elements of a list or vector as a list; a mobject gives itself when it
+# has points, then its submobjects, as iterating over it does upstream.
 as_items <- function(x) {
-  if (is_mobject(x)) return(x$submobjects)
+  if (is_mobject(x)) return(x$split())
   as.list(x)
 }
 

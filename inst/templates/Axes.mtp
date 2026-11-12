@@ -1,0 +1,15 @@
+AxesTemplate <- R6::R6Class("AxesTemplate", inherit = Scene,
+  public = list(
+    construct = function() {
+      graph <- Axes(
+        x_range = c(-1, 10, 1),
+        y_range = c(-1, 10, 1),
+        x_length = 9,
+        y_length = 6,
+        axis_config = list(include_tip = FALSE)
+      )
+      labels <- graph$get_axis_labels()
+      self$add(graph, labels)
+    }
+  )
+)

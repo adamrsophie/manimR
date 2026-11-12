@@ -125,7 +125,7 @@ RendererClass <- R6::R6Class("Renderer", lock_objects = FALSE,
       upto <- cfg("upto_animation_number") %||% -1
       if (upto >= 0 && n > upto) {
         self$skip_animations <- TRUE
-        stop(structure(class = c("manim_end_scene", "condition"), list(message = "end", call = NULL)))
+        stop(EndSceneEarlyException())
       }
     },
     # As upstream's CairoRenderer.play(): a play whose hash names an existing
@@ -244,7 +244,9 @@ RendererClass <- R6::R6Class("Renderer", lock_objects = FALSE,
 
 #' @rdname CairoRenderer
 #' @export
-CairoRendererClass <- R6::R6Class("CairoRenderer", inherit = RendererClass, lock_objects = FALSE)
+CairoRendererClass <- R6::R6Class("CairoRenderer", inherit = RendererClass, lock_objects = FALSE,
+  public = list(capabilities = RendererCapabilities(live_preview = FALSE))
+)
 
 #' @rdname CairoRenderer
 #' @export

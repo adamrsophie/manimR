@@ -103,6 +103,9 @@ DEFAULT_DASH_LENGTH <- 0.05
 DEFAULT_ARROW_TIP_LENGTH <- 0.35
 #' @rdname constants
 #' @export
+DEFAULT_ARROW_TIP_WIDTH <- 0.35
+#' @rdname constants
+#' @export
 DEFAULT_WAIT_TIME <- 1
 #' @rdname constants
 #' @export

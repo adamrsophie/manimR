@@ -27,11 +27,13 @@ also available as \code{config$digest_file()}.
 \details{
 As upstream does on import, manimR reads two files when it is loaded, if
 they exist: the user wide file and the folder wide \code{manim.cfg} of the
-working directory, in that order. \code{config_file_paths()} gives their
-locations: \verb{~/.config/manim/manim.cfg} (on Windows
-\verb{~/AppData/Roaming/Manim/manim.cfg}) and \code{manim.cfg}. Upstream's library
-wide defaults are built into manimR. \code{\link[=manim_cli]{manim_cli()}} reads the working
-directory's file again, or the one given with \code{-c}/\code{--config_file}.
+working directory, in that order. \code{config_file_paths()} gives the three
+locations of upstream: the library wide \code{default.cfg} (shipped with
+manimR, whose values are its built in defaults),
+\verb{~/.config/manim/manim.cfg} (on Windows
+\verb{~/AppData/Roaming/Manim/manim.cfg}) and \code{manim.cfg}. \code{\link[=manim_cli]{manim_cli()}} reads
+the working directory's file again, or the one given with
+\code{-c}/\code{--config_file}. \code{\link[=make_config_parser]{make_config_parser()}} merges the three files.
 }
 \examples{
 cfg_file <- tempfile(fileext = ".cfg")

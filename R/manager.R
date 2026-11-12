@@ -48,7 +48,19 @@ ManagerClass <- R6::R6Class("Manager", lock_objects = FALSE,
       self$setup()
       # Reaching the configured animation boundary (-n) ends the scene
       # normally, as upstream's EndSceneEarlyException does.
-      tryCatch(self$construct(), manim_end_scene = function(e) NULL)
+      rerun <- tryCatch({
+        self$construct()
+        FALSE
+      }, manim_end_scene = function(e) FALSE, manim_rerun_scene = function(e) TRUE)
+      if (rerun) {
+        # As upstream: the scene is emptied and its encode jobs end, and the
+        # caller renders the scene again.
+        self$scene$remove(self$scene$mobjects)
+        self$num_plays <- 0
+        self$file_writer$abort_encode_jobs()
+        ok <- TRUE
+        return(invisible(TRUE))
+      }
       self$tear_down()
       self$post_construct()
       ok <- TRUE

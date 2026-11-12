@@ -151,7 +151,8 @@ MethodAnimationClass <- R6::R6Class("MethodAnimation", inherit = TransformClass,
       super$initialize(mobject, mobject$target, ...)
     },
     finish = function() {
-      for (m in self$methods) do.call(self$mobject[[m$name]], m$args)
+      # Each method of the target runs again on the mobject itself.
+      for (m in self$methods) do.call(self$mobject[[attr(m, "name")]], c(m$args, m$kwargs))
       super$finish()
     }
   )

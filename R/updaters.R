@@ -6,7 +6,9 @@
 #'
 #' A `ValueTracker` stores a number that can be animated, for example with
 #' `tracker$animate$set_value(5)`, and read in updaters with `get_value()`.
-#' `ComplexValueTracker` stores a complex number.
+#' `ComplexValueTracker` stores a complex number. The arithmetic operators
+#' return a new tracker, and `as.logical(t)` is `TRUE` when the value is not
+#' zero, as upstream's `bool(t)`.
 #'
 #' @param value Initial value.
 #' @param ... Passed to the Mobject initializer.
@@ -71,6 +73,13 @@ Ops.ValueTracker <- function(e1, e2) {
   if (is_mobject(v1) || is_mobject(v2)) stop("Cannot combine a ValueTracker with a Mobject.", call. = FALSE)
   res <- get(.Generic)(v1, v2)
   if (.Generic %in% c("+", "-", "*", "/", "^", "%%", "%/%")) ValueTracker(res) else res
+}
+
+# ValueTracker.__bool__: Python's bool() of the value (NaN is true).
+#' @export
+as.logical.ValueTracker <- function(x, ...) {
+  v <- x$get_value()
+  is.na(v) || v != 0
 }
 
 #' Updater helpers

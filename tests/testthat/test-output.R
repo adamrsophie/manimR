@@ -12,6 +12,12 @@ test_that("output formats follow upstream's render session", {
   tempconfig(list(format = "mp4", transparent = TRUE), expect_error(resolve_render_session(), "alpha channel"))
   tempconfig(list(format = "png", save_sections = TRUE), expect_error(resolve_render_session(), "Section output"))
   tempconfig(list(live_preview = TRUE), expect_error(resolve_render_session(), "live preview"))
+  live <- RendererCapabilities(live_preview = TRUE)
+  tempconfig(list(live_preview = TRUE, dry_run = TRUE), expect_error(resolve_render_session(live), "dry_run"))
+  tempconfig(list(live_preview = TRUE, format = "png"), expect_error(resolve_render_session(live), "PNG"))
+  tempconfig(list(live_preview = TRUE), expect_identical(resolve_render_session(live)$output$format, "none"))
+  expect_false(CairoRenderer()$capabilities$live_preview)
+  expect_false(CairoRendererClass$capabilities$live_preview)
   tempconfig(list(format = "gif"), {
     out <- resolve_render_session()$output
     expect_identical(out$segment_extension, ".mp4")
@@ -142,8 +148,11 @@ test_that("manim.cfg files and the command line set upstream's options", {
     expect_identical(cfg("media_width"), "50%")
   })
   d <- withr_tempdir()
-  expect_output(path <- manim_cli(c("cfg", "export", "--directory", d)), "Configuration written")
-  expect_identical(normalizePath(dirname(path)), normalizePath(d))
+  old_wd <- setwd(d)
+  on.exit(setwd(old_wd), add = TRUE)
+  expect_output(path <- manim_cli(c("cfg", "export", "--directory", "out")), "Exported final Config")
+  expect_identical(normalizePath(dirname(path)), normalizePath(file.path(d, "out")))
+  setwd(old_wd)
   script <- tempfile(fileext = ".R")
   writeLines(c("A <- manim_scene(function(self) self$add(Circle()), name = 'A')",
                "B <- manim_scene(function(self) self$add(Square()), name = 'B')"), script)
@@ -384,7 +393,7 @@ test_that("hidden SVG elements are not imported", {
 
 test_that("config files are found where upstream looks for them", {
   paths <- config_file_paths()
-  expect_named(paths, c("user_wide", "folder_wide"))
+  expect_named(paths, c("library_wide", "user_wide", "folder_wide"))
   expect_equal(paths[["folder_wide"]], "manim.cfg")
   d <- withr_tempdir()
   writeLines(c("[CLI]", "frame_rate = 24"), file.path(d, "manim.cfg"))

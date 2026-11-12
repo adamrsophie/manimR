@@ -96,6 +96,15 @@ config <- structure(list(), class = "manim_config_object")
 #' @export
 names.manim_config_object <- function(x) union(config_names(), CONFIG_DERIVED)
 
+# Settings that manimR stores but upstream's ManimConfig does not keep in its
+# option dictionary (R only settings, or upstream properties).
+CONFIG_NOT_UPSTREAM_OPTS <- c("curve_tolerance", "ffmpeg", "flush_cache", "frame_size", "module_name",
+                              "save_last_frame", "transparent", "typst")
+
+# ManimConfig.__len__ counts the options it stores.
+#' @export
+length.manim_config_object <- function(x) length(setdiff(config_names(), CONFIG_NOT_UPSTREAM_OPTS))
+
 #' @rdname config
 #' @export
 print.manim_config_object <- function(x, ...) {
@@ -140,6 +149,10 @@ FRAME_CONSTANTS <- c("UP", "DOWN", "RIGHT", "LEFT", "IN", "OUT", "ORIGIN", "X_AX
 #' @rdname config
 #' @export
 names.manim_frame_object <- function(x) c(FRAME_OPTS, FRAME_CONSTANTS)
+
+# ManimFrame.__len__ counts the frame options, not the constants.
+#' @export
+length.manim_frame_object <- function(x) length(FRAME_OPTS)
 
 #' @rdname config
 #' @export

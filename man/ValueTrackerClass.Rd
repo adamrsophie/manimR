@@ -24,7 +24,9 @@ these functions call.
 \description{
 A \code{ValueTracker} stores a number that can be animated, for example with
 \code{tracker$animate$set_value(5)}, and read in updaters with \code{get_value()}.
-\code{ComplexValueTracker} stores a complex number.
+\code{ComplexValueTracker} stores a complex number. The arithmetic operators
+return a new tracker, and \code{as.logical(t)} is \code{TRUE} when the value is not
+zero, as upstream's \code{bool(t)}.
 }
 \examples{
 t <- ValueTracker(1)

@@ -37,6 +37,8 @@ generator.
 \description{
 A LaTeX document template used by \code{\link[=Tex]{Tex()}} and \code{\link[=MathTex]{MathTex()}}.
 Change the default with \code{manim_config(tex_template = TexTemplate(...))}.
+Two templates are \code{==} when every field matches, as upstream's dataclass
+equality.
 }
 \examples{
 tpl <- TexTemplate()

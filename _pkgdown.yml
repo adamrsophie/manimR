@@ -63,10 +63,13 @@ reference:
   - render_file
   - find_scenes
   - manim_cli
+  - value_from_string
+  - get_template_path
   - preview_output
   - manim_check
   - get_dir
   - digest_config_file
+  - make_config_parser
   - plot.Mobject
   - CairoRenderer
 - title: Configuration and logging

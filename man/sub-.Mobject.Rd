@@ -6,6 +6,7 @@
 \alias{[[<-.Mobject}
 \alias{length.Mobject}
 \alias{[[.Mobject}
+\alias{$.Mobject}
 \title{Index submobjects}
 \usage{
 \method{[}{Mobject}(x, i, ...)
@@ -17,6 +18,8 @@
 \method{length}{Mobject}(x)
 
 \method{[[}{Mobject}(x, i, ...)
+
+\method{$}{Mobject}(x, name)
 }
 \arguments{
 \item{x}{A mobject.}
@@ -26,13 +29,16 @@
 \item{...}{Ignored.}
 
 \item{value}{A mobject to store under key \code{i} of a \link{VDict}.}
+
+\item{name}{A field or method name.}
 }
 \value{
 \code{[} returns a submobject, or a group of them for a vector index.
 \code{[[} returns a submobject, a field or an entry. \code{length()} returns the
 number of submobjects, plus one when the mobject has points of its own.
 The assignment forms return the changed mobject; \code{mob[[i]] <- value} with
-a position does what \code{mob[i] <- value} does.
+a position does what \code{mob[i] <- value} does. \code{$} returns the field or
+method, or the generated getter or setter function.
 }
 \description{
 \code{mob[i]} returns the i-th submobject (1 based). A vector index returns a
@@ -46,4 +52,9 @@ entries as a group with \code{vd[c("a", "b")]}) or a vertex of a \link{Graph}
 \code{vd["square"] <- Square()} adds or replaces an entry. With \code{[[}, a
 character key returns the field or method of that name when there is one,
 as for any environment, and otherwise the dictionary entry or vertex.
+
+\code{mob$name} reads a field or method. As upstream's compatibility layer, an
+unknown \code{mob$get_x()} returns the field \code{x} and an unknown
+\code{mob$set_x(value)} sets it, each with a deprecation warning; other unknown
+names give \code{NULL}, as for any environment.
 }

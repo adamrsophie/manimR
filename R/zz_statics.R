@@ -28,6 +28,12 @@
 #' * `CodeClass$get_styles_list()` and `CodeClass$get_pygments_style(name)`:
 #'   the names and colors of the highlighting styles (all of Pygments' when
 #'   it is available, see [Code()]).
+#' * `CodeClass$default_background_config` and
+#'   `CodeClass$default_paragraph_config` are the class attributes that
+#'   hold the defaults of `background_config` and `paragraph_config`;
+#'   changing them changes later [Code()] objects.
+#' * `CairoRendererClass$capabilities`: the optional session features of the
+#'   renderer (`live_preview = FALSE`).
 #' * `GraphClass$from_igraph(graph, ...)` and `DiGraphClass$from_igraph(graph,
 #'   ...)`: a [Graph()] or [DiGraph()] with the vertices (by name when they
 #'   have names) and edges of an igraph graph, the R counterpart of
@@ -77,8 +83,8 @@ AnimationClass$set_default <- function(...) set_default(AnimationClass, ...)
 MobjectClass$add_animation_override <- function(animation_class, override_func, mobject_class = MobjectClass) {
   name <- if (inherits(animation_class, "R6ClassGenerator")) animation_class$classname else animation_class
   if (paste0("animation_override_", name) %in% names(mobject_class$public_methods)) {
-    stop("The animation ", name, " for ", mobject_class$classname, " is overridden by more than one method.",
-         call. = FALSE)
+    stop(MultiAnimationOverrideException(paste0("The animation ", name, " for ", mobject_class$classname,
+                                                " is overridden by more than one method.")))
   }
   override_animation(mobject_class, name, override_func)
 }
@@ -119,3 +125,13 @@ graph_from_igraph <- function(constructor) {
 
 GraphClass$from_igraph <- graph_from_igraph(Graph)
 DiGraphClass$from_igraph <- graph_from_igraph(DiGraph)
+
+# Class attributes of upstream's Code: the defaults of background_config and
+# paragraph_config.
+CodeClass$default_background_config <- list(buff = 0.3, fill_color = NULL, stroke_color = WHITE, corner_radius = 0.2,
+                                             stroke_width = 1, fill_opacity = 1)
+CodeClass$default_paragraph_config <- list(font = "Monospace", font_size = 24, line_spacing = 0.5,
+                                           disable_ligatures = TRUE)
+
+# Class attribute of upstream's CairoRenderer.
+CairoRendererClass$capabilities <- RendererCapabilities(live_preview = FALSE)

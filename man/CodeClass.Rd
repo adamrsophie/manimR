@@ -41,7 +41,7 @@ from the file name or the code when \code{NULL}.}
 \code{\link[=SurroundingRectangle]{SurroundingRectangle()}}; \code{fill_color} defaults to the style's background.}
 
 \item{paragraph_config}{Named list of \code{\link[=Text]{Text()}} arguments for the code and
-line numbers: \code{font} (default \code{"mono"}), \code{font_size} (24),
+line numbers: \code{font} (default \code{"Monospace"}, drawn with R's \code{"mono"} family), \code{font_size} (24),
 \code{line_spacing} (0.5, extra space between lines as a fraction of the
 font size, as upstream), \code{disable_ligatures}, and any other \code{\link[=Text]{Text()}}
 option such as \code{weight} or \code{slant}. \code{color} is ignored; colors come
