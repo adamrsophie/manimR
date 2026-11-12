@@ -93,7 +93,7 @@ when nothing is written (`format = "none"` or `dry_run`).
 # The last frame as a PNG file in the session's temporary directory.
 render(function(self) self$play(Create(Circle())), quality = "l", format = "png",
        media_dir = tempdir())
-#> INFO File ready at '/tmp/Rtmpupxpaz/images/manimR/Scene_manimR_v0.1.0.png'
+#> INFO File ready at '/tmp/RtmpC0uUc4/images/manimR/Scene_manimR_v0.1.0.png'
 #> INFO Rendered Scene
 #> Played 1 animations
 if (FALSE) { # \dontrun{
