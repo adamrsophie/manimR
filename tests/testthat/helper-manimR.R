@@ -11,11 +11,13 @@ manim_config(media_dir = file.path(tempdir(), "manimR-tests"))
 
 # TRUE when LaTeX and dvisvgm are installed and compile the default template;
 # an installation can have both programs and lack the template's packages.
+# Always FALSE on CRAN, where no external program is run.
 latex_works <- local({
   ok <- NULL
   function() {
     if (is.null(ok)) {
-      ok <<- nzchar(Sys.which("latex")) && nzchar(Sys.which("dvisvgm")) &&
+      ok <<- identical(Sys.getenv("NOT_CRAN"), "true") &&
+        nzchar(Sys.which("latex")) && nzchar(Sys.which("dvisvgm")) &&
         tryCatch({
           MathTex("x")
           TRUE

@@ -66,7 +66,6 @@
 #' @aliases OpenGLVectorClass OpenGLDoubleArrowClass OpenGLCubicBezierClass OpenGLPolygonClass
 #' @aliases OpenGLRegularPolygonClass OpenGLTriangleClass OpenGLArrowTipClass OpenGLImageMobjectClass
 #' @aliases OpenGLSurfaceClass OpenGLSurfaceMeshClass OpenGLTexturedSurfaceClass
-#' @aliases get_mobject_class get_vectorized_mobject_class get_point_mobject_class
 #' @usage NULL
 #' @format NULL
 #' @rawNamespace export(OpenGLMobject, OpenGLGroup, OpenGLPoint, OpenGLVMobject, OpenGLVGroup)
@@ -91,7 +90,6 @@
 #' @rawNamespace export(OpenGLRegularPolygonClass, OpenGLTriangleClass, OpenGLArrowTipClass)
 #' @rawNamespace export(OpenGLImageMobjectClass, OpenGLSurfaceClass, OpenGLSurfaceMeshClass)
 #' @rawNamespace export(OpenGLTexturedSurfaceClass)
-#' @rawNamespace export(get_mobject_class, get_vectorized_mobject_class, get_point_mobject_class)
 #' @examples
 #' c1 <- OpenGLCircle(radius = 2)
 #' inherits(c1, "Circle")
@@ -269,6 +267,14 @@ OpenGLSurfaceGroupClass <- R6::R6Class("OpenGLSurfaceGroup", inherit = OpenGLSur
 OpenGLSurfaceGroup <- build_constructor(OpenGLSurfaceGroupClass)
 OpenGLTexturedSurface <- build_constructor(OpenGLTexturedSurfaceClass)
 
+#' @rdname opengl_mobjects
+#' @export
 get_mobject_class <- function() MobjectClass
+
+#' @rdname opengl_mobjects
+#' @export
 get_vectorized_mobject_class <- function() VMobjectClass
+
+#' @rdname opengl_mobjects
+#' @export
 get_point_mobject_class <- function() PMobjectClass

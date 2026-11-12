@@ -350,7 +350,7 @@ test_that("knit_print copies outputs under chunk-specific names", {
   png::writePNG(array(c(0, 0, 1), c(1, 1, 3)), f2)
   out <- character()
   for (x in list(list("red", f1), list("blue", f2))) {
-    opts <- list(label = x[[1]], fig.path = file.path(d, "fig/"), out.width = "100%")
+    opts <- list(label = x[[1]], fig.path = paste0(d, "/fig/"), out.width = "100%")
     res <- knit_print.manim_output(structure(x[[2]], class = "manim_output"), options = opts)
     out <- c(out, as.character(res))
   }

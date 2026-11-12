@@ -84,6 +84,13 @@
 \alias{get_vectorized_mobject_class}
 \alias{get_point_mobject_class}
 \title{OpenGL mobject classes}
+\usage{
+get_mobject_class()
+
+get_vectorized_mobject_class()
+
+get_point_mobject_class()
+}
 \arguments{
 \item{uv_surface}{A \code{\link[=Surface]{Surface()}}.}
 
