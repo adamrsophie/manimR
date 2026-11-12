@@ -197,7 +197,10 @@ prompt_scene_choice <- function(names, input = NULL) {
 #' `--show_in_file_browser`, plus manimR's `--flush_cache`. Short flags can
 #' be combined (`-pql`). A `manim.cfg` in the working directory is read
 #' first unless `-c` names another file, and the command line wins over
-#' both. The OpenGL window options are accepted; asking for a live preview
+#' both. Unless `--media_dir` or a config file sets it, the media folder is
+#' `media` in `tools::R_user_dir("manimR", "cache")`, since the temporary
+#' directory of an `Rscript` process is deleted when it ends;
+#' `--media_dir media` writes to `./media` as upstream's command line does. The OpenGL window options are accepted; asking for a live preview
 #' is an error, as with upstream's Cairo renderer. Options can also be
 #' written `--name=value`, and `render` may come first, as in `manim render`.
 #'
@@ -331,8 +334,8 @@ manim_cli <- function(args = commandArgs(trailingOnly = TRUE)) {
   # A .cfg file as FILE is the config file, and names the script itself.
   if (tolower(tools::file_ext(file)) == "cfg") config_file <- file
   with_manim_config(list(), {
-    # As upstream's command line, the media folder is ./media unless set.
-    if (identical(cfg("media_dir"), default_media_dir())) manim_config(media_dir = "media")
+    # Unless set, the media folder is in the R user cache folder.
+    if (identical(cfg("media_dir"), default_media_dir())) manim_config(media_dir = cli_media_dir())
     if (!is.null(config_file)) {
       digest_config_file(config_file)
     } else if (file.exists("manim.cfg")) {
@@ -454,8 +457,8 @@ cli_subcommand <- function(args) {
       config_file <- if (is_cfg) pos[1] else settings$config_file
       settings$config_file <- NULL
       with_manim_config(list(), {
-        # As upstream's command line, the media folder is ./media unless set.
-        if (identical(cfg("media_dir"), default_media_dir())) manim_config(media_dir = "media")
+        # Unless set, the media folder is in the R user cache folder.
+        if (identical(cfg("media_dir"), default_media_dir())) manim_config(media_dir = cli_media_dir())
         if (!is.null(config_file)) digest_config_file(config_file)
         input <- cfg("input_file")
         if (is.null(input) || !nzchar(input)) {

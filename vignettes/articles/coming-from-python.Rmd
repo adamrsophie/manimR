@@ -731,7 +731,9 @@ plot(Text("Hello", font_size = 96, t2c = list("[1:3]" = YELLOW)))
 * **Output paths.** Videos go to `media/videos/<script name>/<quality>/`
   as with Python manim, but the media folder is in the R session's
   temporary directory unless you set `manim_config(media_dir = "media")`;
-  `manim_cli()` uses `./media` as the Python command line does. Scenes
+  `manim_cli()` uses a folder in `tools::R_user_dir("manimR", "cache")`
+  unless you pass `--media_dir media`, which gives the Python command line's
+  `./media`. Scenes
   rendered from the console, without a script, use `manimR` as the folder
   name.
 * **Plotting a mobject.** `plot(mob)` draws one frame in the Plots pane;

@@ -7,8 +7,10 @@
   upstream defines only to preset arguments.
 * Rendered output and the LaTeX cache go to a `media` folder in the R
   session's temporary directory unless `media_dir` is set, so nothing is
-  written to the working directory by default; `manim_cli()` writes to
-  `./media` as Manim's command line does.
+  written to the working directory by default; `manim_cli()` writes to a
+  `media` folder in `tools::R_user_dir("manimR", "cache")` unless
+  `--media_dir` is given (`--media_dir media` writes `./media` as Manim's
+  command line does).
 * Output follows Manim 0.22's render sessions: `format` is `"auto"`,
   `"mp4"`, `"mov"`, `"webm"`, `"gif"`, `"png"` (last frame),
   `"png-sequence"` or `"none"`, with `dry_run`, directory templates

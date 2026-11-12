@@ -38,7 +38,10 @@ animations N through M, counted from 0), \code{-a}/\code{--write_all}, \code{--f
 \code{--show_in_file_browser}, plus manimR's \code{--flush_cache}. Short flags can
 be combined (\code{-pql}). A \code{manim.cfg} in the working directory is read
 first unless \code{-c} names another file, and the command line wins over
-both. The OpenGL window options are accepted; asking for a live preview
+both. Unless \code{--media_dir} or a config file sets it, the media folder is
+\code{media} in \code{tools::R_user_dir("manimR", "cache")}, since the temporary
+directory of an \code{Rscript} process is deleted when it ends;
+\verb{--media_dir media} writes to \code{./media} as upstream's command line does. The OpenGL window options are accepted; asking for a live preview
 is an error, as with upstream's Cairo renderer. Options can also be
 written \code{--name=value}, and \code{render} may come first, as in \verb{manim render}.
 

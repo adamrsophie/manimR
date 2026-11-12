@@ -417,7 +417,7 @@ test_that("config has upstream's digest_file, get_dir and update methods", {
   })
 })
 
-test_that("the default media folder is in the session's temporary directory", {
+test_that("the default media folders are in temporary and user cache directories", {
   wd <- withr_tempdir()
   old_wd <- setwd(wd)
   on.exit(setwd(old_wd), add = TRUE)
@@ -426,11 +426,16 @@ test_that("the default media folder is in the session's temporary directory", {
     out <- render(function(self) self$add(Circle()), quality = "l", format = "png", preview = FALSE)
     expect_true(startsWith(normalizePath(out), normalizePath(default_media_dir())))
     expect_false(dir.exists(file.path(wd, "media")))
-    # The command line writes ./media, as upstream's.
+    # The command line writes to the R user cache folder.
+    old_cache <- Sys.getenv("R_USER_CACHE_DIR", NA)
+    on.exit(if (is.na(old_cache)) Sys.unsetenv("R_USER_CACHE_DIR") else Sys.setenv(R_USER_CACHE_DIR = old_cache),
+            add = TRUE)
+    Sys.setenv(R_USER_CACHE_DIR = file.path(wd, "cache"))
     f <- file.path(wd, "scene.R")
     writeLines(c("library(manimR)", "A <- manim_scene(function(self) self$add(Circle()))"), f)
     capture.output(manim_cli(c("--hide-splash", "render", f, "A", "-s", "-ql", "-v", "warning")))
-    expect_true(dir.exists(file.path(wd, "media", "images")))
+    expect_true(dir.exists(file.path(wd, "cache", "R", "manimR", "media", "images")))
+    expect_false(dir.exists(file.path(wd, "media")))
     expect_equal(cfg("media_dir"), default_media_dir())
   })
 })

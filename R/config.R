@@ -36,8 +36,13 @@ quality_spec <- function(q) {
 
 # The default media folder, in the session's temporary directory, so that
 # rendering writes nothing to the working directory unless asked to. Upstream
-# writes ./media; manim_cli() keeps that, as upstream's command line does.
+# writes ./media.
 default_media_dir <- function() file.path(tempdir(), "media")
+
+# The default media folder of manim_cli(): the temporary directory of its
+# Rscript process is deleted when it ends, so it renders into the R user cache
+# folder instead.
+cli_media_dir <- function() file.path(tools::R_user_dir("manimR", "cache"), "media")
 
 default_config <- function() {
   list(
