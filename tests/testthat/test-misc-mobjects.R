@@ -641,7 +641,7 @@ test_that("OpenGL mobject classes are their Cairo counterparts", {
   for (n in names(manimR:::OPENGL_MOBJECT_CLASSES)) {
     expect_equal(get(paste0(n, "Class"))$get_inherit()$classname, manimR:::OPENGL_MOBJECT_CLASSES[[n]])
   }
-  s <- OpenGLSurface(function(u, v) c(u, v, u * v), u_range = c(-1, 1), v_range = c(-1, 1), resolution = 8)
+  s <- OpenGLSurface(function(u, v) c(u, v, u * v), u_range = c(-1, 1), v_range = c(-1, 1), resolution = 9)
   expect_length(OpenGLSurfaceMesh(s, resolution = c(5, 5))$submobjects, 10)
   tex <- OpenGLTexturedSurface(s, matrix(c("red", "blue", "green", "white"), 2, 2))
   cols <- vapply(tex$list_of_faces[c(1, 8, 57, 64)], function(f) f$get_fill_color(), "")

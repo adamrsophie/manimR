@@ -962,6 +962,35 @@ OPENGL_CLASS_METHODS$OpenGLDashedLine <- list(public = list(
 # outside [a, b] along `axis` (0 for u, 1 for v) collapse onto its ends.
 OPENGL_CLASS_METHODS$OpenGLSurface <- list(public = list(
   prefered_creation_axis = 1,
+  passed_uv_func = NULL,
+  axes = NULL,
+  colorscale = NULL,
+  colorscale_axis = 2,
+  # Upstream's arguments: resolution counts grid points (one more than the
+  # faces along u and v), and the surface is one color without outlines.
+  # ponytail: upstream's default is 101 by 101 points for the GPU; grid draws
+  # each face as a polygon, so the default is Surface()'s 32 faces.
+  initialize = function(uv_func = NULL, u_range = NULL, v_range = NULL, resolution = NULL, axes = NULL,
+                        color = GREY, colorscale = NULL, colorscale_axis = 2, opacity = 1, gloss = 0.3,
+                        shadow = 0.4, prefered_creation_axis = 1, epsilon = 1e-5, render_primitive = 4L,
+                        depth_test = TRUE, shader_folder = NULL, ...) {
+    resolution <- rep_len(resolution %||% 33, 2)
+    self$passed_uv_func <- uv_func
+    self$axes <- axes
+    self$colorscale <- colorscale
+    self$colorscale_axis <- colorscale_axis
+    self$prefered_creation_axis <- prefered_creation_axis
+    self$epsilon <- epsilon
+    super$initialize(uv_func %||% function(u, v) c(u, v, 0), u_range = u_range %||% c(0, 1),
+                     v_range = v_range %||% c(0, 1), resolution = resolution - 1, fill_color = color,
+                     fill_opacity = opacity, checkerboard_colors = FALSE, stroke_width = 0, ...)
+    self$set_gloss(gloss)
+    self$set_shadow(shadow)
+    self$render_primitive <- render_primitive
+    self$depth_test <- depth_test
+    self$shader_folder <- shader_folder %||% "surface"
+    if (!is.null(colorscale) && !is.null(axes)) self$set_fill_by_value(axes, colorscale, axis = colorscale_axis + 1)
+  },
   pointwise_become_partial = function(smobject, a, b, axis = NULL) {
     axis <- axis %||% self$prefered_creation_axis
     grid <- surface_corner_grid(smobject)
@@ -1078,6 +1107,46 @@ OPENGL_ARC_CLASSES <- c("OpenGLArc", "OpenGLArcBetweenPoints", "OpenGLCurvedArro
                         "OpenGLCircle", "OpenGLDot", "OpenGLEllipse")
 
 # A straight cubic piece from a to b (upstream's add_line_to(), raised).
+# Tips of upstream's OpenGLTipableVMobject: add_tip(at_start, ...) makes an
+# OpenGLArrowTip from tip_config and the arguments given.
+OPENGL_TIPABLE_METHODS <- list(public = list(
+  tip_config = list(),
+  add_tip = function(at_start = FALSE, ...) {
+    tip <- self$create_tip(at_start, ...)
+    self$reset_endpoints_based_on_tip(tip, at_start)
+    self$assign_tip_attr(tip, at_start)
+    self$add(tip)
+    invisible(self)
+  },
+  create_tip = function(at_start = FALSE, ...) {
+    tip <- self$get_unpositioned_tip(...)
+    self$position_tip(tip, at_start)
+    tip
+  },
+  get_unpositioned_tip = function(...) do.call(OpenGLArrowTip, utils::modifyList(as.list(self$tip_config), list(...))),
+  position_tip = function(tip, at_start = FALSE) {
+    if (at_start) {
+      anchor <- self$get_start()
+      handle <- self$get_first_handle()
+    } else {
+      handle <- self$get_last_handle()
+      anchor <- self$get_end()
+    }
+    tip$rotate(angle_of_vector(handle - anchor) - PI - tip$get_angle())
+    tip$shift(anchor - tip$get_tip_point())
+    tip
+  },
+  reset_endpoints_based_on_tip = function(tip, at_start) {
+    if (self$get_length() == 0) return(invisible(self))
+    if (at_start) self$put_start_and_end_on(tip$get_base(), self$get_end())
+    else self$put_start_and_end_on(self$get_start(), tip$get_base())
+    invisible(self)
+  }
+))
+OPENGL_TIPABLE_CLASSES <- c("OpenGLTipableVMobject", "OpenGLArc", "OpenGLArcBetweenPoints", "OpenGLCurvedArrow",
+                            "OpenGLCurvedDoubleArrow", "OpenGLCircle", "OpenGLDot", "OpenGLEllipse",
+                            "OpenGLAnnularSector", "OpenGLSector", "OpenGLAnnulus", "OpenGLLine", "OpenGLDashedLine",
+                            "OpenGLTangentLine")
 opengl_line_piece <- function(a, b) rbind(a, a + (b - a) / 3, a + 2 * (b - a) / 3, b, deparse.level = 0)
 
 # Constructors whose upstream arguments differ from their Cairo counterpart.
@@ -1118,6 +1187,53 @@ OPENGL_CLASS_METHODS$OpenGLAnnulus <- list(public = list(
     self$set_points(rbind(outer, inner[rev(seq_len(nrow(inner))), , drop = FALSE]))
     self$shift(self$arc_center)
     invisible(self)
+  }
+))
+# Upstream's OpenGL dashes take no dash_offset and split the curve by its
+# parameter rather than by arc length.
+OPENGL_CLASS_METHODS$OpenGLDashedVMobject <- list(public = list(
+  initialize = function(vmobject, num_dashes = 15, dashed_ratio = 0.5, color = WHITE, ...) {
+    args <- utils::modifyList(list(equal_lengths = FALSE), list(...))
+    do.call(super$initialize, c(list(vmobject, num_dashes = num_dashes, dashed_ratio = dashed_ratio,
+                                     color = color), args))
+    self$num_dashes <- num_dashes
+    self$dashed_ratio <- dashed_ratio
+  },
+  num_dashes = NULL,
+  dashed_ratio = NULL
+))
+OPENGL_CLASS_METHODS$OpenGLTipableVMobject <- list(public = list(
+  initialize = function(tip_length = DEFAULT_ARROW_TIP_LENGTH, normal_vector = OUT, tip_config = list(), ...) {
+    super$initialize(tip_length = tip_length, normal_vector = normal_vector, ...)
+    self$tip_config <- tip_config
+  }
+))
+OPENGL_CLASS_METHODS$OpenGLCurvedArrow <- list(public = list(
+  initialize = function(start_point, end_point, ...) {
+    super$initialize(start_point, end_point, ...)
+    self$add_tip()
+  }
+))
+OPENGL_CLASS_METHODS$OpenGLCurvedDoubleArrow <- list(public = list(
+  initialize = function(start_point, end_point, ...) {
+    super$initialize(start_point, end_point, ...)
+    self$add_tip(at_start = TRUE)
+  }
+))
+# Upstream's OpenGL image is 4 units high unless width or height is given.
+OPENGL_CLASS_METHODS$OpenGLImageMobject <- list(public = list(
+  initialize = function(filename_or_array, width = NULL, height = NULL, image_mode = "RGBA",
+                        resampling_algorithm = "bicubic", opacity = 1, gloss = 0, shadow = 0, ...) {
+    super$initialize(filename_or_array, image_mode = image_mode, resampling_algorithm = resampling_algorithm, ...)
+    hw <- self$pixel_shape()
+    if (is.null(width) && is.null(height)) height <- 4
+    if (is.null(height)) height <- width * hw[1] / hw[2]
+    if (is.null(width)) width <- height * hw[2] / hw[1]
+    self$stretch_to_fit_height(height)
+    self$stretch_to_fit_width(width)
+    if (opacity != 1) self$set_opacity(opacity)
+    self$set_gloss(gloss)
+    self$set_shadow(shadow)
   }
 ))
 OPENGL_CLASS_METHODS$OpenGLCubicBezier <- list(public = list(

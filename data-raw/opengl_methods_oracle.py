@@ -9,9 +9,10 @@ from PIL import Image
 from manim import BLUE, DOWN, LEFT, ORIGIN, RIGHT, UP, WHITE, PI
 from manim.mobject.opengl.opengl_geometry import (
     OpenGLAnnularSector, OpenGLAnnulus, OpenGLArc, OpenGLArcBetweenPoints, OpenGLArrow, OpenGLArrowTip,
-    OpenGLCircle, OpenGLCubicBezier, OpenGLDashedLine, OpenGLDot, OpenGLDoubleArrow, OpenGLEllipse, OpenGLLine,
+    OpenGLCircle, OpenGLCurvedArrow, OpenGLCurvedDoubleArrow, OpenGLCubicBezier, OpenGLDashedLine, OpenGLDot, OpenGLDoubleArrow, OpenGLEllipse, OpenGLLine,
     OpenGLRectangle, OpenGLRegularPolygon, OpenGLSector, OpenGLSquare, OpenGLVector,
 )
+from manim.mobject.opengl.opengl_vectorized_mobject import OpenGLDashedVMobject
 from manim.mobject.opengl.opengl_mobject import OpenGLPoint
 from manim.mobject.opengl.opengl_surface import OpenGLSurface, OpenGLTexturedSurface
 from manim.mobject.opengl.opengl_vectorized_mobject import OpenGLVMobject
@@ -87,5 +88,26 @@ r = OpenGLRectangle(WHITE, 4, 2)
 out["rectangle_size"] = [r.width, r.height]
 p = OpenGLPoint(RIGHT)
 out["point"] = {"location": p.get_location().tolist(), "width": p.get_width(), "height": p.get_height()}
+
+# Dashes split a curve by its parameter.
+bent = OpenGLVMobject().set_points_as_corners([LEFT, ORIGIN, 3 * RIGHT])
+out["dashed"] = {"open": [m.points.tolist() for m in OpenGLDashedVMobject(bent, 3).submobjects],
+                 "closed": [m.points.tolist() for m in OpenGLDashedVMobject(OpenGLSquare(), 4, 0.6).submobjects]}
+
+# Tips of OpenGL tipable classes are OpenGLArrowTips made from tip_config.
+tipped = {"line": OpenGLLine(LEFT, 2 * RIGHT).add_tip(),
+          "arc_start": OpenGLArc(0, PI).add_tip(at_start=True),
+          "config": OpenGLLine(ORIGIN, 2 * UP, tip_config={"width": 0.5}).add_tip(length=0.2),
+          "curved": OpenGLCurvedArrow(LEFT, RIGHT), "curved_double": OpenGLCurvedDoubleArrow(LEFT, RIGHT)}
+out["tipped"] = {k: {"points": m.points.tolist(), "tips": [t.points.tolist() for t in m.submobjects],
+                     "tip_color": m.submobjects[0].get_fill_color().to_hex()} for k, m in tipped.items()}
+
+# Sizes of an OpenGL image of 2 by 4 pixels.
+from manim.mobject.opengl.opengl_image_mobject import OpenGLImageMobject
+pixels = np.zeros((2, 4, 4), dtype=np.uint8)
+sizes = [{}, {"width": 2}, {"height": 3}, {"width": 1, "height": 5}]
+out["image_sizes"] = [[m.get_width(), m.get_height()] for m in (OpenGLImageMobject(pixels, **kw) for kw in sizes)]
+glossy = OpenGLImageMobject(pixels, gloss=0.2, shadow=0.3)
+out["image_gloss"] = [glossy.gloss, glossy.shadow]
 
 json.dump(out, open(sys.argv[1], "w"), indent=1)

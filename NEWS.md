@@ -41,8 +41,10 @@
   Where an OpenGL class differs from its Cairo counterpart, it follows
   upstream's OpenGL class: `OpenGLArrow()` is a filled shape,
   `OpenGLLine()` applies `buff` twice, arcs are made of quadratic pieces,
-  and `OpenGLArc()`, `OpenGLCircle()`, `OpenGLRectangle()` and others take
-  upstream's arguments in upstream's order.
+  `add_tip()` adds an `OpenGLArrowTip()`, `OpenGLSurface()` counts
+  `resolution` in grid points, and `OpenGLArc()`, `OpenGLCircle()`,
+  `OpenGLRectangle()`, `OpenGLImageMobject()` and others take upstream's
+  arguments in upstream's order.
 * Images are drawn through the homography of their corners with Pillow's
   nearest, bilinear and bicubic filters, and an image seen edge on is
   skipped as upstream.

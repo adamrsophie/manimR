@@ -98,8 +98,8 @@ test_that("OpenGL VMobjects give upstream's shader data and wrappers", {
 })
 
 test_that("OpenGLSurface gives upstream's grid, triangles and shader data", {
-  s <- OpenGLSurface(function(u, v) c(u, v, u * v), u_range = c(-1, 1), v_range = c(-1, 1), resolution = 2)
-  # Upstream's resolution counts points: (3, 3) there.
+  # Resolution counts grid points, as upstream.
+  s <- OpenGLSurface(function(u, v) c(u, v, u * v), u_range = c(-1, 1), v_range = c(-1, 1), resolution = 3)
   expect_equal(s$get_triangle_indices(), oracle$surface$triangle_indices)
   d <- s$get_shader_data()
   expect_named(d, c("point", "du_point", "dv_point", "color"))
@@ -190,7 +190,7 @@ test_that("OpenGL classes have upstream's own methods", {
   arrow <- OpenGLArrow(LEFT, RIGHT)
   arrow$set_path_arc(PI / 2)
   expect_equal(arrow$path_arc, PI / 2)
-  s <- OpenGLSurface(function(u, v) c(u, v, 0), u_range = c(0, 1), v_range = c(0, 1), resolution = 4)
+  s <- OpenGLSurface(function(u, v) c(u, v, 0), u_range = c(0, 1), v_range = c(0, 1), resolution = 5)
   part <- s$copy()
   part$pointwise_become_partial(s, 0, 0.5, axis = 0)
   expect_equal(max(vapply(part$list_of_faces, function(f) max(f$points[, 1]), 0)), 0.5)
@@ -291,4 +291,49 @@ test_that("OpenGL shapes take upstream's arguments and points", {
   p <- OpenGLPoint(RIGHT)
   expect_equal(p$get_location(), oracle$point$location)
   expect_equal(c(p$get_width(), p$get_height()), c(oracle$point$width, oracle$point$height))
+})
+
+test_that("OpenGLDashedVMobject splits a curve by its parameter, as upstream", {
+  bent <- OpenGLVMobject()$set_points_as_corners(rbind(LEFT, ORIGIN, 3 * RIGHT))
+  dashes <- list(open = OpenGLDashedVMobject(bent, 3), closed = OpenGLDashedVMobject(OpenGLSquare(), 4, 0.6))
+  for (k in names(dashes)) {
+    got <- lapply(dashes[[k]]$submobjects, function(m) as_quadratic(m$points))
+    expected <- oracle$dashed[[k]]
+    # Dashes of equal size come back from JSON as one array.
+    if (is.array(expected)) expected <- lapply(seq_len(dim(expected)[1]), function(i) expected[i, , ])
+    expect_equal(got, expected, tolerance = 1e-9, label = k)
+  }
+  expect_equal(dashes$closed$dashed_ratio, 0.6)
+})
+
+test_that("OpenGL tips are upstream's OpenGLArrowTips made from tip_config", {
+  tipped <- list(line = OpenGLLine(LEFT, 2 * RIGHT)$add_tip(), arc_start = OpenGLArc(0, PI)$add_tip(at_start = TRUE),
+                 config = OpenGLLine(ORIGIN, 2 * UP, tip_config = list(width = 0.5))$add_tip(length = 0.2),
+                 curved = OpenGLCurvedArrow(LEFT, RIGHT), curved_double = OpenGLCurvedDoubleArrow(LEFT, RIGHT))
+  for (k in names(tipped)) {
+    m <- tipped[[k]]
+    o <- oracle$tipped[[k]]
+    expect_equal(as_quadratic(m$points), o$points, tolerance = 1e-9, label = k)
+    tips <- o$tips
+    if (is.array(tips)) tips <- lapply(seq_len(dim(tips)[1]), function(i) tips[i, , ])
+    got <- lapply(m$submobjects, function(t) as_quadratic(t$points))
+    expect_equal(got, tips, tolerance = 1e-9, label = k)
+    expect_s3_class(m$submobjects[[1]], "OpenGLArrowTip")
+    expect_equal(toupper(m$submobjects[[1]]$get_fill_color()), o$tip_color, label = k)
+  }
+  expect_false(inherits(tipped$curved, "CurvedArrow"))
+})
+
+test_that("OpenGLImageMobject takes upstream's width and height", {
+  pixels <- array(0, c(2, 4, 4))
+  sizes <- list(list(), list(width = 2), list(height = 3), list(width = 1, height = 5))
+  got <- t(vapply(sizes, function(kw) {
+    m <- do.call(OpenGLImageMobject, c(list(pixels), kw))
+    c(m$get_width(), m$get_height())
+  }, numeric(2)))
+  # Upstream's surface also stores points nudged 1e-5 along u and v.
+  expect_equal(got, oracle$image_sizes, tolerance = 1e-4)
+  glossy <- OpenGLImageMobject(pixels, gloss = 0.2, shadow = 0.3)
+  expect_equal(c(glossy$gloss, glossy$shadow), oracle$image_gloss)
+  expect_s3_class(glossy, "ImageMobject")
 })

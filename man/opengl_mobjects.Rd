@@ -140,6 +140,22 @@ upstream's arguments in upstream's order.
 \item Arcs, circles, dots, ellipses, sectors and annuli are made of
 \code{n_components} quadratic pieces (8 by default), as upstream, stored as
 cubic curves.
+\item \code{add_tip(at_start, ...)} of OpenGL lines and arcs adds an
+\code{OpenGLArrowTip()} made from the \code{tip_config} of the line and the
+arguments given (white unless they say otherwise).
+\code{OpenGLCurvedArrow()} and \code{OpenGLCurvedDoubleArrow()} are
+\code{OpenGLArcBetweenPoints} with such tips, not \code{\link[=CurvedArrow]{CurvedArrow()}}s.
+\item \code{OpenGLDashedVMobject(vmobject, num_dashes, dashed_ratio, color)} spaces
+its dashes by the curve's parameter rather than by arc length.
+\item \code{OpenGLSurface(uv_func, u_range, v_range, resolution, axes, color, colorscale, colorscale_axis, opacity, gloss, shadow, ...)} takes
+upstream's arguments: \code{resolution} counts grid points, one more than
+the faces along \code{u} and \code{v}, and the surface is one \code{color}
+(grey) without outlines, and \code{colorscale} with \code{axes} colors it by value
+along \code{colorscale_axis} (0 for x, as upstream). The default
+\code{resolution} is 33 points (32 faces, as \code{\link[=Surface]{Surface()}}) rather than
+upstream's 101: manimR draws each face with grid, not on a GPU.
+\item \code{OpenGLImageMobject(filename_or_array, width, height, ...)} is 4 units
+high unless \code{width} or \code{height} is given.
 }
 
 Three classes have no Cairo counterpart:
@@ -162,7 +178,7 @@ it in \code{dark_image} but draws the light image on both sides.
 c1 <- OpenGLCircle(radius = 2)
 inherits(c1, "Circle")
 s <- OpenGLSurface(function(u, v) c(u, v, u * v), u_range = c(-1, 1), v_range = c(-1, 1),
-                   resolution = 8)
+                   resolution = 9)
 mesh <- OpenGLSurfaceMesh(s, resolution = c(5, 5))
 length(mesh$submobjects)
 img <- matrix(c("red", "blue", "green", "white"), 2, 2)

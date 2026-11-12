@@ -38,6 +38,23 @@
 #' * Arcs, circles, dots, ellipses, sectors and annuli are made of
 #'   `n_components` quadratic pieces (8 by default), as upstream, stored as
 #'   cubic curves.
+#' * `add_tip(at_start, ...)` of OpenGL lines and arcs adds an
+#'   `OpenGLArrowTip()` made from the `tip_config` of the line and the
+#'   arguments given (white unless they say otherwise).
+#'   `OpenGLCurvedArrow()` and `OpenGLCurvedDoubleArrow()` are
+#'   `OpenGLArcBetweenPoints` with such tips, not [CurvedArrow()]s.
+#' * `OpenGLDashedVMobject(vmobject, num_dashes, dashed_ratio, color)` spaces
+#'   its dashes by the curve's parameter rather than by arc length.
+#' * `OpenGLSurface(uv_func, u_range, v_range, resolution, axes, color,
+#'   colorscale, colorscale_axis, opacity, gloss, shadow, ...)` takes
+#'   upstream's arguments: `resolution` counts grid points, one more than
+#'   the faces along `u` and `v`, and the surface is one `color`
+#'   (grey) without outlines, and `colorscale` with `axes` colors it by value
+#'   along `colorscale_axis` (0 for x, as upstream). The default
+#'   `resolution` is 33 points (32 faces, as [Surface()]) rather than
+#'   upstream's 101: manimR draws each face with grid, not on a GPU.
+#' * `OpenGLImageMobject(filename_or_array, width, height, ...)` is 4 units
+#'   high unless `width` or `height` is given.
 #'
 #' Three classes have no Cairo counterpart:
 #'
@@ -115,20 +132,21 @@
 #' c1 <- OpenGLCircle(radius = 2)
 #' inherits(c1, "Circle")
 #' s <- OpenGLSurface(function(u, v) c(u, v, u * v), u_range = c(-1, 1), v_range = c(-1, 1),
-#'                    resolution = 8)
+#'                    resolution = 9)
 #' mesh <- OpenGLSurfaceMesh(s, resolution = c(5, 5))
 #' length(mesh$submobjects)
 #' img <- matrix(c("red", "blue", "green", "white"), 2, 2)
 #' tex <- OpenGLTexturedSurface(s, img)
 NULL
 
-# Class name and Cairo counterpart.
+# Class name and parent: its Cairo counterpart, or an OpenGL class defined
+# earlier when the Cairo class is a factory that upstream's OpenGL class is not.
 OPENGL_MOBJECT_CLASSES <- c(
   OpenGLMobject = "Mobject", OpenGLGroup = "Group", OpenGLPoint = "Point", OpenGLVMobject = "VMobject",
   OpenGLVGroup = "VGroup", OpenGLVectorizedPoint = "VectorizedPoint",
   OpenGLCurvesAsSubmobjects = "CurvesAsSubmobjects", OpenGLDashedVMobject = "DashedVMobject",
   OpenGLTipableVMobject = "TipableVMobject", OpenGLArc = "Arc", OpenGLArcBetweenPoints = "ArcBetweenPoints",
-  OpenGLCurvedArrow = "CurvedArrow", OpenGLCurvedDoubleArrow = "CurvedDoubleArrow", OpenGLCircle = "Circle",
+  OpenGLCurvedArrow = "OpenGLArcBetweenPoints", OpenGLCurvedDoubleArrow = "OpenGLCurvedArrow", OpenGLCircle = "Circle",
   OpenGLDot = "Dot", OpenGLEllipse = "Ellipse", OpenGLAnnularSector = "AnnularSector",
   OpenGLSector = "Sector", OpenGLAnnulus = "Annulus", OpenGLLine = "Line", OpenGLDashedLine = "DashedLine",
   OpenGLTangentLine = "TangentLine", OpenGLElbow = "Elbow", OpenGLCubicBezier = "CubicBezier", OpenGLPolygon = "Polygon",
@@ -239,8 +257,10 @@ OpenGLTexturedSurfaceClass <- R6::R6Class("OpenGLTexturedSurface", inherit = Ope
         self$dark_image <- texture(dark_image_file)
         self$num_textures <- 2
       }
-      super$initialize(func = uv_surface$uv_func, u_range = uv_surface$u_range, v_range = uv_surface$v_range,
-                       resolution = uv_surface$resolution, ...)
+      # A surface's resolution field counts faces; OpenGLSurface() takes points.
+      super$initialize(uv_surface$uv_func, u_range = uv_surface$u_range, v_range = uv_surface$v_range,
+                       resolution = uv_surface$resolution + 1, gloss = uv_surface$gloss %||% 0.3,
+                       shadow = uv_surface$shadow %||% 0.4, ...)
       # The faces take the surface's current shape, then the image's colors.
       for (k in seq_along(self$list_of_faces)) {
         if (k <= length(uv_surface$list_of_faces)) {
@@ -278,7 +298,7 @@ OpenGLSurfaceGroupClass <- R6::R6Class("OpenGLSurfaceGroup", inherit = OpenGLSur
     initialize = function(..., resolution = NULL) {
       args <- list(...)
       nm <- names(args) %||% rep("", length(args))
-      do.call(super$initialize, c(list(func = NULL, resolution = c(0, 0)), args[nm != ""]))
+      do.call(super$initialize, c(list(uv_func = NULL, resolution = c(1, 1)), args[nm != ""]))
       self$resolution <- resolution %||% c(0, 0)
       self$add(args[nm == ""])
     }
@@ -526,6 +546,7 @@ local({
     own <- OPENGL_CLASS_METHODS[[name]]
     if (name %in% OPENGL_LINE_CLASSES) own <- list(public = c(OPENGL_LINE_METHODS$public, own$public))
     if (name %in% OPENGL_ARC_CLASSES) own <- list(public = c(OPENGL_ARC_POINTS$public, own$public))
+    if (name %in% OPENGL_TIPABLE_CLASSES) own <- list(public = c(OPENGL_TIPABLE_METHODS$public, own$public))
     opengl_add_members(gen, ancestry, signatures, own)
     # A constructor takes the arguments of its initializer when it is built.
     if (!is.null(own$public$initialize)) assign(name, build_constructor(gen), envir = ns)
