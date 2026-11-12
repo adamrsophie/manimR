@@ -53,6 +53,7 @@ reference:
   - VectorScene
   - interactive_scene
   - Manager
+  - MethodWithArgs
   - Section
   - DefaultSectionType
   - manim_scene
