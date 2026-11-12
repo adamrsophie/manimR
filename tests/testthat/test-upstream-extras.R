@@ -194,6 +194,8 @@ test_that("constructors take their arguments in upstream's order", {
 
   expect_true(Annulus(mark_paths_closed = TRUE)$mark_paths_closed)
   expect_equal(AddClass$new(Square())$run_time, 0)
+  skip_if_not(latex_works())
+  skip_on_cran()
   expect_s3_class(Variable(1, "x", var_type = IntegerClass)$value, "Integer")
 })
 

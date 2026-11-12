@@ -222,8 +222,6 @@ test_that("spring layouts honor dim, center and fixed vertices", {
 })
 
 test_that("constructor functions have their own class generators", {
-  t <- MathTable(list(c("1", "2")))
-  expect_s3_class(t, "MathTable")
   expect_true(inherits(MathTableClass, "R6ClassGenerator"))
   expect_identical(MathTableClass$get_inherit()$classname, "Table")
   expect_s3_class(ReplacementTransform(Square(), Circle()), "Transform")
@@ -235,6 +233,9 @@ test_that("constructor functions have their own class generators", {
   expect_equal(nrow(RegularPolygon()$get_vertices()), 6)
   Sub <- R6::R6Class("Sub", inherit = StarClass)
   expect_s3_class(Sub$new(), "Star")
+  skip_if_not(latex_works())
+  skip_on_cran()
+  expect_s3_class(MathTable(list(c("1", "2"))), "MathTable")
 })
 
 test_that("OpenGL point clouds take an opacity", {
