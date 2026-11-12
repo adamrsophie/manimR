@@ -12,7 +12,9 @@
   session’s temporary directory unless `media_dir` is set, so nothing is
   written to the working directory by default;
   [`manim_cli()`](https://adamrsophie.github.io/manimR/reference/manim_cli.md)
-  writes to `./media` as Manim’s command line does.
+  writes to a `media` folder in `tools::R_user_dir("manimR", "cache")`
+  unless `--media_dir` is given (`--media_dir media` writes `./media` as
+  Manim’s command line does).
 - Output follows Manim 0.22’s render sessions: `format` is `"auto"`,
   `"mp4"`, `"mov"`, `"webm"`, `"gif"`, `"png"` (last frame),
   `"png-sequence"` or `"none"`, with `dry_run`, directory templates
@@ -57,8 +59,8 @@
   ([`OpenGLCircle()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md),
   [`OpenGLVGroup()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md),
   [`OpenGLSurface()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
-  and the rest) are subclasses of their Cairo counterparts, so code
-  written for that renderer runs unchanged;
+  and the rest) build on their Cairo counterparts, so code written for
+  that renderer runs unchanged;
   [`OpenGLSurfaceMesh()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
   and
   [`OpenGLTexturedSurface()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
@@ -66,7 +68,16 @@
   upstream’s OpenGL classes, including the CPU side of its GPU pipeline:
   shader data, triangulation, uniforms and
   [`ShaderWrapper()`](https://adamrsophie.github.io/manimR/reference/ShaderWrapper.md),
-  with upstream’s GLSL files.
+  with upstream’s GLSL files. Where an OpenGL class differs from its
+  Cairo counterpart, it follows upstream’s OpenGL class:
+  [`OpenGLArrow()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
+  is a filled shape,
+  [`OpenGLLine()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
+  applies `buff` twice, arcs are made of quadratic pieces, and
+  [`OpenGLArc()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md),
+  [`OpenGLCircle()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md),
+  [`OpenGLRectangle()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
+  and others take upstream’s arguments in upstream’s order.
 - Images are drawn through the homography of their corners with Pillow’s
   nearest, bilinear and bicubic filters, and an image seen edge on is
   skipped as upstream.

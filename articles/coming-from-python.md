@@ -854,8 +854,10 @@ plot(Text("Hello", font_size = 96, t2c = list("[1:3]" = YELLOW)))
   temporary directory unless you set
   `manim_config(media_dir = "media")`;
   [`manim_cli()`](https://adamrsophie.github.io/manimR/reference/manim_cli.md)
-  uses `./media` as the Python command line does. Scenes rendered from
-  the console, without a script, use `manimR` as the folder name.
+  uses a folder in `tools::R_user_dir("manimR", "cache")` unless you
+  pass `--media_dir media`, which gives the Python command line’s
+  `./media`. Scenes rendered from the console, without a script, use
+  `manimR` as the folder name.
 - **Plotting a mobject.** `plot(mob)` draws one frame in the Plots pane;
   Python manim has no counterpart, and it is the quickest way to check a
   layout.

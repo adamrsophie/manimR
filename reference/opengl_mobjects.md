@@ -2,8 +2,8 @@
 
 Upstream's OpenGL renderer has its own mobject classes, such as
 `OpenGLCircle` or `OpenGLVGroup`. manimR draws every mobject with grid,
-so each of them is a subclass of its Cairo counterpart that takes the
-same arguments: `OpenGLCircle()` is a
+so each of them is a subclass of its Cairo counterpart: `OpenGLCircle()`
+is a
 [`Circle()`](https://adamrsophie.github.io/manimR/reference/geometry.md)
 and `inherits(x, "OpenGLCircle")` is `TRUE`. Code written for the OpenGL
 renderer runs unchanged. The classes also have the methods of upstream's
@@ -14,7 +14,6 @@ sends to the GPU (see
 [`ShaderWrapper()`](https://adamrsophie.github.io/manimR/reference/ShaderWrapper.md)),
 from manimR's cubic curves, which they split into upstream's quadratic
 ones. manimR draws with grid and has no OpenGL window or camera.
-`OpenGLArrowTip()` is, as upstream, an `OpenGLTriangle` pointing right.
 
 ## Arguments
 
@@ -68,6 +67,32 @@ objects whose names end in `Class` are the R6 class generators that
 these functions call.
 
 ## Details
+
+Where upstream's OpenGL class differs from its Cairo counterpart, manimR
+follows the OpenGL class:
+
+- `OpenGLArrowTip()` is an `OpenGLTriangle` pointing right.
+
+- `OpenGLArrow()`, `OpenGLVector()` and `OpenGLDoubleArrow()` are filled
+  shapes (a stem `thickness` wide and a head, grey by default) and
+  subclasses of `OpenGLLine`, not of
+  [`Arrow()`](https://adamrsophie.github.io/manimR/reference/geometry.md).
+
+- `OpenGLLine()`, `OpenGLDashedLine()` and `OpenGLTangentLine()` apply
+  `buff` twice, as upstream:
+  `OpenGLLine(2 * LEFT, 2 * RIGHT, buff = 0.5)` runs from -1 to 1.
+
+- `OpenGLArc(start_angle, angle, radius, n_components, arc_center)`,
+  `OpenGLCircle(color)`, `OpenGLSector(outer_radius, inner_radius)`,
+  `OpenGLRectangle(color, width, height)`,
+  `OpenGLRegularPolygon(n, start_angle)`,
+  `OpenGLCubicBezier(a0, h0, h1, a1)` and
+  `OpenGLPoint(location, artificial_width, artificial_height)` take
+  upstream's arguments in upstream's order.
+
+- Arcs, circles, dots, ellipses, sectors and annuli are made of
+  `n_components` quadratic pieces (8 by default), as upstream, stored as
+  cubic curves.
 
 Three classes have no Cairo counterpart:
 

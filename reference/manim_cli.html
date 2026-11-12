@@ -112,7 +112,10 @@ animations N through M, counted from 0), <code>-a</code>/<code>--write_all</code
 <code>--show_in_file_browser</code>, plus manimR's <code>--flush_cache</code>. Short flags can
 be combined (<code>-pql</code>). A <code>manim.cfg</code> in the working directory is read
 first unless <code>-c</code> names another file, and the command line wins over
-both. The OpenGL window options are accepted; asking for a live preview
+both. Unless <code>--media_dir</code> or a config file sets it, the media folder is
+<code>media</code> in <code>tools::R_user_dir("manimR", "cache")</code>, since the temporary
+directory of an <code>Rscript</code> process is deleted when it ends;
+<code>--media_dir media</code> writes to <code>./media</code> as upstream's command line does. The OpenGL window options are accepted; asking for a live preview
 is an error, as with upstream's Cairo renderer. Options can also be
 written <code>--name=value</code>, and <code>render</code> may come first, as in <code>manim render</code>.</p>
 <p>The other subcommands of <code>manim</code>:</p><ul><li><p><code>checkhealth</code> reports the programs manimR uses (<code><a href="manim_check.html">manim_check()</a></code>).</p></li>

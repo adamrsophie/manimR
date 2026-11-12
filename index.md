@@ -172,10 +172,10 @@ to `media/videos/<module>/<quality>/<Scene>.mp4` and
 session’s temporary directory unless you set `media_dir` (for example
 `manim_config(media_dir = "media")`), while
 [`manim_cli()`](https://adamrsophie.github.io/manimR/reference/manim_cli.md)
-uses `./media` as Manim’s command line does. The directory settings
-(`video_dir`, `images_dir`, `partial_movie_dir`, `tex_dir`, …) take the
-same `{media_dir}`, `{module_name}`, `{quality}` and `{scene_name}`
-placeholders
+uses the R user cache folder (`--media_dir media` gives Manim’s
+`./media`). The directory settings (`video_dir`, `images_dir`,
+`partial_movie_dir`, `tex_dir`, …) take the same `{media_dir}`,
+`{module_name}`, `{quality}` and `{scene_name}` placeholders
 ([`get_dir()`](https://adamrsophie.github.io/manimR/reference/get_dir.md)
 resolves them). A `manim.cfg` file is read with
 [`digest_config_file()`](https://adamrsophie.github.io/manimR/reference/digest_config_file.md),

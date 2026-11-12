@@ -1655,9 +1655,11 @@ Pango, so font names are those your system knows
 <code>media/videos/&lt;script name&gt;/&lt;quality&gt;/</code> as with
 Python manim, but the media folder is in the R session’s temporary
 directory unless you set <code>manim_config(media_dir = "media")</code>;
-<code><a href="../reference/manim_cli.html">manim_cli()</a></code> uses <code>./media</code> as the Python command
-line does. Scenes rendered from the console, without a script, use
-<code>manimR</code> as the folder name.</li>
+<code><a href="../reference/manim_cli.html">manim_cli()</a></code> uses a folder in
+<code>tools::R_user_dir("manimR", "cache")</code> unless you pass
+<code>--media_dir media</code>, which gives the Python command line’s
+<code>./media</code>. Scenes rendered from the console, without a
+script, use <code>manimR</code> as the folder name.</li>
 <li>
 <strong>Plotting a mobject.</strong> <code>plot(mob)</code> draws
 one frame in the Plots pane; Python manim has no counterpart, and it is
