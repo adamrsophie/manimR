@@ -54,7 +54,7 @@ The other subcommands of `manim`:
   ([`manim_check()`](https://adamrsophie.github.io/manimR/reference/manim_check.md)).
 
 - `cfg show` prints the settings, `cfg write` writes them to `manim.cfg`
-  in the working directory and `cfg export --dir DIR` into `DIR`.
+  in the working directory and `cfg export --directory DIR` into `DIR`.
 
 - `init project NAME` creates a project folder with `main.R` and a
   `manim.cfg` (upstream's default settings: 1920 x 1080 at 30 fps);

@@ -78,14 +78,6 @@ unchanged; the GPU pipeline itself (shaders, the OpenGL camera and window)
 is not part of manimR.</p>
     </div>
 
-    <div class="section level2">
-    <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">get_mobject_class</span><span class="op">(</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">get_vectorized_mobject_class</span><span class="op">(</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">get_point_mobject_class</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-    </div>
 
     <div class="section level2">
     <h2 id="arguments">Arguments<a class="anchor" aria-label="anchor" href="#arguments"></a></h2>
@@ -149,11 +141,7 @@ along the image from left to right and <code>v</code> from bottom to top, as
 upstream's texture coordinates. Upstream's shader shows
 <code>dark_image_file</code> on the side facing away from the light; manimR keeps
 it in <code>dark_image</code> but draws the light image on both sides.</p></li>
-</ul><p><code>get_mobject_class()</code>, <code>get_vectorized_mobject_class()</code> and
-<code>get_point_mobject_class()</code> return the base classes for the active
-renderer, as upstream's <code>manim.mobject.utils</code>; with manimR's renderer
-they are <a href="MobjectClass.html">MobjectClass</a>, <a href="VMobjectClass.html">VMobjectClass</a> and <a href="point_cloud.html">PMobjectClass</a>.</p>
-    </div>
+</ul></div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>

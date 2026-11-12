@@ -9,16 +9,6 @@ and `inherits(x, "OpenGLCircle")` is `TRUE`. Code written for the OpenGL
 renderer runs unchanged; the GPU pipeline itself (shaders, the OpenGL
 camera and window) is not part of manimR.
 
-## Usage
-
-``` r
-get_mobject_class()
-
-get_vectorized_mobject_class()
-
-get_point_mobject_class()
-```
-
 ## Arguments
 
 - uv_surface:
@@ -89,15 +79,6 @@ Three classes have no Cairo counterpart:
   upstream's texture coordinates. Upstream's shader shows
   `dark_image_file` on the side facing away from the light; manimR keeps
   it in `dark_image` but draws the light image on both sides.
-
-`get_mobject_class()`, `get_vectorized_mobject_class()` and
-`get_point_mobject_class()` return the base classes for the active
-renderer, as upstream's `manim.mobject.utils`; with manimR's renderer
-they are
-[MobjectClass](https://adamrsophie.github.io/manimR/reference/MobjectClass.md),
-[VMobjectClass](https://adamrsophie.github.io/manimR/reference/VMobjectClass.md)
-and
-[PMobjectClass](https://adamrsophie.github.io/manimR/reference/point_cloud.md).
 
 ## Examples
 

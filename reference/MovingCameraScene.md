@@ -23,7 +23,7 @@ Zoom <- R6::R6Class("Zoom", inherit = MovingCameraScene, public = list(
   }))
 # The last frame as a PNG file in the session's temporary directory.
 render(Zoom, quality = "l", format = "png", media_dir = tempdir())
-#> INFO File ready at '/tmp/Rtmp59BXtx/images/manimR/Zoom_manimR_v0.1.0.png'
+#> INFO File ready at '/tmp/RtmpcHCkSB/images/manimR/Zoom_manimR_v0.1.0.png'
 #> INFO Rendered Zoom
 #> Played 2 animations
 if (FALSE) { # \dontrun{
