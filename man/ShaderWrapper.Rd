@@ -61,9 +61,10 @@ or \code{NULL}, and \code{get_colormap_code()} a string.
 \description{
 The CPU side of upstream's OpenGL draw calls: a \code{ShaderWrapper} holds the
 vertex data, vertex indices, uniforms and GLSL source of one draw call.
-manimR draws with grid and has no OpenGL renderer, so nothing sends these
+manimR draws with grid and has no OpenGL context, so nothing sends these
 to a GPU; they describe what upstream's renderer would draw, and the GLSL
-files of upstream ship in the package (\code{get_shader_dir()}).
+files of upstream ship in the package (\code{get_shader_dir()}). The CPU side
+of the renderer itself is in \link{opengl_renderer}.
 }
 \details{
 \code{get_shader_code_from_file()} reads a GLSL file and inlines its

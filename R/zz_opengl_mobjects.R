@@ -16,7 +16,8 @@
 #' `get_triangulation()` and `get_shader_wrapper_list()`: they compute the
 #' data upstream's renderer sends to the GPU (see [ShaderWrapper()]), from
 #' manimR's cubic curves, which they split into upstream's quadratic ones.
-#' manimR draws with grid and has no OpenGL window or camera.
+#' manimR draws with grid and has no OpenGL window; the CPU side of upstream's
+#' renderer (its camera, meshes and shaders) is in [opengl_renderer].
 #'
 #' Where upstream's OpenGL class differs from its Cairo counterpart, manimR
 #' follows the OpenGL class:

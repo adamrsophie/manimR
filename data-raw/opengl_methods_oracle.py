@@ -142,6 +142,15 @@ out["camera"] = {"rotation": np.asarray(cam.inverse_rotation_matrix).tolist(), "
                  "view": cam.unformatted_view_matrix.tolist(), "turned": turned.euler_angles.tolist(),
                  "moved_points": moved.points.tolist(), "moved_shape": list(moved.get_shape()),
                  "moved_phi": float(moved.euler_angles[1]), "focal": moved.get_focal_distance()}
+start, end = OpenGLCamera(), OpenGLCamera(euler_angles=[1, 0.5, 0.2])
+end.shift([1, 2, 0])
+end.scale(0.5)
+mid = OpenGLCamera()
+mid.interpolate(start, end, 0.25)
+out["camera_interpolate"] = {"points": mid.points.tolist(), "angles": mid.euler_angles.tolist(),
+                             "rotation": np.asarray(mid.inverse_rotation_matrix).tolist()}
+end.to_default_state()
+out["camera_default"] = {"points": end.points.tolist(), "angles": end.euler_angles.tolist()}
 a, b, c = Object3D(), Object3D(), Object3D()
 a.add(b)
 b.add(c)

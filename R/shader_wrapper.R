@@ -1,6 +1,6 @@
 # The CPU side of upstream's shader wrapper (manim/renderer/shader_wrapper.py):
 # vertex data, uniforms and the GLSL source of an OpenGL draw call. manimR has
-# no OpenGL renderer; the wrappers describe what upstream would send to the
+# no OpenGL context; the wrappers describe what upstream would send to the
 # GPU, and the GLSL files are shipped in inst/shaders.
 
 # Shader data: one row per vertex, a numeric matrix for each attribute of a
@@ -87,9 +87,10 @@ get_colormap_code <- function(rgb_list) {
 #'
 #' The CPU side of upstream's OpenGL draw calls: a `ShaderWrapper` holds the
 #' vertex data, vertex indices, uniforms and GLSL source of one draw call.
-#' manimR draws with grid and has no OpenGL renderer, so nothing sends these
+#' manimR draws with grid and has no OpenGL context, so nothing sends these
 #' to a GPU; they describe what upstream's renderer would draw, and the GLSL
-#' files of upstream ship in the package (`get_shader_dir()`).
+#' files of upstream ship in the package (`get_shader_dir()`). The CPU side
+#' of the renderer itself is in [opengl_renderer].
 #'
 #' `get_shader_code_from_file()` reads a GLSL file and inlines its
 #' `#include ../include/...` lines; `find_file()` looks a file up in a list
