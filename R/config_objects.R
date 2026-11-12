@@ -29,6 +29,10 @@ CONFIG_DERIVED <- c("frame_width", "frame_x_radius", "frame_y_radius", "aspect_r
 #' `left_side`, `right_side`) are computed on read; `frame_width` can also
 #' be set, as upstream allows, and then stays fixed until set again.
 #' `config$quality <- "low_quality"` applies a preset from [QUALITIES].
+#' Three of upstream's methods are there too: `config$digest_file(path)`
+#' reads a `manim.cfg` file ([digest_config_file()]), `config$get_dir(key,
+#' ...)` resolves a directory setting ([get_dir()]) and
+#' `config$update(list(...))` changes several settings.
 #'
 #' `manim_frame` is upstream's read only `frame` object: the frame sizes and
 #' edges plus the direction constants (`manim_frame$top`, `manim_frame$UP`).
@@ -60,6 +64,10 @@ config <- structure(list(), class = "manim_config_object")
 #' @rdname config
 #' @export
 `$.manim_config_object` <- function(x, name) {
+  # Methods of upstream's ManimConfig.
+  method <- switch(name, digest_file = digest_config_file, get_dir = get_dir,
+                   update = function(obj) do.call(manim_config, as.list(obj)), NULL)
+  if (!is.null(method)) return(method)
   if (name %in% CONFIG_DERIVED && !(name == "frame_width" && !is.null(cfg("frame_width")))) {
     return(config_derived(name))
   }
@@ -86,7 +94,7 @@ config <- structure(list(), class = "manim_config_object")
 
 #' @rdname config
 #' @export
-names.manim_config_object <- function(x) union(names(.manim$config), CONFIG_DERIVED)
+names.manim_config_object <- function(x) union(config_names(), CONFIG_DERIVED)
 
 #' @rdname config
 #' @export
@@ -145,7 +153,7 @@ print.manim_frame_object <- function(x, ...) {
 #' @export
 tempconfig <- function(temp, code) {
   temp <- as.list(temp)
-  temp <- temp[names(temp) %in% names(config)]
+  temp <- temp[names(temp) %in% config_names()]
   old <- .manim$config
   on.exit(.manim$config <- old, add = TRUE)
   if (length(temp)) do.call(manim_config, temp)
@@ -184,6 +192,12 @@ make_log_fn <- function(level) {
     if (LOG_LEVELS[[level]] >= current) {
       text <- if (length(list(...))) sprintf(msg, ...) else paste(msg, collapse = " ")
       message(level, " ", text)
+      # With log_to_file, scenes also log to <log_dir>/<module>_<scene>.log
+      # as JSON lines, like upstream's JSONFormatter.
+      if (!is.null(.manim$log_file)) {
+        cat(sprintf('{"levelname": %s, "module": "manimR", "message": %s}\n', json_string(level), json_string(text)),
+            file = .manim$log_file, append = TRUE)
+      }
     }
     invisible(NULL)
   }

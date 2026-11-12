@@ -187,8 +187,10 @@ MultiCameraClass <- R6::R6Class("MultiCamera", inherit = MovingCameraClass, lock
       cam <- imfc$camera
       # Placed like display_image_mobject (and upstream): center, edge lengths
       # and the angle of the top edge come from the corners UL, UR, DL, so a
-      # rotated display stays rotated. As upstream, a mirrored display is
-      # drawn rotated, not mirrored.
+      # rotated display stays rotated, and a mirrored one (e1 x e2 > 0 with y
+      # pointing up) is drawn mirrored by turning the y scale around.
+      # Limitation: a sheared or perspective display is drawn as its rectangle;
+      # capturing the sub camera as pixels would be needed to warp it.
       corners <- self$project_points(imfc$points, imfc)
       ul <- corners[1, ]
       ur <- corners[2, ]
@@ -197,13 +199,14 @@ MultiCameraClass <- R6::R6Class("MultiCamera", inherit = MovingCameraClass, lock
       h <- get_norm(dl - ul)
       if (w <= 0 || h <= 0) return(invisible(self))
       angle <- atan2(ur[2] - ul[2], ur[1] - ul[1]) * 180 / pi
+      mirrored <- (ur[1] - ul[1]) * (dl[2] - ul[2]) - (ur[2] - ul[2]) * (dl[1] - ul[1]) > 0
       center <- (ur + dl) / 2
       fw <- cam$get_frame_width()
       fh <- cam$get_frame_height()
       fc <- cam$get_frame_center()
       grid::pushViewport(grid::viewport(x = grid::unit(center[1], "native"), y = grid::unit(center[2], "native"),
                                         width = grid::unit(w, "native"), height = grid::unit(h, "native"),
-                                        angle = angle, xscale = fc[1] + c(-fw, fw) / 2, yscale = fc[2] + c(-fh, fh) / 2,
+                                        angle = angle, xscale = fc[1] + c(-fw, fw) / 2, yscale = fc[2] + (if (mirrored) c(fh, -fh) else c(-fh, fh)) / 2,
                                         # grid does not clip rotated viewports; a clipping path does.
                                         clip = if (angle == 0) "on" else grid::rectGrob()))
       on.exit(grid::popViewport(), add = TRUE)

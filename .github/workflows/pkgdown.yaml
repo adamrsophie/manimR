@@ -1,0 +1,68 @@
+# Builds the pkgdown website, rendering every scene in the articles as a
+# video, and publishes it to the gh-pages branch.
+on:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+name: pkgdown
+
+permissions: read-all
+
+jobs:
+  pkgdown:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: pkgdown-${{ github.run_id }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: r-lib/actions/setup-pandoc@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        with:
+          use-public-rspm: true
+
+      - env:
+          GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+        uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        with:
+          extra-packages: any::pkgdown, local::.
+          needs: website
+
+      - name: Install ffmpeg and Pygments
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg python3-pygments
+
+      - uses: r-lib/actions/setup-tinytex@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+
+      - name: Install LaTeX packages and dvisvgm
+        run: |
+          tlmgr install babel-english lm amsmath amsfonts doublestroke setspace tipa \
+            relsize jknapltx rsfs calligra wasysym ragged2e physics xcolor microtype \
+            preview standalone dvisvgm
+          dvisvgm --version
+
+      - name: Install typst
+        run: |
+          curl -sSL -o "$RUNNER_TEMP/typst.tar.xz" \
+            https://github.com/typst/typst/releases/download/v0.14.2/typst-x86_64-unknown-linux-musl.tar.xz
+          echo "a6044cbad2a954deb921167e257e120ac0a16b20339ec01121194ff9d394996d  $RUNNER_TEMP/typst.tar.xz" | sha256sum -c -
+          tar -xJf "$RUNNER_TEMP/typst.tar.xz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/typst-x86_64-unknown-linux-musl" >> "$GITHUB_PATH"
+
+      - name: Build site
+        env:
+          GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+        run: pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)
+        shell: Rscript {0}
+
+      - name: Deploy to GitHub pages
+        uses: JamesIves/github-pages-deploy-action@fa24774553152dd7873cd16ebd8d959b010c5445 # v4.9.0
+        with:
+          clean: false
+          branch: gh-pages
+          folder: docs

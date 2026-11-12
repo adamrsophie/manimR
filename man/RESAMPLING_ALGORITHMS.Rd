@@ -8,7 +8,10 @@ RESAMPLING_ALGORITHMS
 }
 \description{
 Names accepted by \code{ImageMobject$set_resampling_algorithm()}, mapped to
-their canonical names. When drawing through grid, \code{"nearest"} draws the
-pixels as blocks and every other algorithm uses the device's smooth
-interpolation.
+their canonical names. Images are drawn with the filters Pillow's
+perspective transform has: \code{"nearest"} draws the pixels as blocks,
+\code{"bilinear"} interpolates linearly, and \code{"bicubic"} (the default) uses
+Pillow's bicubic filter for enlarged, sheared or perspective images. Pillow
+cannot transform with \code{"lanczos"}, \code{"box"} or \code{"hamming"}; manimR draws
+them as \code{"bilinear"}.
 }

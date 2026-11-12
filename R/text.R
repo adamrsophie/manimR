@@ -108,6 +108,33 @@ shape_runs <- function(runs, line_pitch = 97.5, disable_ligatures = TRUE, tab_wi
   glyphs
 }
 
+# The glyphs in character order with an invisible point for each
+# whitespace character, placed at the previous glyph (or the next one for
+# leading whitespace). Glyphs without a character (decorations) come last.
+text_chars <- function(text, glyphs) {
+  chars <- strsplit(text, "")[[1]]
+  idx <- vapply(glyphs, function(g) g$char_index %||% NA_integer_, 0L)
+  out <- list()
+  pending <- list()
+  last <- NULL
+  for (i in seq_along(chars)) {
+    if (grepl("^[[:space:]]$", chars[i])) {
+      sp <- DotClass$new(radius = 0, fill_opacity = 0, stroke_opacity = 0)
+      sp$char_index <- i
+      sp$char <- chars[i]
+      if (is.null(last)) pending[[length(pending) + 1]] <- sp else sp$move_to(last$get_center())
+      out[[length(out) + 1]] <- sp
+      next
+    }
+    for (g in glyphs[which(idx == i)]) {
+      if (is.null(last)) for (sp in pending) sp$move_to(g$get_center())
+      last <- g
+      out[[length(out) + 1]] <- g
+    }
+  }
+  c(out, glyphs[is.na(idx)])
+}
+
 # Positions of all occurrences of `pattern` (fixed) or a "[a:b]" slice in text.
 find_text_ranges <- function(text, key) {
   m <- regmatches(key, regexec("^\\[(-?\\d*):(-?\\d*)\\]$", key))[[1]]
@@ -146,8 +173,16 @@ find_text_ranges <- function(text, key) {
 #' @param tab_width Spaces per tab.
 #' @param height,width Optional target size.
 #' @param should_center Center the text at the origin.
-#' @param disable_ligatures Keep one glyph per character (default `TRUE`).
+#' @param disable_ligatures Keep one submobject per character, with an
+#'   invisible point for each space, as upstream (default `FALSE`).
 #' @param markup Parse `text` as Pango style markup, as [MarkupText()] does.
+#' @param warn_missing_font Warn when `font` is not installed (or registered
+#'   with [register_font()]), as upstream does.
+#' @param use_svg_cache Accepted for upstream's signature; glyphs are read
+#'   from the fonts directly, so there is no SVG to cache.
+#' @param justify For [MarkupText()]: stretch the lines that wrap (markup
+#'   lines wrap at 2400 / `font_size` em, upstream's Pango layout width) to
+#'   that full width.
 #' @param ... Passed to [VMobject()].
 #' @export
 #' @examples
@@ -162,12 +197,25 @@ TextClass <- R6::R6Class("Text", inherit = VMobjectClass, lock_objects = FALSE,
     initialize = function(text, fill_opacity = 1, stroke_width = 0, color = "#FFFFFF", font_size = DEFAULT_FONT_SIZE,
                           line_spacing = -1, font = "", slant = "NORMAL", weight = "NORMAL", t2c = NULL, t2f = NULL,
                           t2g = NULL, t2s = NULL, t2w = NULL, gradient = NULL, tab_width = 4, height = NULL,
-                          width = NULL, should_center = TRUE, disable_ligatures = TRUE, markup = FALSE, ...) {
+                          width = NULL, should_center = TRUE, disable_ligatures = FALSE, markup = FALSE,
+                          warn_missing_font = TRUE, use_svg_cache = FALSE, justify = FALSE, ...) {
       text <- paste(text, collapse = "")
+      if (nzchar(font) && warn_missing_font && !font_available(font)) {
+        logger$warning("Font %s is not installed; the default font is used instead.", font)
+      }
+      # The long form names take precedence, as upstream.
+      extra <- list(...)
+      t2c <- extra$text2color %||% t2c
+      t2f <- extra$text2font %||% t2f
+      t2g <- extra$text2gradient %||% t2g
+      t2s <- extra$text2slant %||% t2s
+      t2w <- extra$text2weight %||% t2w
+      extra[c("text2color", "text2font", "text2gradient", "text2slant", "text2weight")] <- NULL
       self$original_text <- text
       self$font <- font
       self$initial_font_size <- font_size
-      super$initialize(color = color, fill_opacity = fill_opacity, stroke_width = stroke_width, ...)
+      do.call(super$initialize, c(list(color = color, fill_opacity = fill_opacity, stroke_width = stroke_width), extra))
+      self$disable_ligatures <- disable_ligatures
       if (markup) {
         runs <- parse_markup(text, font, weight, slant, font_size)
         for (k in seq_along(runs)) runs[[k]]$text <- gsub("\t", strrep(" ", tab_width), runs[[k]]$text, fixed = TRUE)
@@ -182,8 +230,17 @@ TextClass <- R6::R6Class("Text", inherit = VMobjectClass, lock_objects = FALSE,
       # scene units (line_spacing defaults to 0.3); in shaping units that is
       # (1 + line_spacing) * 75 at GLYPH_SHAPE_SIZE.
       ls <- if (line_spacing == -1) DEFAULT_LINE_SPACING_SCALE else line_spacing
-      glyphs <- shape_runs(runs, line_pitch = (1 + ls) * GLYPH_SHAPE_SIZE * 72 / 96,
-                           disable_ligatures = disable_ligatures, tab_width = tab_width)
+      pitch <- (1 + ls) * GLYPH_SHAPE_SIZE * 72 / 96
+      glyphs <- shape_runs(runs, line_pitch = pitch, disable_ligatures = disable_ligatures, tab_width = tab_width)
+      # Markup is laid out as upstream's Pango layout of width 500 at a size
+      # of font_size / 4.8: lines wrap at 2400 / font_size em, and with
+      # justify the wrapped lines fill that width.
+      if (markup) {
+        glyphs <- wrap_glyphs(glyphs, text, width = 2400 / font_size * GLYPH_SHAPE_SIZE, line_pitch = pitch,
+                              justify = justify)
+      } else if (justify) {
+        stop("justify needs markup text; use MarkupText()", call. = FALSE)
+      }
       # manimpango renders points that svgelements reads at 96 ppi, so one em
       # is font_size / 72 scene units, matching upstream Text sizes.
       glyphs <- c(glyphs, text_decorations(glyphs))
@@ -193,6 +250,9 @@ TextClass <- R6::R6Class("Text", inherit = VMobjectClass, lock_objects = FALSE,
         g$set_style(fill_color = g$run_color %||% color, fill_opacity = (g$run_opacity %||% 1) * fill_opacity,
                     stroke_color = g$run_color %||% color, stroke_width = stroke_width)
       }
+      # With disable_ligatures, characters and submobjects correspond one to
+      # one: whitespace becomes an invisible point, as upstream's _gen_chars().
+      if (disable_ligatures && !markup) glyphs <- text_chars(text, glyphs)
       self$add(glyphs)
       if (!is.null(gradient)) self$set_color_by_gradient(gradient)
       gids <- unique(unlist(lapply(glyphs, function(g) g$run_gradient_id)))
@@ -249,6 +309,9 @@ TextClass <- R6::R6Class("Text", inherit = VMobjectClass, lock_objects = FALSE,
     }
   ),
   active = list(
+    # The characters as a group of the submobjects, as upstream's
+    # Text.chars.
+    chars = function() do.call(self$get_group_class(), self$submobjects),
     font_size = function(value) {
       cur <- if (is.null(self$initial_height) || self$initial_height == 0) self$initial_font_size
         else self$height / self$initial_height * self$initial_font_size
@@ -426,4 +489,80 @@ paragraph_align_line <- function(g, alignment, line_no) {
   )
   line$move_to(c(x, y, 0))
   invisible(g)
+}
+
+# TRUE when a font family is installed, registered with register_font(), or
+# one of the generic families.
+font_available <- function(font) {
+  if (tolower(font) %in% c("sans", "sans-serif", "serif", "mono", "monospace", "symbol", "emoji")) return(TRUE)
+  fams <- unique(c(systemfonts::system_fonts()$family, systemfonts::registry_fonts()$family))
+  font %in% fams || tolower(font) %in% tolower(fams)
+}
+
+# Wraps glyph lines at `width` (shaping units) between words, moving the
+# rest of a line to a new line below, and with `justify` spreads the words
+# of every wrapped line except the last of its paragraph over `width`, as
+# Pango does with a layout width and justify.
+wrap_glyphs <- function(glyphs, text, width, line_pitch, justify = FALSE) {
+  if (!length(glyphs)) return(glyphs)
+  chars <- strsplit(text, "")[[1]]
+  word_id <- cumsum(c(TRUE, grepl("[[:space:]]", chars[-length(chars)]) & !grepl("[[:space:]]", chars[-1])))
+  word_id[grepl("[[:space:]]", chars)] <- NA
+  idx <- vapply(glyphs, function(g) g$char_index %||% NA_integer_, 0L)
+  shifted <- function(g, dx, dy) {
+    g$points[, 1] <- g$points[, 1] + dx
+    g$points[, 2] <- g$points[, 2] + dy
+    g$baseline_y <- (g$baseline_y %||% 0) + dy
+  }
+  xmin <- function(g) min(g$points[, 1])
+  xmax <- function(g) max(g$points[, 1])
+  line_of <- function() vapply(glyphs, function(g) g$line_index %||% NA_integer_, 0L)
+  wrapped_lines <- integer()
+  ln <- 1L
+  repeat {
+    lines <- line_of()
+    if (ln > max(lines, na.rm = TRUE)) break
+    members <- which(lines == ln & !is.na(idx))
+    if (!length(members)) {
+      ln <- ln + 1L
+      next
+    }
+    left <- min(vapply(glyphs[members], xmin, 0))
+    over <- members[vapply(glyphs[members], function(g) xmax(g) - left > width, NA)]
+    words <- unique(word_id[idx[members]])
+    first_word <- words[1]
+    breaking <- if (length(over)) word_id[idx[over[1]]] else NA
+    if (is.na(breaking) || identical(breaking, first_word)) {
+      ln <- ln + 1L
+      next
+    }
+    # Move the words from `breaking` on to a new line, and every later line
+    # down by one.
+    later <- which(lines > ln)
+    for (k in later) {
+      shifted(glyphs[[k]], 0, -line_pitch)
+      glyphs[[k]]$line_index <- glyphs[[k]]$line_index + 1L
+    }
+    moving <- members[word_id[idx[members]] >= breaking]
+    dx <- left - min(vapply(glyphs[moving], xmin, 0))
+    for (k in moving) {
+      shifted(glyphs[[k]], dx, -line_pitch)
+      glyphs[[k]]$line_index <- ln + 1L
+    }
+    wrapped_lines <- c(wrapped_lines, ln)
+    ln <- ln + 1L
+  }
+  if (justify) {
+    lines <- line_of()
+    for (ln in wrapped_lines) {
+      members <- which(lines == ln & !is.na(idx))
+      words <- unique(word_id[idx[members]])
+      if (length(words) < 2) next
+      left <- min(vapply(glyphs[members], xmin, 0))
+      right <- max(vapply(glyphs[members], xmax, 0))
+      gap <- (width - (right - left)) / (length(words) - 1)
+      for (k in members) shifted(glyphs[[k]], gap * (match(word_id[idx[k]], words) - 1), 0)
+    }
+  }
+  glyphs
 }

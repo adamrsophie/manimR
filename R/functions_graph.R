@@ -158,7 +158,7 @@ ImplicitFunctionClass <- R6::R6Class("ImplicitFunction", inherit = VMobjectClass
       super$initialize(...)
     },
     generate_points = function() {
-      # ponytail: uniform grid plus grDevices::contourLines instead of the
+      # Limitation: uniform grid plus grDevices::contourLines instead of the
       # adaptive quadtree of the isosurfaces package; raise max_quads for detail.
       n <- max(2^self$min_depth, ceiling(4 * sqrt(self$max_quads))) + 1
       xs <- seq(self$x_range[1], self$x_range[2], length.out = n)

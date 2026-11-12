@@ -39,7 +39,7 @@ test_that("ManimColor works wherever a color is accepted", {
   sq <- Square(color = c1)
   expect_equal(sq$get_color(), "#336699")
   expect_equal(color_to_rgba(c1), c(0.2, 0.4, 0.6, 1))
-  expect_equal(interpolate_color(c1, WHITE, 0), "#336699")
+  expect_equal(manim_color(interpolate_color(c1, WHITE, 0)), "#336699")
   expect_equal(as.integer(ManimColor("#000102")), 258L)
   expect_output(print(c1), "ManimColor\\('#336699'\\)")
   expect_identical(RGBA, ManimColor)

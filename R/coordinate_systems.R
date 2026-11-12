@@ -96,6 +96,7 @@ add_points <- function(a, b) {
 #'
 #' @param x_range,y_range,z_range `c(min, max, step)` of each axis.
 #' @param x_length,y_length,z_length Lengths of the axes.
+#' @param dimension Number of axes of a coordinate system, 2 or 3.
 #' @param axis_config,x_axis_config,y_axis_config,z_axis_config Lists of
 #'   arguments for the [NumberLine()] of every axis or of one axis.
 #' @param tips Whether the axes get arrow tips.
@@ -617,7 +618,7 @@ ThreeDAxesClass <- R6::R6Class("ThreeDAxes", inherit = AxesClass, lock_objects =
       self$add(z_axis)
       self$z_axis <- z_axis
       self$add_3d_pieces()
-      # ponytail: upstream also sets sheen 0.2 on every axis submobject, shaded along
+      # Limitation: upstream also sets sheen 0.2 on every axis submobject, shaded along
       # light_source. The camera's mask based gradient stroke made one ThreeDAxes frame
       # take minutes, so the sheen is skipped; add it back once gradient strokes are cheap.
     },

@@ -3,11 +3,11 @@
 #' Scene sections
 #'
 #' A scene is split into sections with its `next_section()` method. Each
-#' section records the plays it contains (`partial_movie_files`; manimR
-#' encodes each scene in one pass, so the entries are `NULL` placeholders,
-#' one per play, as upstream stores for skipped plays) and, when
-#' `manim_config(save_sections = TRUE)`, the file name of its own video
-#' (`video`, relative to the sections directory).
+#' section records the partial movie files of the plays it contains
+#' (`partial_movie_files`, with `NULL` for skipped plays, as upstream) and,
+#' when `manim_config(save_sections = TRUE)`, the file name of its own video
+#' (`video`, relative to the sections directory), which is joined from those
+#' partial movie files.
 #'
 #' `$is_empty()` tells whether the section has no plays, `$get_dict()`
 #' returns the entry written to the sections index (name, type, video and the

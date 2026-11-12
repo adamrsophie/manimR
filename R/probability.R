@@ -115,7 +115,9 @@ SampleSpaceClass <- R6::R6Class("SampleSpace", inherit = RectangleClass, lock_ob
       for (i in seq_len(min(length(labels), length(parts$submobjects)))) {
         label <- labels[[i]]
         part <- parts$submobjects[[i]]
-        brace <- Brace(part, direction, min_num_quads = min_num_quads, buff = buff)
+        # Upstream passes min_num_quads on to Brace, whose base class rejects
+        # it; the argument is accepted here and has no effect.
+        brace <- Brace(part, direction, buff = buff)
         if (is_vmobject(label)) {
           label_mob <- label
         } else {

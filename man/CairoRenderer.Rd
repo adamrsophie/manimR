@@ -7,20 +7,21 @@
 \alias{CairoRendererClass}
 \title{Cairo style renderer and scene file writer}
 \usage{
-SceneFileWriter(
-  scene_name,
-  module_name = NULL,
-  width,
-  height,
-  fps,
-  output_file = NULL
-)
+SceneFileWriter(settings)
 
-CairoRenderer(camera_class = CameraClass, skip_animations = FALSE, ...)
+CairoRenderer(
+  file_writer_class = SceneFileWriterClass,
+  camera_class = CameraClass,
+  skip_animations = FALSE,
+  ...
+)
 }
 \arguments{
-\item{scene_name, module_name, width, height, fps, output_file}{Output names
-and frame format of a \code{SceneFileWriter}.}
+\item{settings}{The settings a scene resolves for its file writer: the
+output plan, the video encoder and the cache settings.}
+
+\item{file_writer_class}{The file writer class generator a renderer
+creates for each scene.}
 
 \item{camera_class}{The camera class generator.}
 

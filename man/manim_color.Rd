@@ -28,6 +28,8 @@ rgba_to_color(rgba)
 \value{
 \code{manim_color()} returns an uppercase hex string. \code{color_to_rgb()}
 returns a numeric vector in \verb{[0, 1]}; \code{color_to_rgba()} includes alpha.
+\code{rgb_to_color()} and \code{rgba_to_color()} return a \code{\link[=ManimColor]{ManimColor()}}, which
+keeps the exact channel values (and alpha) and works as a hex string.
 }
 \description{
 Accepts manim color names (case insensitive, e.g. \code{"blue_d"}), hex strings

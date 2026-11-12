@@ -3,9 +3,12 @@
 #' Resampling algorithms for images
 #'
 #' Names accepted by `ImageMobject$set_resampling_algorithm()`, mapped to
-#' their canonical names. When drawing through grid, `"nearest"` draws the
-#' pixels as blocks and every other algorithm uses the device's smooth
-#' interpolation.
+#' their canonical names. Images are drawn with the filters Pillow's
+#' perspective transform has: `"nearest"` draws the pixels as blocks,
+#' `"bilinear"` interpolates linearly, and `"bicubic"` (the default) uses
+#' Pillow's bicubic filter for enlarged, sheared or perspective images. Pillow
+#' cannot transform with `"lanczos"`, `"box"` or `"hamming"`; manimR draws
+#' them as `"bilinear"`.
 #' @export
 RESAMPLING_ALGORITHMS <- c(
   nearest = "nearest", none = "nearest",
@@ -15,7 +18,7 @@ RESAMPLING_ALGORITHMS <- c(
   box = "box", hamming = "hamming"
 )
 
-# Convert a grey, grey+alpha or RGB array (0 to 255) into an h x w x 4 RGBA array.
+# Convert a gray, gray+alpha or RGB array (0 to 255) into an h x w x 4 RGBA array.
 #' @rdname image_helpers
 #' @export
 change_to_rgba_array <- function(image, dtype = "uint8") {
@@ -59,9 +62,20 @@ native_raster_to_array <- function(x) {
   array(c(channel(0L), channel(8L), channel(16L), channel(24L)), c(h, w, 4))
 }
 
+# The inverse for an h x w x 4 array of values 0 to 1: a nativeRaster draws
+# without the color conversion grid does for arrays.
+array_to_native_raster <- function(a) {
+  h <- dim(a)[1]
+  w <- dim(a)[2]
+  byte <- function(k) round(t(a[, , k]) * 255)
+  v <- byte(1) + byte(2) * 256 + byte(3) * 65536 + byte(4) * 16777216
+  v[v >= 2^31] <- v[v >= 2^31] - 2^32
+  structure(as.integer(v), dim = c(h, w), class = "nativeRaster", channels = 4L)
+}
+
 #' @title Image mobjects
 #' @description `ImageMobject()` displays a raster image from a PNG file or a
-#'   numeric array with values from 0 to 255 (a matrix for greyscale, or an
+#'   numeric array with values from 0 to 255 (a matrix for grayscale, or an
 #'   `h x w x 3` or `h x w x 4` array). Its corner points are, in order,
 #'   upper left, upper right, lower left and lower right, so it moves, scales
 #'   and rotates like any mobject. `get_raster()` returns an array in `[0, 1]`
@@ -80,10 +94,13 @@ native_raster_to_array <- function(x) {
 #'   (luminance). Arrays and rasters are used as given. Images are then
 #'   stored as RGBA, 0 to 255.
 #' @param camera A [MovingCameraClass] camera.
+#' @param pixel_array_dtype Type of the stored pixel values; only `"uint8"`
+#'   (0 to 255) is used.
+#' @param resampling_algorithm How the image is sampled when drawn: a name
+#'   in [RESAMPLING_ALGORITHMS], `"bicubic"` by default.
 #' @param default_display_frame_config List of style arguments for the frame
 #'   added by `add_display_frame()`.
-#' @param ... Further arguments, such as `resampling_algorithm` (see
-#'   [RESAMPLING_ALGORITHMS]); others go to [MobjectClass].
+#' @param ... Further arguments for [MobjectClass].
 #' @name image_mobject
 #' @examples
 #' img <- ImageMobject(matrix(c(0, 100, 30, 200, 255, 0, 5, 33), 2, byrow = TRUE))
@@ -179,9 +196,10 @@ ImageMobjectClass <- R6::R6Class("ImageMobject", inherit = AbstractImageMobjectC
         if (length(x) != 1) {
           stop("A file name must be a single string; give a matrix of colors its dimensions.", call. = FALSE)
         }
-        path <- x
-        if (!file.exists(path) && file.exists(paste0(path, ".png"))) path <- paste0(path, ".png")
-        if (!file.exists(path)) stop("Image file not found: ", x, call. = FALSE)
+        # Looked up as upstream's get_full_raster_image_path(): as given, then
+        # in assets_dir, with the usual image extensions.
+        path <- tryCatch(get_full_raster_image_path(x), error = function(e) NA_character_)
+        if (is.na(path) || !file.exists(path)) stop("Image file not found: ", x, call. = FALSE)
         arr <- read_raster_file(path)
         # Upstream converts only images read from files to image_mode.
         pa <- convert_image_mode(round(arr * 255), image_mode)
@@ -207,7 +225,7 @@ ImageMobjectClass <- R6::R6Class("ImageMobject", inherit = AbstractImageMobjectC
       rgb <- round(color_to_rgb(color) * 255)
       for (k in 1:3) self$pixel_array[, , k] <- rgb[k]
       if (!is.null(alpha)) self$pixel_array[, , 4] <- trunc(255 * alpha)
-      for (sm in self$submobjects) sm$set_color(color, alpha, family)
+      for (sm in self$submobjects) sm$set_color(color, family = family)
       self$color <- manim_color(color)
       invisible(self)
     },

@@ -146,7 +146,7 @@ test_that("set_fill_by_value colors faces by a coordinate", {
   surf <- Surface(function(u, v) c(u, v, u), u_range = c(0, 1), v_range = c(0, 1), resolution = c(4, 1))
   surf$set_fill_by_value(axes = axes, colorscale = c(RED, GREEN), axis = 1)
   f1 <- surf$submobjects[[1]]
-  expect_equal(f1$get_fill_color(), interpolate_color(RED, GREEN, f1$get_midpoint()[1]))
+  expect_equal(f1$get_fill_color(), manim_color(interpolate_color(RED, GREEN, f1$get_midpoint()[1])))
   surf$set_fill_by_value(axes = axes, colorscale = list(list(BLUE, 0.3), list(YELLOW, 0.6)), axis = 1)
   expect_equal(surf$submobjects[[1]]$get_fill_color(), manim_color(BLUE))
   expect_equal(surf$submobjects[[4]]$get_fill_color(), manim_color(YELLOW))
@@ -290,4 +290,45 @@ test_that("ThreeDCamera rotation, projection, depth order and shading match upst
   }
   sq <- Square(shade_in_3d = TRUE)$set_fill(BLUE, opacity = 1)$rotate(0.7, axis = RIGHT)$shift(OUT)
   expect_equal(cam$get_fill_rgbas(sq), oracle_mat(o$square_fill_rgbas), tolerance = 1e-8)
+})
+
+test_that("mirrored camera displays are drawn mirrored", {
+  subcam <- MovingCamera(frame = Rectangle(width = 4, height = 4), pixel_width = 180, pixel_height = 180)
+  im <- ImageMobjectFromCamera(subcam)$stretch_to_fit_width(3)$stretch_to_fit_height(3)$move_to(4 * RIGHT)
+  cam <- MultiCamera(image_mobjects_from_cameras = list(im), pixel_width = 320, pixel_height = 180)
+  colors <- c(RED, BLUE, GREEN, YELLOW)
+  pos <- list(LEFT + UP, RIGHT + UP, LEFT + DOWN, RIGHT + DOWN)
+  mobs <- c(lapply(1:4, function(i) {
+    Square(side_length = 1, fill_color = colors[i], fill_opacity = 1, stroke_width = 0)$move_to(pos[[i]])
+  }), list(im))
+  draw <- function() {
+    cap <- ragg::agg_capture(width = 320, height = 180, background = "black")
+    on.exit(grDevices::dev.off())
+    cam$draw_frame(mobs)
+    a <- manimR:::native_raster_to_array(cap(native = TRUE))
+    vapply(list(c(3.25, 0.75), c(4.75, 0.75), c(3.25, -0.75), c(4.75, -0.75)), function(p) {
+      row <- floor((4 - p[2]) / 8 * 180) + 1
+      col <- floor((p[1] + cam$get_frame_width() / 2) / cam$get_frame_width() * 320) + 1
+      paste(a[row, col, 1:3], collapse = ",")
+    }, "")
+  }
+  before <- draw()
+  im$flip(UP)
+  expect_equal(draw(), before[c(2, 1, 4, 3)])
+})
+
+test_that("split screen cameras keep still mobjects under moving ones", {
+  cam <- SplitScreenCamera(Camera(), Camera(), pixel_width = 320, pixel_height = 90)
+  still <- Circle(radius = 1, fill_color = RED, fill_opacity = 1, stroke_width = 0)$shift(2 * LEFT)
+  moving <- Square(side_length = 1, fill_color = BLUE, fill_opacity = 1, stroke_width = 0)$shift(2 * RIGHT)
+  grab <- function(f) {
+    cap <- ragg::agg_capture(width = 320, height = 90, background = "black")
+    on.exit(grDevices::dev.off())
+    f()
+    cap(native = TRUE)
+  }
+  static <- grab(function() cam$draw_frame(list(still)))
+  frame <- grab(function() cam$draw_frame(list(moving), background_raster = static))
+  full <- grab(function() cam$draw_frame(list(still, moving)))
+  expect_equal(manimR:::native_raster_to_array(frame), manimR:::native_raster_to_array(full))
 })

@@ -25,8 +25,11 @@ Text(
   height = NULL,
   width = NULL,
   should_center = TRUE,
-  disable_ligatures = TRUE,
+  disable_ligatures = FALSE,
   markup = FALSE,
+  warn_missing_font = TRUE,
+  use_svg_cache = FALSE,
+  justify = FALSE,
   ...
 )
 }
@@ -59,9 +62,20 @@ gradients.}
 
 \item{should_center}{Center the text at the origin.}
 
-\item{disable_ligatures}{Keep one glyph per character (default \code{TRUE}).}
+\item{disable_ligatures}{Keep one submobject per character, with an
+invisible point for each space, as upstream (default \code{FALSE}).}
 
 \item{markup}{Parse \code{text} as Pango style markup, as \code{\link[=MarkupText]{MarkupText()}} does.}
+
+\item{warn_missing_font}{Warn when \code{font} is not installed (or registered
+with \code{\link[=register_font]{register_font()}}), as upstream does.}
+
+\item{use_svg_cache}{Accepted for upstream's signature; glyphs are read
+from the fonts directly, so there is no SVG to cache.}
+
+\item{justify}{For \code{\link[=MarkupText]{MarkupText()}}: stretch the lines that wrap (markup
+lines wrap at 2400 / \code{font_size} em, upstream's Pango layout width) to
+that full width.}
 
 \item{...}{Passed to \code{\link[=VMobject]{VMobject()}}.}
 }

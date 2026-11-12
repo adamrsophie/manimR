@@ -186,7 +186,8 @@ svg_arc_to_cubics <- function(p0, rx, ry, phi_deg, fa, fs, p1) {
   })
 }
 
-svg_style_props <- c("fill", "fill-opacity", "stroke", "stroke-opacity", "stroke-width", "opacity", "color")
+svg_style_props <- c("fill", "fill-opacity", "stroke", "stroke-opacity", "stroke-width", "opacity", "color",
+                     "display", "visibility")
 
 svg_node_style <- function(node, inherited) {
   st <- inherited
@@ -554,6 +555,11 @@ SVGMobjectClass <- R6::R6Class("SVGMobject", inherit = VMobjectClass, lock_objec
         groups[[id]] <<- groups[[id]] %||% VGroup()
         Mn <- M %*% parse_svg_transform(xml2::xml_attr(node, "transform"))
         st <- svg_node_style(node, style)
+        # Elements with display: none are not rendered, with their children;
+        # display is not inherited.
+        disp <- svg_apply_css(node, st, css_rules)$display
+        if (identical(tolower(trimws(disp %||% "")), "none")) return(invisible(NULL))
+        st$display <- NULL
         if (tag %in% c("g", "svg", "a", "switch")) {
           if (tag == "svg" && depth > 0) {
             Mn <- Mn %*% svg_matrix(1, 0, 0, 1, svg_length_px(xml2::xml_attr(node, "x") %|na|% "0"),
@@ -577,7 +583,9 @@ SVGMobjectClass <- R6::R6Class("SVGMobject", inherit = VMobjectClass, lock_objec
           }
         } else {
           shape <- list(node = node, style = svg_apply_css(node, st, css_rules), transform = Mn)
-          mob <- self$get_mob_from_shape_element(shape)
+          # Hidden shapes (visibility is inherited) are not drawn.
+          vis <- tolower(trimws(shape$style$visibility %||% "visible"))
+          mob <- if (vis %in% c("hidden", "collapse")) NULL else self$get_mob_from_shape_element(shape)
           if (!is.null(mob)) {
             mobs[[length(mobs) + 1L]] <<- mob
             for (g in stack) groups[[g]]$add(mob)

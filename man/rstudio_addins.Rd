@@ -3,6 +3,7 @@
 \name{rstudio_addins}
 \alias{rstudio_addins}
 \alias{addin_render_scene}
+\alias{addin_render_background}
 \alias{addin_render_all}
 \alias{addin_last_frame}
 \alias{addin_insert_template}
@@ -10,6 +11,8 @@
 \title{RStudio addins}
 \usage{
 addin_render_scene()
+
+addin_render_background()
 
 addin_render_all()
 
@@ -26,9 +29,15 @@ Addins available from the RStudio Addins menu:
 \item \code{addin_render_all()}: render every scene in the active file.
 \item \code{addin_last_frame()}: render only the final frame of the scene under the cursor (fast preview).
 \item \code{addin_insert_template()}: insert a scene template at the cursor.
+\item \code{addin_render_background()}: render the scene under the cursor as an
+RStudio background job, so the console stays free; the job pane shows
+its log and can stop it, and the result opens in the Viewer when it is
+done.
 \item \code{manim_gadget()}: a dialog to pick the scene, quality and format.
 }
 }
 \details{
 The quality used by the quick addins is \code{getOption("manimR.addin_quality", "l")}.
+Any addin can be bound to a keyboard shortcut with Tools, Modify Keyboard
+Shortcuts.
 }

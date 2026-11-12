@@ -91,7 +91,7 @@ test_that("Text maps characters to glyphs and colors substrings", {
 test_that("colors parse manim names and R colors", {
   expect_equal(manim_color("red"), "#FC6255")
   expect_equal(manim_color("#ff0000"), "#FF0000")
-  expect_equal(interpolate_color(BLACK, WHITE, 0.5), "#7F7F7F")
+  expect_equal(manim_color(interpolate_color(BLACK, WHITE, 0.5)), "#7F7F7F")
   expect_length(color_gradient(c(RED, BLUE), 5), 5)
   expect_equal(XKCD$AVOCADO, "#90B134")
 })
@@ -237,4 +237,33 @@ test_that("final review fixes hold", {
   cam$draw_frame(list(p))
   img <- dev(native = FALSE)
   expect_true(all(img == "transparent" | substr(img, 8, 9) == "00"))
+})
+
+test_that("copies give private mobject references their own copies", {
+  PrivateMob <- R6::R6Class("PrivateMob", inherit = MobjectClass, lock_objects = FALSE,
+    public = list(
+      initialize = function() {
+        super$initialize()
+        private$dot <- Dot()
+        self$add(private$dot)
+      },
+      get_dot = function() private$dot
+    ),
+    private = list(dot = NULL)
+  )
+  a <- PrivateMob$new()
+  b <- a$copy()
+  b$get_dot()$shift(RIGHT)
+  expect_false(identical(a$get_dot(), b$get_dot()))
+  expect_equal(a$get_dot()$get_center(), c(0, 0, 0))
+  expect_equal(b$submobjects[[1]]$get_center(), c(1, 0, 0))
+})
+
+test_that("Add and TransformMatchingTex use animation overrides", {
+  C <- R6::R6Class("OverrideProbe", inherit = CircleClass, lock_objects = FALSE)
+  override_animation(C, "Add", function(...) Wait(run_time = 7))
+  override_animation(C, "TransformMatchingTex", function(...) Wait(run_time = 7))
+  expect_s3_class(Add(C$new()), "Wait")
+  expect_s3_class(TransformMatchingTex(C$new(), Circle()), "Wait")
+  expect_s3_class(Add(C$new(), use_override = FALSE), "Add")
 })

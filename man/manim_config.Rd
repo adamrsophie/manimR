@@ -7,25 +7,74 @@
 manim_config(...)
 }
 \arguments{
-\item{...}{Named settings, e.g. \code{quality = "l"}, \code{background_color = WHITE},
-\code{format = "gif"}, \code{media_dir = "media"}, \code{pixel_width}, \code{pixel_height},
-\code{frame_rate}, \code{frame_height}, \code{transparent}, \code{tex_template}. The returned
-list also reports the derived \code{frame_width}, \code{frame_x_radius} and
-\code{frame_y_radius}.}
+\item{...}{Named settings.}
 }
 \value{
-The configuration list, invisibly when setting.
+The configuration list (including the derived \code{frame_width},
+\code{frame_x_radius}, \code{frame_y_radius}, \code{transparent} and
+\code{save_last_frame}), invisibly when setting.
 }
 \description{
 Called with no arguments, returns the current configuration as a list.
-Named arguments update it. \code{quality} accepts manim's quality flags:
-\code{"l"} (854x480, 15 fps), \code{"m"} (1280x720, 30 fps), \code{"h"} (1920x1080, 60 fps),
-\code{"p"} (2560x1440, 60 fps) and \code{"k"} (3840x2160, 60 fps), or the preset
-names of \link{QUALITIES} such as \code{"low_quality"} and \code{"example_quality"}.
-\code{renderer} accepts \code{"cairo"}; \code{"opengl"} is accepted for compatibility and
-renders with the same Cairo style renderer, the only one ported. The
-\link{config} object gives the same settings with upstream's \code{config$name}
-syntax.
+Named arguments update it; an unknown name is an error, as upstream's
+\code{config}. The \link{config} object gives the same settings with upstream's
+\code{config$name} syntax, \code{\link[=with_manim_config]{with_manim_config()}} and \code{\link[=tempconfig]{tempconfig()}} change
+them for a block of code, and \code{\link[=digest_config_file]{digest_config_file()}} reads them from a
+\code{manim.cfg} file.
+}
+\details{
+The settings, with upstream's names and defaults:
+\itemize{
+\item Frame: \code{quality} (a flag \code{"l"} 854x480 at 15 fps, \code{"m"} 1280x720 at 30,
+\code{"h"} 1920x1080 at 60, \code{"p"} 2560x1440 at 60, \code{"k"} 3840x2160 at 60, or a
+preset name of \link{QUALITIES}), \code{pixel_width}, \code{pixel_height},
+\code{frame_size} (both at once), \code{frame_rate}, \code{frame_height} (8),
+\code{frame_width} (derived from the aspect ratio unless set),
+\code{frame_x_radius}, \code{frame_y_radius}, \code{background_color},
+\code{background_opacity}, \code{transparent} (\code{TRUE} sets \code{background_opacity}
+to 0).
+\item Output: \code{format}, the artifact a render writes: \code{"auto"} (the default:
+MP4, or MOV when transparent; a scene without animations is saved as
+its last frame), \code{"mp4"}, \code{"mov"}, \code{"webm"}, \code{"gif"}, \code{"png"} (only the
+last frame), \code{"png-sequence"} (every frame) or \code{"none"}.
+\code{save_last_frame = TRUE} is short for \code{format = "png"}. \code{dry_run} renders
+without writing files, \code{save_sections} also writes one video per section,
+\code{zero_pad} (4) is the number of digits in PNG sequence file names,
+\code{output_file} names the artifact (relative to its directory below),
+\code{from_animation_number} and \code{upto_animation_number} (-1: all) select
+animations.
+\item Directories, with \code{{name}} placeholders resolved by \code{\link[=get_dir]{get_dir()}}:
+\code{media_dir} ("media"), \code{video_dir}
+("\{media_dir\}/videos/\{module_name\}/\{quality\}"), \code{images_dir}, \code{sections_dir},
+\code{partial_movie_dir}, \code{tex_dir}, \code{text_dir}, \code{log_dir}, \code{assets_dir}
+(where sounds and images are looked up), \code{input_file} (the script
+being rendered; its name is the module name) and manimR's
+\code{module_name} for scenes rendered from R code ("manimR").
+\item Encoding: \code{video_codec}, \code{pixel_format} (both \code{"auto"}) and
+\code{video_encoder_options} (a named list of ffmpeg options such as
+\code{list(crf = "18")}) for the cached video segments;
+\code{max_inflight_encoders} and \code{encoder_queue_size} are validated but
+encoding runs in the R process, one segment at a time.
+\item Caching: \code{disable_caching}, \code{disable_caching_warning},
+\code{max_files_cached} (100; -1 keeps all), and manimR's \code{flush_cache}.
+\item Presentation and logging: \code{preview} (open the result), \code{preview_command},
+\code{show_in_file_browser}, \code{verbosity} ("INFO"), \code{progress_bar},
+\code{log_to_file} (write a log per scene to \code{log_dir}), \code{media_loglevel}.
+\item LaTeX: \code{tex_template} (a \code{\link[=TexTemplate]{TexTemplate()}}), \code{tex_template_file},
+\code{no_latex_cleanup} (keep .aux, .dvi and .log files in \code{tex_dir}).
+\item Other: \code{seed} (random seed of every scene), \code{renderer} (\code{"cairo"};
+\code{"opengl"} is accepted and renders with the Cairo style renderer, the
+only one ported), \code{plugins}, \code{write_all}, \code{scene_names},
+\code{notify_outdated_version}, and the OpenGL window settings
+\code{enable_gui}, \code{live_preview}, \code{gui_location}, \code{fullscreen},
+\code{window_position}, \code{window_size}, \code{window_monitor},
+\code{use_projection_fill_shaders}, \code{use_projection_stroke_shaders},
+\code{enable_wireframe}, which have no effect on the Cairo style renderer
+(asking for a live preview is an error, as upstream), and the Jupyter
+settings \code{media_embed} and \code{media_width}.
+\item manimR only: \code{ffmpeg} and \code{typst} (paths of those programs) and
+\code{curve_tolerance}.
+}
 }
 \examples{
 old <- manim_config(quality = "l")

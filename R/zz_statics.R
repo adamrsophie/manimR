@@ -26,7 +26,13 @@
 #' * `TexTemplateClass$from_file(file, ...)`: a template whose whole body
 #'   is read from a `.tex` file.
 #' * `CodeClass$get_styles_list()` and `CodeClass$get_pygments_style(name)`:
-#'   the names and colors of the built in highlighting styles.
+#'   the names and colors of the highlighting styles (all of Pygments' when
+#'   it is available, see [Code()]).
+#' * `GraphClass$from_igraph(graph, ...)` and `DiGraphClass$from_igraph(graph,
+#'   ...)`: a [Graph()] or [DiGraph()] with the vertices (by name when they
+#'   have names) and edges of an igraph graph, the R counterpart of
+#'   upstream's `Graph.from_networkx()`; `...` goes to the constructor, for
+#'   example `layout = "spring"`.
 #'
 #' @name class_methods
 #' @examples
@@ -84,10 +90,30 @@ TexTemplateClass$from_file <- function(file = "tex_template.tex", ...) {
   tpl
 }
 
-CodeClass$get_styles_list <- function() names(code_styles())
+CodeClass$get_styles_list <- function() pygments_styles() %||% names(code_styles())
 CodeClass$get_pygments_style <- function(name) {
   style <- code_styles()[[name]]
+  if (is.null(style) && !is.null(pygments_python())) {
+    p <- code_pygments("x", "text", name)
+    return(list(background = p$background, line_number = p$line_number, text = p$foreground))
+  }
   if (is.null(style)) stop("Unknown style '", name, "'. Available: ", paste(names(code_styles()), collapse = ", "),
                            call. = FALSE)
   style
 }
+
+graph_from_igraph <- function(constructor) {
+  force(constructor)
+  function(graph, ...) {
+    if (!requireNamespace("igraph", quietly = TRUE)) stop("from_igraph() needs the igraph package.", call. = FALSE)
+    n <- igraph::vcount(graph)
+    names <- igraph::V(graph)$name
+    vertices <- if (is.null(names)) seq_len(n) else names
+    el <- igraph::as_edgelist(graph, names = !is.null(names))
+    edges <- lapply(seq_len(nrow(el)), function(i) el[i, ])
+    constructor(vertices, edges, ...)
+  }
+}
+
+GraphClass$from_igraph <- graph_from_igraph(Graph)
+DiGraphClass$from_igraph <- graph_from_igraph(DiGraph)

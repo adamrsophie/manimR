@@ -1,7 +1,79 @@
 # Highlighted source code listings. Ported from
 # manim/mobject/text/code_mobject.py. Upstream highlights with Pygments; manimR
-# has a small built in tokenizer for R and Python (comments, strings, numbers
-# and keywords) and the colors of a few Pygments styles.
+# does the same when Python with Pygments is available (any language and
+# style), and otherwise uses a small built in tokenizer for R and Python
+# (comments, strings, numbers and keywords) with the colors of a few
+# Pygments styles.
+
+# The Python interpreter with Pygments, or NULL. Set
+# options(manimR.python = "/path/to/python") to choose one.
+pygments_python <- function() {
+  # options(manimR.pygments = FALSE) uses the built in highlighter.
+  if (identical(getOption("manimR.pygments"), FALSE)) return(NULL)
+  if (is.null(.manim$pygments_python)) {
+    cand <- unique(c(getOption("manimR.python"), unname(Sys.which(c("python3", "python")))))
+    cand <- cand[!is.na(cand) & nzchar(cand)]
+    found <- ""
+    for (p in cand) {
+      ok <- suppressWarnings(system2(p, c("-c", shQuote("import pygments")), stdout = FALSE, stderr = FALSE))
+      if (identical(as.integer(ok), 0L)) {
+        found <- p
+        break
+      }
+    }
+    .manim$pygments_python <- found
+  }
+  if (nzchar(.manim$pygments_python)) .manim$pygments_python else NULL
+}
+
+hex_to_utf8 <- function(h) {
+  if (!nzchar(h)) return("")
+  out <- rawToChar(as.raw(strtoi(substring(h, seq(1, nchar(h), 2), seq(2, nchar(h), 2)), 16L)))
+  Encoding(out) <- "UTF-8"
+  out
+}
+
+# Highlights `code` with Pygments, as upstream: the lexer of `language`, or
+# one guessed from `filename` or the code, and the colors of `style`.
+# Returns the text Pygments highlighted, the style colors and the colored
+# token ranges (1 based, inclusive), or NULL without Pygments.
+code_pygments <- function(code, language = NULL, style = "vim", filename = NULL) {
+  py <- pygments_python()
+  if (is.null(py)) return(NULL)
+  script <- system.file("python", "pygments_tokens.py", package = "manimR")
+  src <- tempfile(fileext = ".txt")
+  on.exit(unlink(src), add = TRUE)
+  con <- file(src, open = "wb")
+  writeBin(charToRaw(enc2utf8(code)), con)
+  close(con)
+  out <- suppressWarnings(system2(py, shQuote(c(script, src, language %||% "", style, filename %||% "")),
+                                  stdout = TRUE, stderr = TRUE))
+  if (!is.null(attr(out, "status"))) {
+    last <- utils::tail(out, 1)
+    if (grepl("Could not find style", last)) {
+      stop("Unknown formatter_style '", style, "'. See CodeClass$get_styles_list().", call. = FALSE)
+    }
+    stop("Pygments could not highlight the code: ", last, call. = FALSE)
+  }
+  field <- function(key) sub(paste0("^", key, "\t"), "", grep(paste0("^", key, "\t"), out, value = TRUE)[1])
+  rows <- grep("^[0-9]+\t", out, value = TRUE)
+  parts <- strsplit(rows, "\t")
+  tokens <- data.frame(start = as.integer(vapply(parts, `[`, "", 1)) + 1L,
+                       end = as.integer(vapply(parts, `[`, "", 2)),
+                       color = toupper(vapply(parts, `[`, "", 3)), stringsAsFactors = FALSE)
+  hexcolor <- function(x) if (is.na(x) || !nzchar(x) || x == "inherit") NA else if (startsWith(x, "#")) x else paste0("#", x)
+  list(text = hex_to_utf8(field("TEXT")), lexer = field("LEXER"), tokens = tokens,
+       background = hexcolor(field("BG")), foreground = hexcolor(field("FG")), line_number = hexcolor(field("LN")))
+}
+
+# Pygments' style names, or NULL without Pygments.
+pygments_styles <- function() {
+  py <- pygments_python()
+  if (is.null(py)) return(NULL)
+  script <- system.file("python", "pygments_tokens.py", package = "manimR")
+  out <- suppressWarnings(system2(py, shQuote(c(script, "--styles")), stdout = TRUE, stderr = TRUE))
+  if (!is.null(attr(out, "status"))) NULL else out
+}
 
 # Colors of some Pygments styles for the token kinds the tokenizer emits.
 # NA means "no color", which falls back to the foreground color.
@@ -64,7 +136,7 @@ code_tokenize <- function(code, language) {
   starts <- integer(); ends <- integer(); kinds <- character()
   i <- 1L
   prev_word <- FALSE
-  # ponytail: rescans the remaining string at every token (quadratic in the
+  # Limitation: rescans the remaining string at every token (quadratic in the
   # code length); fine for slide sized listings, use gregexpr passes if not.
   while (i <= n) {
     rest <- substr(code, i, n)
@@ -139,22 +211,28 @@ code_guess_language <- function(code, file = NULL) {
 #'   lines colored by token kind, optional line numbers, and a rounded
 #'   background (`"rectangle"`) or a window with three buttons (`"window"`).
 #'
-#'   Pygments is not available in R, so a small built in tokenizer
-#'   highlights R and Python comments, strings, numbers and keywords; other
-#'   languages are shown in the foreground color. The styles `"vim"`
-#'   (default), `"monokai"`, `"emacs"` and `"default"` reproduce the
-#'   colors of the Pygments styles of the same names. A custom style is a
-#'   named list like the entries of those styles, with fields `background`,
-#'   `line_number`, `text`, `comment`, `keyword`, `namespace`, `constant`,
-#'   `operator_word`, `string` and `number`.
+#'   Highlighting follows upstream: when Python with the pygments module is
+#'   available (found as `python3` or `python`, or set with
+#'   `options(manimR.python = "/path/to/python")`), every Pygments lexer and
+#'   style works and the colors are exactly upstream's
+#'   (`CodeClass$get_styles_list()` lists the styles). Without Pygments, a
+#'   small built in tokenizer highlights R and Python comments, strings,
+#'   numbers and keywords; other languages are shown in the foreground
+#'   color. Its styles `"vim"` (default), `"monokai"`, `"emacs"` and
+#'   `"default"` reproduce the colors of the Pygments styles of the same
+#'   names. A custom style is a named list like the entries of those styles,
+#'   with fields `background`, `line_number`, `text`, `comment`, `keyword`,
+#'   `namespace`, `constant`, `operator_word`, `string` and `number`; it
+#'   always uses the built in tokenizer.
 #'
 #'   Fields: `code_lines` (a VGroup of [Text()] lines), `line_numbers` and
 #'   `background`.
 #' @param code_file Path of a file with the code.
 #' @param code_string Alternatively, the code as a string.
-#' @param language `"r"` or `"python"`; guessed from the file extension or
-#'   the code when `NULL`.
-#' @param formatter_style Style name or a named list of colors.
+#' @param language A Pygments lexer name such as `"r"`, `"python"`, `"c"` or
+#'   `"javascript"` (only `"r"` and `"python"` without Pygments); guessed
+#'   from the file name or the code when `NULL`.
+#' @param formatter_style A Pygments style name or a named list of colors.
 #' @param tab_width Width of a tab in spaces.
 #' @param add_line_numbers Show line numbers.
 #' @param line_numbers_from First line number.
@@ -193,18 +271,28 @@ CodeClass <- R6::R6Class("Code", inherit = VMobjectClass, lock_objects = FALSE,
         stop("Either a code file or a code string must be specified.", call. = FALSE)
       }
       code_string <- paste(code_string, collapse = "\n")
-      language <- tolower(language %||% code_guess_language(code_string, code_file))
-      if (language == "py") language <- "python"
-      if (!language %in% c("r", "python", "text")) {
-        warning("Code: no highlighting for language '", language, "'; only R and Python are highlighted.",
-                call. = FALSE)
-      }
-      style <- if (is.list(formatter_style)) formatter_style else code_styles()[[formatter_style]]
-      if (is.null(style)) {
-        stop("Unknown formatter_style '", formatter_style, "'. Available: ",
-             paste(names(code_styles()), collapse = ", "), ".", call. = FALSE)
-      }
       code_string <- code_expand_tabs(code_string, tab_width)
+      # Pygments, as upstream, when it is available.
+      pyg <- if (is.character(formatter_style)) {
+        code_pygments(code_string, language, formatter_style, if (!is.null(code_file)) basename(code_file))
+      }
+      if (!is.null(pyg)) {
+        code_string <- pyg$text
+        style <- list(background = pyg$background, text = pyg$foreground, line_number = pyg$line_number)
+        language <- tolower(language %||% pyg$lexer)
+      } else {
+        language <- tolower(language %||% code_guess_language(code_string, code_file))
+        if (language == "py") language <- "python"
+        if (!language %in% c("r", "python", "text")) {
+          warning("Code: no highlighting for language '", language, "' without Pygments; install Python with ",
+                  "the pygments module for every language, or set options(manimR.python).", call. = FALSE)
+        }
+        style <- if (is.list(formatter_style)) formatter_style else code_styles()[[formatter_style]]
+        if (is.null(style)) {
+          stop("Unknown formatter_style '", formatter_style, "'. Available: ",
+               paste(names(code_styles()), collapse = ", "), ".", call. = FALSE)
+        }
+      }
       self$code_string <- code_string
       self$language <- language
 
@@ -251,10 +339,10 @@ CodeClass <- R6::R6Class("Code", inherit = VMobjectClass, lock_objects = FALSE,
       self$code_lines <- VGroup(lines)
 
       # Color glyphs by token.
-      self$tokens <- code_tokenize(paste(rendered, collapse = "\n"), language)
+      self$tokens <- if (!is.null(pyg)) pyg$tokens else code_tokenize(paste(rendered, collapse = "\n"), language)
       line_start <- cumsum(c(0, nchar(rendered) + 1))
       for (k in seq_len(nrow(self$tokens))) {
-        col <- style[[self$tokens$kind[k]]]
+        col <- if (!is.null(pyg)) self$tokens$color[k] else style[[self$tokens$kind[k]]]
         if (is.null(col) || is.na(col)) next
         for (i in seq_along(rendered)) {
           a <- max(self$tokens$start[k] - line_start[i], 1)

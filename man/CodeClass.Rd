@@ -23,10 +23,11 @@ Code(
 
 \item{code_string}{Alternatively, the code as a string.}
 
-\item{language}{\code{"r"} or \code{"python"}; guessed from the file extension or
-the code when \code{NULL}.}
+\item{language}{A Pygments lexer name such as \code{"r"}, \code{"python"}, \code{"c"} or
+\code{"javascript"} (only \code{"r"} and \code{"python"} without Pygments); guessed
+from the file name or the code when \code{NULL}.}
 
-\item{formatter_style}{Style name or a named list of colors.}
+\item{formatter_style}{A Pygments style name or a named list of colors.}
 
 \item{tab_width}{Width of a tab in spaces.}
 
@@ -51,14 +52,19 @@ A highlighted source code listing: monospaced \code{\link[=Text]{Text()}}
 lines colored by token kind, optional line numbers, and a rounded
 background (\code{"rectangle"}) or a window with three buttons (\code{"window"}).
 
-Pygments is not available in R, so a small built in tokenizer
-highlights R and Python comments, strings, numbers and keywords; other
-languages are shown in the foreground color. The styles \code{"vim"}
-(default), \code{"monokai"}, \code{"emacs"} and \code{"default"} reproduce the
-colors of the Pygments styles of the same names. A custom style is a
-named list like the entries of those styles, with fields \code{background},
-\code{line_number}, \code{text}, \code{comment}, \code{keyword}, \code{namespace}, \code{constant},
-\code{operator_word}, \code{string} and \code{number}.
+Highlighting follows upstream: when Python with the pygments module is
+available (found as \code{python3} or \code{python}, or set with
+\code{options(manimR.python = "/path/to/python")}), every Pygments lexer and
+style works and the colors are exactly upstream's
+(\code{CodeClass$get_styles_list()} lists the styles). Without Pygments, a
+small built in tokenizer highlights R and Python comments, strings,
+numbers and keywords; other languages are shown in the foreground
+color. Its styles \code{"vim"} (default), \code{"monokai"}, \code{"emacs"} and
+\code{"default"} reproduce the colors of the Pygments styles of the same
+names. A custom style is a named list like the entries of those styles,
+with fields \code{background}, \code{line_number}, \code{text}, \code{comment}, \code{keyword},
+\code{namespace}, \code{constant}, \code{operator_word}, \code{string} and \code{number}; it
+always uses the built in tokenizer.
 
 Fields: \code{code_lines} (a VGroup of \code{\link[=Text]{Text()}} lines), \code{line_numbers} and
 \code{background}.

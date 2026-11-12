@@ -237,20 +237,20 @@ VMobjectClass <- R6::R6Class("VMobject", inherit = MobjectClass, lock_objects = 
       super$fade(darkness, family)
     },
     get_fill_rgbas = function() self$fill_rgbas %||% matrix(0, 1, 4),
-    get_fill_color = function() rgb_to_color(self$get_fill_rgbas()[1, 1:3]),
+    get_fill_color = function() rgb_hex(self$get_fill_rgbas()[1, 1:3]),
     get_fill_opacity = function() self$get_fill_rgbas()[1, 4],
-    get_fill_colors = function() apply(self$get_fill_rgbas(), 1, function(r) rgb_to_color(r[1:3])),
+    get_fill_colors = function() apply(self$get_fill_rgbas(), 1, function(r) rgb_hex(r[1:3])),
     get_fill_opacities = function() self$get_fill_rgbas()[, 4],
     get_stroke_rgbas = function(background = FALSE) {
       (if (background) self$background_stroke_rgbas else self$stroke_rgbas) %||% matrix(0, 1, 4)
     },
-    get_stroke_color = function(background = FALSE) rgb_to_color(self$get_stroke_rgbas(background)[1, 1:3]),
+    get_stroke_color = function(background = FALSE) rgb_hex(self$get_stroke_rgbas(background)[1, 1:3]),
     get_stroke_width = function(background = FALSE) {
       max(0, if (background) self$background_stroke_width else self$stroke_width)
     },
     get_stroke_opacity = function(background = FALSE) self$get_stroke_rgbas(background)[1, 4],
     get_stroke_colors = function(background = FALSE) {
-      apply(self$get_stroke_rgbas(background), 1, function(r) rgb_to_color(r[1:3]))
+      apply(self$get_stroke_rgbas(background), 1, function(r) rgb_hex(r[1:3]))
     },
     get_stroke_opacities = function(background = FALSE) self$get_stroke_rgbas(background)[, 4],
     get_color = function() {
@@ -606,24 +606,24 @@ VMobjectClass <- R6::R6Class("VMobject", inherit = MobjectClass, lock_objects = 
       }
       self$points[nrow(self$points), ]
     },
+    # As upstream: the arc length up to the point, found by solving each
+    # cubic for the point (proportions_along_bezier_curve_for_point()),
+    # divided by the total arc length.
     proportion_from_point = function(point) {
       self$throw_error_if_no_points()
       point <- as_point(point)
       lens <- self$get_curve_lengths()
-      total <- sum(lens)
       target <- 0
-      ts <- seq(0, 1, length.out = 201)
-      B <- cubic_basis(ts)
       for (i in seq_along(lens)) {
-        p <- B %*% self$get_nth_curve_points(i)
-        d <- sqrt(rowSums((p - rep(point, each = nrow(p)))^2))
-        if (min(d) < 1e-3 * max(1, total)) {
-          target <- target + lens[i] * ts[max(which(d == min(d)))]
-          return(target / total)
+        props <- proportions_along_bezier_curve_for_point(point, self$get_nth_curve_points(i))
+        if (length(props)) {
+          target <- target + lens[i] * max(props)
+          return(target / sum(lens))
         }
         target <- target + lens[i]
       }
-      stop("Point does not lie on this curve.", call. = FALSE)
+      stop("Point ", paste0("(", paste(format(point), collapse = ", "), ")"), " does not lie on this curve.",
+           call. = FALSE)
     },
     get_anchors_and_handles = function() {
       k <- nrow(self$points) %/% 4
@@ -829,21 +829,56 @@ VGroupClass <- R6::R6Class("VGroup", inherit = VMobjectClass, lock_objects = FAL
 #' @export
 VGroup <- constructor(VGroupClass)
 #' @title VDict
-#' @description A VGroup whose submobjects are addressed by name.
-#' @param mapping A named list of VMobjects.
-#' @param show_keys Whether to show the keys as text next to each value.
+#' @description A VGroup whose submobjects are addressed by key, as
+#'   upstream's `VDict`: `d$add(list(s = Square()))` adds pairs,
+#'   `d$remove("s")` removes one, `d[["s"]]` or `d$get("s")` reads one and
+#'   `d[["s"]] <- Circle()` replaces it. With `show_keys = TRUE` each value
+#'   gets its key as a [Tex()] label on its left (this needs LaTeX).
+#' @param mapping_or_iterable A named list of VMobjects, or a list of
+#'   `list(key, mobject)` pairs.
+#' @param show_keys Whether to show the keys next to the values.
 #' @param ... Passed to [VGroup()].
 #' @export
 VDictClass <- R6::R6Class("VDict", inherit = VGroupClass, lock_objects = FALSE,
   public = list(
     submob_dict = NULL,
-    initialize = function(mapping = list(), show_keys = FALSE, ...) {
+    show_keys = FALSE,
+    initialize = function(mapping_or_iterable = list(), show_keys = FALSE, ...) {
       super$initialize(...)
+      self$show_keys <- show_keys
       self$submob_dict <- list()
-      for (k in names(mapping)) self$add_key_value_pair(k, mapping[[k]])
+      self$add(mapping_or_iterable)
+    },
+    # Adds key and value pairs. Mobjects given without keys are added as
+    # plain submobjects, which the group methods of Mobject rely on.
+    add = function(...) {
+      args <- list(...)
+      if (length(args) == 1 && is.list(args[[1]]) && !is_mobject(args[[1]])) {
+        pairs <- vdict_pairs(args[[1]])
+        for (i in seq_along(pairs$keys)) self$add_key_value_pair(pairs$keys[[i]], pairs$values[[i]])
+        return(invisible(self))
+      }
+      do.call(super$add, args)
+    },
+    # Removes the value of a key (upstream's VDict.remove()); given
+    # mobjects, removes them as submobjects.
+    remove = function(...) {
+      args <- list(...)
+      if (length(args) == 1 && (is.character(args[[1]]) || is.numeric(args[[1]]))) {
+        key <- as.character(args[[1]])
+        if (!key %in% names(self$submob_dict)) {
+          stop("The given key '", key, "' is not present in the VDict", call. = FALSE)
+        }
+        super$remove(self$submob_dict[[key]])
+        self$submob_dict[[key]] <- NULL
+        return(invisible(self))
+      }
+      do.call(super$remove, args)
     },
     add_key_value_pair = function(key, value) {
-      if (!is.null(self$submob_dict[[key]])) self$remove(self$submob_dict[[key]])
+      key <- as.character(key)
+      if (!inherits(value, "VMobject")) stop("All submobjects of a VDict must be of type VMobject", call. = FALSE)
+      if (self$show_keys) value$add(Tex(key)$next_to(value, LEFT))
       self$submob_dict[[key]] <- value
       super$add(value)
       invisible(self)
@@ -855,17 +890,25 @@ VDictClass <- R6::R6Class("VDict", inherit = VGroupClass, lock_objects = FALSE,
       if (length(key) == 1) return(self$submob_dict[[key]])
       do.call(VGroup, unname(self$submob_dict[key]))
     },
+    # Upstream's `del vdict[key]`: forgets the key and removes its value.
     remove_key = function(key) {
-      v <- self$submob_dict[[key]]
-      if (!is.null(v)) {
-        self$remove(v)
-        self$submob_dict[[key]] <- NULL
-      }
+      if (as.character(key) %in% names(self$submob_dict)) self$remove(as.character(key))
       invisible(self)
     },
+    has_key = function(key) as.character(key) %in% names(self$submob_dict),
     get_all_submobjects = function() unname(self$submob_dict)
   )
 )
+
+# The keys and values of a named list or of a list of (key, value) pairs.
+vdict_pairs <- function(x) {
+  if (!length(x)) return(list(keys = list(), values = list()))
+  if (!is.null(names(x)) && all(nzchar(names(x)))) return(list(keys = as.list(names(x)), values = unname(x)))
+  if (all(vapply(x, function(p) is.list(p) && length(p) == 2 && is_mobject(p[[2]]), NA))) {
+    return(list(keys = lapply(x, `[[`, 1), values = lapply(x, `[[`, 2)))
+  }
+  stop("A VDict takes a named list of VMobjects or a list of list(key, mobject) pairs.", call. = FALSE)
+}
 
 #' @rdname VDictClass
 #' @export

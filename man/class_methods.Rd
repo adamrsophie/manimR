@@ -26,7 +26,12 @@ families installed.
 \item \code{TexTemplateClass$from_file(file, ...)}: a template whose whole body
 is read from a \code{.tex} file.
 \item \code{CodeClass$get_styles_list()} and \code{CodeClass$get_pygments_style(name)}:
-the names and colors of the built in highlighting styles.
+the names and colors of the highlighting styles (all of Pygments' when
+it is available, see \code{\link[=Code]{Code()}}).
+\item \code{GraphClass$from_igraph(graph, ...)} and \code{DiGraphClass$from_igraph(graph, ...)}: a \code{\link[=Graph]{Graph()}} or \code{\link[=DiGraph]{DiGraph()}} with the vertices (by name when they
+have names) and edges of an igraph graph, the R counterpart of
+upstream's \code{Graph.from_networkx()}; \code{...} goes to the constructor, for
+example \code{layout = "spring"}.
 }
 }
 \examples{

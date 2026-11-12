@@ -28,9 +28,11 @@
 #'   rbind(c(1, 1, 0), c(1, -1, 0), c(-1, -1, 0), c(-1, 1, 0), c(0, 0, 2)),
 #'   list(c(1, 2, 5), c(2, 3, 5), c(3, 4, 5), c(4, 1, 5), c(1, 2, 3, 4))
 #' )
+#' \donttest{
 #' oct <- Octahedron(edge_length = 3)
 #' oct$graph[1]$set_color(RED)
 #' oct$faces[3]$set_color(YELLOW)
+#' }
 NULL
 
 #' @rdname polyhedra
@@ -155,7 +157,7 @@ Dodecahedron <- function(edge_length = 1, ...) {
 # Faces of the 3D convex hull of the rows of `P`, each as hull vertex indices
 # ordered counterclockwise seen from outside. Coplanar hull points form one
 # polygonal face.
-# ponytail: brute force O(n^4) over point triples instead of upstream's
+# Limitation: brute force O(n^4) over point triples instead of upstream's
 # QuickHull; fine for the tens of points hulls are drawn with, port
 # utils/qhull.py if large clouds are needed.
 convex_hull_3d_faces <- function(P, tol = 1e-5) {

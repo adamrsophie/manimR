@@ -10,5 +10,8 @@ manim_check()
 A named logical vector, invisibly.
 }
 \description{
-Reports whether ffmpeg, LaTeX and dvisvgm are available.
+Reports which of the programs manimR uses are available: ffmpeg and
+ffprobe (video output and video metadata), LaTeX and dvisvgm (\code{\link[=Tex]{Tex()}},
+\code{\link[=MathTex]{MathTex()}}), typst (\code{\link[=Typst]{Typst()}}) and Python with Pygments (highlighting
+every language in \code{\link[=Code]{Code()}}). This is \verb{manim checkhealth}.
 }

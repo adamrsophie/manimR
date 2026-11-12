@@ -2,59 +2,71 @@
 
 #' Render a scene
 #'
-#' Renders a scene to a video (or image) file, like `manim render` does.
+#' Renders a scene to a video or image file, like `manim render` does.
 #'
 #' @param scene A [Scene] subclass (R6 generator), a scene instance, or a
 #'   function of one argument `self` used as `construct()`. A scene instance
 #'   keeps the camera it was created with, so quality and other camera
 #'   settings only apply when `scene` is a class or a function.
-#' @param quality One of `"l"`, `"m"`, `"h"`, `"p"`, `"k"`. Defaults to the
-#'   current [manim_config()] quality.
-#' @param format Output format: `"mp4"`, `"gif"`, `"webm"`, `"mov"` or `"png"`
-#'   (an image sequence).
-#' @param output_file Output path. Defaults to
-#'   `media/videos/<module>/<quality>/<Scene>.<format>`.
-#' @param save_last_frame Also write the final frame as a PNG.
-#' @param preview Open the result when done (the RStudio Viewer when available).
+#' @param quality One of `"l"`, `"m"`, `"h"`, `"p"`, `"k"` or a preset name
+#'   of [QUALITIES]. Defaults to the current [manim_config()] quality.
+#' @param format The artifact to write: `"auto"` (the default: MP4, or MOV
+#'   when transparent; a scene without animations is saved as its last
+#'   frame), `"mp4"`, `"mov"`, `"webm"`, `"gif"`, `"png"` (only the last
+#'   frame), `"png-sequence"` (every frame) or `"none"`.
+#' @param output_file Name of the artifact. A relative name is placed in the
+#'   video directory (or the images directory for PNG output), as upstream's
+#'   `-o`; an absolute path is used as it is. Defaults to the scene name in
+#'   `media/videos/<module>/<quality>/` (videos) or `media/images/<module>/`
+#'   (images).
+#' @param save_last_frame `TRUE` is short for `format = "png"`.
+#' @param preview Open the result when done (the RStudio Viewer when
+#'   available). Defaults to the `preview` setting.
 #' @param transparent Render with a transparent background.
-#' @param module_name Folder name under `media/`; defaults to the scene
-#'   file name when known.
+#' @param module_name Folder name under `media/videos/` and `media/images/`;
+#'   [render_file()] uses the script name. Defaults to `"manimR"`.
 #' @param scene_name Name used for output files; defaults to the scene class name.
 #' @param ... Further [manim_config()] settings for this render, such as
-#'   `background_color` or `frame_rate`.
-#' @return The output path, invisibly, with class `manim_output`.
+#'   `background_color`, `frame_rate`, `save_sections` or `dry_run`.
+#' @return The path of the artifact, invisibly, with class `manim_output`;
+#'   `NULL` when nothing is written (`format = "none"` or `dry_run`).
 #' @export
 #' @examples
 #' \dontrun{
 #' render(function(self) self$play(Create(Circle())), quality = "l")
 #' }
 render <- function(scene, quality = NULL, format = NULL, output_file = NULL, save_last_frame = NULL,
-                   preview = FALSE, transparent = NULL, module_name = NULL, scene_name = NULL, ...) {
+                   preview = NULL, transparent = NULL, module_name = NULL, scene_name = NULL, ...) {
   settings <- list(...)
   if (!is.null(quality)) settings$quality <- quality
   if (!is.null(format)) settings$format <- format
   if (!is.null(save_last_frame)) settings$save_last_frame <- save_last_frame
   if (!is.null(transparent)) settings$transparent <- transparent
-  if (inherits(scene, "Scene")) {
+  if (!is.null(output_file)) settings$output_file <- output_file
+  if (!is.null(module_name)) settings$module_name <- module_name
+  if (!is.null(preview)) settings$preview <- preview
+  is_instance <- inherits(scene, "Scene")
+  if (is_instance) {
     # As upstream, a scene reads the camera settings when it is created, so
     # they cannot change an existing instance.
-    fixed <- intersect(names(settings), c("quality", "pixel_width", "pixel_height", "frame_rate", "frame_height",
-                                          "frame_width", "background_color", "background_opacity",
-                                          "transparent", "write_to_movie"))
+    fixed <- intersect(names(settings), c("quality", "pixel_width", "pixel_height", "frame_size", "frame_rate",
+                                          "frame_height", "frame_width", "background_color", "background_opacity",
+                                          "transparent"))
     if (length(fixed)) {
       warning("render() was given a scene object, which keeps the camera it was created with, so ",
               paste(fixed, collapse = ", "), " had no effect on the camera. Pass the Scene class instead, ",
               "or set manim_config() before creating the scene.", call. = FALSE)
     }
   }
-  with_manim_config(settings, {
+  out <- with_manim_config(settings, {
     obj <- instantiate_scene(scene)
     if (!is.null(scene_name)) obj$scene_name_override <- scene_name
-    out <- obj$render(module_name = module_name, output_file = output_file)
+    # The output settings of this call apply to a scene created earlier too.
+    if (is_instance || !is.null(scene_name)) obj$init_output()
+    obj$get_manager()$render()
   })
-  out <- structure(normalizePath(out, mustWork = FALSE), class = "manim_output")
-  if (isTRUE(preview)) preview_output(out)
-  invisible(out)
+  if (is.null(out)) return(invisible(NULL))
+  invisible(structure(normalizePath(out, mustWork = FALSE), class = "manim_output"))
 }
 
 instantiate_scene <- function(scene) {
@@ -70,6 +82,50 @@ print.manim_output <- function(x, ...) {
   invisible(x)
 }
 
+#' Show rendered output in R Markdown and Quarto
+#'
+#' In a knitr document, the value of [render()] printed at the end of an `r`
+#' chunk is embedded: a video player for MP4, WebM and MOV files in HTML
+#' output, an image for GIF and PNG files (and a note with the path in other
+#' output formats). The file is copied next to the chunk's figures, under a
+#' name made of the chunk label and a hash of its contents.
+#'
+#' @param x A `manim_output`, the value of [render()].
+#' @param options knitr chunk options; `out.width` sets the width.
+#' @param ... Ignored.
+#' @return A `knit_asis` string.
+#' @keywords internal
+#' @exportS3Method knitr::knit_print
+knit_print.manim_output <- function(x, options = list(), ...) {
+  path <- unclass(x)
+  fig_dir <- dirname(knitr::fig_path("", options))
+  dir.create(fig_dir, recursive = TRUE, showWarnings = FALSE)
+  # The copy is named after the chunk and the file's contents, so outputs of
+  # other chunks (or other renders in this one) with the same file name do
+  # not replace it.
+  file <- path
+  if (!dir.exists(path)) {
+    tag <- substr(digest::digest(file = path, algo = "xxhash64"), 1, 10)
+    file <- file.path(fig_dir, paste0(options$label %||% "manim", "-", tag, "-", basename(path)))
+    if (!identical(normalizePath(path), normalizePath(file, mustWork = FALSE))) file.copy(path, file, overwrite = TRUE)
+  }
+  ext <- tolower(tools::file_ext(path))
+  width <- css_width(options$out.width)
+  out <- if (dir.exists(path)) {
+    paste0("PNG sequence: `", path, "`")
+  } else if (ext %in% c("mp4", "webm", "mov")) {
+    if (knitr::is_html_output()) {
+      sprintf('<video src="%s" controls autoplay muted loop playsinline style="width:%s"></video>',
+              utils::URLencode(video_src(file, fig_dir)), width)
+    } else {
+      paste0("Video: `", path, "`")
+    }
+  } else {
+    knitr::knit_hooks$get("plot")(file, options)
+  }
+  knitr::asis_output(out)
+}
+
 #' Preview a rendered file
 #'
 #' Shows a video, GIF or PNG in the RStudio Viewer pane when available,
@@ -80,6 +136,8 @@ print.manim_output <- function(x, ...) {
 preview_output <- function(path) {
   path <- unclass(path)
   if (!file.exists(path)) stop("File not found: ", path, call. = FALSE)
+  # A PNG sequence is a folder: show it in the file browser.
+  if (dir.exists(path)) return(invisible(open_file(path, in_browser = TRUE)))
   viewer <- getOption("viewer")
   if (!is.null(viewer)) {
     dir <- file.path(tempdir(), "manimR-preview", basename(tempfile()))
@@ -139,11 +197,17 @@ plot.Mobject <- function(x, background_color = cfg("background_color"), ...) {
   cam <- CameraClass$new(background_color = background_color)
   aspect <- cam$pixel_height / cam$pixel_width
   grid::grid.newpage()
-  grid::pushViewport(grid::viewport(width = grid::unit(1, "snpc"), height = grid::unit(aspect, "snpc")))
-  dev_w <- grid::convertWidth(grid::unit(1, "npc"), "inches", valueOnly = TRUE) * 96
+  # The largest frame of the camera's aspect ratio that fits the device.
+  dev_w <- grid::convertWidth(grid::unit(1, "npc"), "inches", valueOnly = TRUE)
+  dev_h <- grid::convertHeight(grid::unit(1, "npc"), "inches", valueOnly = TRUE)
+  w <- min(dev_w, dev_h / aspect)
+  grid::pushViewport(grid::viewport(width = grid::unit(w, "inches"), height = grid::unit(w * aspect, "inches")))
+  dev_w <- w * 96
   cam$pixel_width <- dev_w
   cam$pixel_height <- dev_w * aspect
-  cam$draw_frame(list(x))
+  # Point sizes follow the camera's resolution relative to the configured
+  # one; the device is the resolution here.
+  with_manim_config(list(pixel_width = dev_w, pixel_height = dev_w * aspect), cam$draw_frame(list(x)))
   grid::popViewport()
   invisible(x)
 }

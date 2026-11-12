@@ -45,7 +45,7 @@ planar_lr_adjacency <- function(n, pairs, directed) {
 
 # LRPlanarity.lr_planarity: a planar embedding (see planar_embedding_new())
 # or NULL when the graph is not planar.
-# ponytail: recursive like networkx's *_recursive methods, so the depth grows
+# Limitation: recursive like networkx's *_recursive methods, so the depth grows
 # with the longest DFS path; use the iterative variants for huge graphs.
 planar_embedding <- function(n, adj) {
   if (n > 2 && sum(lengths(adj)) / 2 > 3 * n - 6) return(NULL)

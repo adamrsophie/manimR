@@ -12,12 +12,45 @@ command line arguments.}
 }
 \description{
 Mirrors \verb{manim render} for use with \code{Rscript}:
-\verb{Rscript -e 'manimR::manim_cli()' scenes.R SceneName -ql -p}.
-Flags: \code{-ql}, \code{-qm}, \code{-qh}, \code{-qp}, \code{-qk} (quality), \code{-s} (save last frame
-only), \code{-t} (transparent), \verb{--format gif}, \verb{-o file}, \code{-p} (preview),
-\code{--save_sections} (also write one video per section), \verb{-n N} or \verb{-n N,M}
-(render animations N through M, counted from 0 as upstream does),
-\verb{-r W,H} (resolution in pixels), \verb{--fps FPS}, \code{--disable_caching} (render
-every animation again) and \code{--flush_cache} (delete cached partial movie
-files first).
+\verb{Rscript -e 'manimR::manim_cli()' scenes.R SceneName -ql -p}. FILE is an
+R script (or a \code{.cfg} file whose \code{input_file} names the script), followed
+by scene names; with no scene names a script with one scene renders it
+and a script with several asks which to render (\code{-a} renders all).
+}
+\details{
+It takes upstream's options: \code{-c}/\code{--config_file}, \code{--disable_caching},
+\code{--tex_template}, \code{-v}/\code{--verbosity}, \code{--notify_outdated_version} and
+\code{--silent}, \code{--enable_gui}, \code{--gui_location}, \code{--fullscreen},
+\code{--enable_wireframe}, \code{--dry_run}, \code{--no_latex_cleanup},
+\code{--preview_command}, \code{--seed}, \code{-o}/\code{--output_file}, \code{-0}/\code{--zero_pad},
+\code{--media_dir}, \code{--log_dir}, \code{--log_to_file}, \verb{-n N[,M]} (render
+animations N through M, counted from 0), \code{-a}/\code{--write_all}, \code{--format},
+\code{-s}/\code{--save_last_frame}, \code{-q}/\code{--quality} (also \code{-ql}, \code{-qm}, \code{-qh},
+\code{-qp}, \code{-qk}), \code{-r}/\verb{--resolution W,H}, \code{--fps}/\code{--frame_rate},
+\code{--video-codec}, \code{--pixel-format}, \verb{--encoder-option KEY=VALUE}
+(repeatable), \code{--max-inflight-encoders}, \code{--encoder-queue-size},
+\code{--renderer}, \code{--save_sections}, \code{-t}/\code{--transparent},
+\code{--use_projection_fill_shaders}, \code{--use_projection_stroke_shaders},
+\code{--progress_bar}, \code{-p}/\code{--preview}, \code{-l}/\code{--live-preview},
+\code{--show_in_file_browser}, plus manimR's \code{--flush_cache}. Short flags can
+be combined (\code{-pql}). A \code{manim.cfg} in the working directory is read
+first unless \code{-c} names another file, and the command line wins over
+both. The OpenGL window options are accepted; asking for a live preview
+is an error, as with upstream's Cairo renderer. Options can also be
+written \code{--name=value}, and \code{render} may come first, as in \verb{manim render}.
+
+The other subcommands of \code{manim}:
+\itemize{
+\item \code{checkhealth} reports the programs manimR uses (\code{\link[=manim_check]{manim_check()}}).
+\item \verb{cfg show} prints the settings, \verb{cfg write} writes them to \code{manim.cfg}
+in the working directory and \verb{cfg export --dir DIR} into \code{DIR}.
+\item \verb{init project NAME} creates a project folder with \code{main.R} and a
+\code{manim.cfg} (upstream's default settings: 1920 x 1080 at 30 fps);
+\verb{init scene NAME [FILE]} appends a scene template to \code{FILE} (\code{main.R}).
+\item \code{plugins -l} lists installed plugins (\code{\link[=list_plugins]{list_plugins()}}).
+\item \verb{cache clear FILE SCENE ...} deletes the partial movie files of those
+scenes, for the quality given with \code{-q} and the media directory given
+with \code{--media-dir}.
+\item \code{--version} prints the version.
+}
 }

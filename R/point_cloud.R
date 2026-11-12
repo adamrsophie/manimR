@@ -149,7 +149,7 @@ PMobjectClass <- R6::R6Class("PMobject", inherit = MobjectClass, lock_objects = 
     },
     get_color = function() {
       if (is.null(self$rgbas) || nrow(self$rgbas) == 0) return(self$color)
-      rgba_to_color(self$rgbas[1, ])
+      rgb_hex(self$rgbas[1, 1:3])
     },
     point_from_proportion = function(alpha) {
       index <- alpha * (self$get_num_points() - 1)

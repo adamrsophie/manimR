@@ -10,13 +10,13 @@
 # arithmetic, as upstream allows).
 new_manim_color <- function(rgba) {
   rgba <- as.numeric(rgba)
-  structure(rgb_to_color(rgba[1:3]), rgba = rgba, class = c("ManimColor", "character"))
+  structure(rgb_hex(rgba[1:3]), rgba = rgba, class = c("ManimColor", "character"))
 }
 
 new_hsv_color <- function(hsva) {
   hsva <- as.numeric(hsva)
   rgb <- hsv_to_rgb(hsva[1:3])
-  structure(rgb_to_color(rgb), rgba = c(rgb, hsva[4]), hsva = hsva, class = c("HSV", "ManimColor", "character"))
+  structure(rgb_hex(rgb), rgba = c(rgb, hsva[4]), hsva = hsva, class = c("HSV", "ManimColor", "character"))
 }
 
 # Python's colorsys conversions.

@@ -83,7 +83,7 @@ ApplyComplexFunction(fn, mobject, ...)
 
 CyclicReplace(..., path_arc = 90 * DEGREES)
 
-Swap(..., path_arc = 90 * DEGREES)
+Swap(...)
 
 FadeTransform(mobject, target_mobject, stretch = TRUE, dim_to_match = 2, ...)
 

@@ -38,11 +38,10 @@ Quaternions are numeric vectors \code{c(w, x, y, z)}.
 left to right; with no arguments it returns \code{c(1, 0, 0, 0)}.
 \item \code{quaternion_from_angle_axis()} returns the rotation quaternion
 \code{c(cos(angle / 2), sin(angle / 2) * axis)}.
-\item \code{angle_axis_from_quaternion()} returns \code{list(angle, axis)}. As in manim
-0.20.1, an angle above \code{PI} is replaced by \code{TAU - angle} while the axis
-is kept. For a quaternion with zero vector part the axis is
-\code{c(1, 0, 0)}; manim 0.20.1 raises an error there, which newer upstream
-versions fix in the same way.
+\item \code{angle_axis_from_quaternion()} returns \code{list(angle, axis)}. As upstream,
+an angle above \code{PI} is replaced by \code{TAU - angle} and the axis is
+negated, which describes the same rotation. For a quaternion with zero
+vector part the axis is \code{c(1, 0, 0)}.
 \item \code{quaternion_conjugate()} negates the vector part.
 }
 }

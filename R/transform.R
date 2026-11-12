@@ -450,6 +450,13 @@ TransformAnimationsClass <- R6::R6Class("TransformAnimations", inherit = Transfo
       start_anim$mobject <- self$starting_mobject
       end_anim$mobject <- self$target_mobject
     },
+    # The blended animations start with this one, so they have their
+    # starting mobjects when interpolated.
+    begin = function() {
+      self$start_anim$begin()
+      self$end_anim$begin()
+      super$begin()
+    },
     interpolate = function(alpha) {
       self$start_anim$interpolate(alpha)
       self$end_anim$interpolate(alpha)

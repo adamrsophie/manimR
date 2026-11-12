@@ -10,16 +10,23 @@ ffmpeg_path <- function() {
 
 #' Check system requirements
 #'
-#' Reports whether ffmpeg, LaTeX and dvisvgm are available.
+#' Reports which of the programs manimR uses are available: ffmpeg and
+#' ffprobe (video output and video metadata), LaTeX and dvisvgm ([Tex()],
+#' [MathTex()]), typst ([Typst()]) and Python with Pygments (highlighting
+#' every language in [Code()]). This is `manim checkhealth`.
 #'
 #' @return A named logical vector, invisibly.
 #' @export
 manim_check <- function() {
-  tools <- c(ffmpeg = cfg("ffmpeg") %||% "ffmpeg", latex = "latex", dvisvgm = "dvisvgm")
-  ok <- nzchar(Sys.which(tools))
+  tools <- c(ffmpeg = cfg("ffmpeg") %||% "ffmpeg", ffprobe = "ffprobe", latex = "latex", dvisvgm = "dvisvgm",
+             typst = cfg("typst") %||% "typst")
+  paths <- Sys.which(path.expand(tools))
+  ok <- nzchar(paths)
   names(ok) <- names(tools)
-  for (i in seq_along(ok)) message(sprintf("%-8s %s", names(ok)[i], if (ok[i]) Sys.which(tools[i]) else "NOT FOUND"))
-  invisible(ok)
+  for (i in seq_along(ok)) message(sprintf("%-9s %s", names(ok)[i], if (ok[i]) paths[[i]] else "NOT FOUND"))
+  py <- pygments_python()
+  message(sprintf("%-9s %s", "pygments", if (is.null(py)) "NOT FOUND (Code() highlights R and Python only)" else py))
+  invisible(c(ok, pygments = !is.null(py)))
 }
 
 # Section file name component, as manim's _slugify_section_name().
@@ -46,6 +53,22 @@ media_duration <- function(path) {
   p[1] * 3600 + p[2] * 60 + p[3]
 }
 
+# A frame as png::writePNG() takes it: native rasters as they are, RGBA
+# arrays scaled to [0, 1].
+frame_to_png_array <- function(frame) {
+  if (inherits(frame, "nativeRaster") || max(frame) <= 1) frame else frame / 255
+}
+
+# The audio codec for sound in a WebM video: Vorbis when ffmpeg has it,
+# otherwise Opus, as upstream's _webm_audio_codec().
+webm_audio_codec <- function() {
+  if (is.null(.manim$webm_audio_codec)) {
+    enc <- suppressWarnings(system2(ffmpeg_path(), c("-hide_banner", "-encoders"), stdout = TRUE, stderr = TRUE))
+    .manim$webm_audio_codec <- if (any(grepl("\\blibvorbis\\b", enc))) "libvorbis" else "libopus"
+  }
+  .manim$webm_audio_codec
+}
+
 frame_bytes <- function(frame) {
   attributes(frame) <- NULL
   writeBin(frame, raw(), size = 4, endian = "little")
@@ -55,136 +78,118 @@ frame_bytes <- function(frame) {
 #' @export
 SceneFileWriterClass <- R6::R6Class("SceneFileWriter", lock_objects = FALSE,
   public = list(
-    scene_name = NULL,
-    module_name = NULL,
-    movie_file_path = NULL,
-    image_file_path = NULL,
+    settings = NULL,
+    output_spec = NULL,
+    output_plan = NULL,
+    video_encoder = NULL,
     con = NULL,
-    frames_written = 0,
-    width = NULL,
-    height = NULL,
-    fps = NULL,
-    format = NULL,
+    partial_path = NULL,
+    frame_count = 0,
     sounds = NULL,
     sections = NULL,
     partial_movie_files = NULL,
-    partial_path = NULL,
-    frame_count = 0,
     subcaptions = NULL,
     final_file_path = NULL,
     includes_sound = FALSE,
-    initialize = function(scene_name, module_name = NULL, width, height, fps, output_file = NULL) {
-      self$scene_name <- scene_name
-      self$module_name <- module_name %||% "manimR"
-      self$width <- width
-      self$height <- height
-      self$fps <- fps
+    # `settings` comes from the scene: the resolved output plan, the video
+    # encoder of the segments, and the cache and asset settings (upstream's
+    # _SceneFileWriterSettings).
+    initialize = function(settings) {
+      self$settings <- settings
+      self$output_plan <- settings$plan
+      self$output_spec <- settings$plan$output
+      self$video_encoder <- settings$video_encoder
+      if (isTRUE(self$output_spec$is_video) != !is.null(self$video_encoder)) {
+        stop("Video output and resolved video encoder settings must be provided together.", call. = FALSE)
+      }
       self$sounds <- list()
-      media <- cfg("media_dir") %||% "media"
-      out <- output_file %||% cfg("output_file")
-      has_out <- !is.null(out) && nzchar(out)
-      out_ext <- if (has_out) tolower(tools::file_ext(out)) else ""
-      fmt <- cfg("format") %||% "mp4"
-      # A movie extension on output_file chooses the format, so the file
-      # always matches its name.
-      if (out_ext %in% c("mp4", "mov", "webm", "gif")) fmt <- out_ext
-      if (isTRUE(cfg("transparent")) && fmt == "mp4") {
-        if (out_ext == "mp4") message("Transparent video needs a .mov file; writing ", sub("\\.mp4$", ".mov", out, ignore.case = TRUE))
-        fmt <- "mov"
-      }
-      self$format <- fmt
-      ext <- if (fmt == "png") "" else paste0(".", fmt)
-      if (has_out) {
-        # The movie and the last frame image share the output stem, so
-        # `-s -o poster.png` writes poster.png.
-        stem <- if (out_ext %in% c("mp4", "mov", "webm", "gif", "png")) tools::file_path_sans_ext(out) else out
-        self$movie_file_path <- paste0(stem, ext)
-        self$image_file_path <- paste0(stem, ".png")
-      } else {
-        vdir <- file.path(media, "videos", self$module_name, quality_dir_name())
-        self$movie_file_path <- file.path(vdir, paste0(scene_name, ext))
-        self$image_file_path <- file.path(media, "images", self$module_name, paste0(scene_name, ".png"))
-      }
       self$sections <- list()
       self$partial_movie_files <- list()
       self$subcaptions <- list()
       self$init_audio()
-      if (isTRUE(cfg("flush_cache"))) self$flush_cache_directory()
+      if (isTRUE(cfg("flush_cache")) && self$output_spec$is_video) self$flush_cache_directory()
       # The first section is created automatically, as upstream does.
-      self$next_section("autocreated", "default.normal", FALSE)
+      self$next_section("autocreated", DefaultSectionType$NORMAL, FALSE)
     },
-    # The ffmpeg arguments that encode raw RGBA frames into `out` in `fmt`.
-    # GIFs are assembled from lossless QuickTime partial files.
-    output_command = function(out = self$movie_file_path, fmt = self$format) {
-      common <- c("-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgba",
-                  "-s", paste0(self$width, "x", self$height), "-r", as.character(self$fps), "-i", "-", "-an")
-      c(common, self$codec_args(fmt), out)
+    # The ffmpeg arguments that encode raw RGBA frames into `out`: the
+    # segment encoder for video segments.
+    output_command = function(out) {
+      enc <- self$video_encoder
+      c("-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgba",
+        "-s", paste0(enc$width, "x", enc$height), "-r", frame_rate_arg(enc$frame_rate), "-i", "-", "-an",
+        video_encoder_args(enc), "-f", if (enc$container_format == "mov") "mov" else enc$container_format, out)
     },
-    codec_args = function(fmt) {
-      transparent <- isTRUE(cfg("transparent"))
-      switch(fmt,
-        mp4 = c("-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18"),
-        mov = if (transparent) c("-c:v", "qtrle", "-pix_fmt", "argb") else c("-c:v", "libx264", "-pix_fmt", "yuv420p"),
-        webm = c("-c:v", "libvpx-vp9", "-pix_fmt", if (transparent) "yuva420p" else "yuv420p", "-b:v", "0", "-crf", "30"),
-        qtrle = c("-c:v", "qtrle", "-pix_fmt", "argb"),
-        stop("Unsupported format: ", fmt, call. = FALSE)
-      )
-    },
-    open_pipe = function(path, fmt = self$format) {
+    open_pipe = function(path) {
       dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
-      args <- self$output_command(path, fmt)
-      pipe(paste(shQuote(ffmpeg_path()), paste(shQuote(args), collapse = " ")), open = "wb")
+      pipe(paste(shQuote(ffmpeg_path()), paste(shQuote(self$output_command(path)), collapse = " ")), open = "wb")
     },
 
-    # Paths (upstream's OutputPlan) ------------------------------------------
-    output_name = function() tools::file_path_sans_ext(basename(self$movie_file_path)),
-    gif_file_path = function() paste0(tools::file_path_sans_ext(self$movie_file_path), ".gif"),
-    image_sequence_directory = function() self$movie_file_path,
-    partial_movie_directory = function() file.path(dirname(self$movie_file_path), "partial_movie_files", self$scene_name),
-    sections_output_dir = function() self$sections_dir(),
-    # Partial movie files keep the movie's format, except GIFs, whose pieces
-    # are lossless QuickTime files.
-    partial_extension = function() if (self$format == "gif") ".mov" else paste0(".", self$format),
-    partial_format = function() if (self$format == "gif") "qtrle" else self$format,
+    # Sections (manim.scene.section) ------------------------------------------
+    finish_last_section = function() {
+      k <- length(self$sections)
+      if (k && self$sections[[k]]$is_empty()) self$sections[[k]] <- NULL
+      invisible(self)
+    },
+    next_section = function(name = "unnamed", type_ = DefaultSectionType$NORMAL, skip_animations = FALSE) {
+      self$finish_last_section()
+      # Images have no sections; the section video path is relative to the
+      # section index file.
+      video <- NULL
+      if (isTRUE(self$output_spec$save_sections) && !skip_animations) {
+        video <- basename(plan_section_path(self$output_plan, length(self$sections), name))
+      }
+      self$sections[[length(self$sections) + 1]] <- SectionClass$new(type_, video, name, skip_animations)
+      invisible(self)
+    },
+    current_section = function() self$sections[[length(self$sections)]],
 
     # Partial movie files, one per play (upstream's segment cache) ------------
-    # `hash` names the file; NULL marks a play that is not rendered.
-    add_partial_movie_file = function(hash) {
-      if (self$format == "png") return(invisible(self))
-      path <- if (is.null(hash)) NULL else file.path(self$partial_movie_directory(), paste0(hash, self$partial_extension()))
+    # `hash_animation` names the file; NULL marks a play that is not rendered.
+    add_partial_movie_file = function(hash_animation) {
+      if (!self$output_spec$is_video) return(invisible(self))
+      path <- if (is.null(hash_animation)) NULL else plan_segment_path(self$output_plan, hash_animation)
       self$partial_movie_files[length(self$partial_movie_files) + 1] <- list(path)
       sec <- self$current_section()
       sec$partial_movie_files[length(sec$partial_movie_files) + 1] <- list(path)
       invisible(self)
     },
-    is_already_cached = function(hash) {
-      path <- file.path(self$partial_movie_directory(), paste0(hash, self$partial_extension()))
+    is_already_cached = function(hash_invocation) {
+      if (!self$output_spec$is_video) return(FALSE)
+      path <- plan_segment_path(self$output_plan, hash_invocation)
       if (!file.exists(path)) return(FALSE)
       modify_atime(path)
       TRUE
     },
-    begin_animation = function(allow_write = FALSE, file_path = NULL) {
-      if (allow_write && isTRUE(cfg("write_to_movie"))) self$open_partial_movie_stream(file_path)
+    begin_animation = function(allow_write = FALSE, animation_index = NULL, file_path = NULL) {
+      if (self$output_spec$is_video && allow_write) {
+        self$open_partial_movie_stream(animation_index = animation_index, file_path = file_path)
+      }
       invisible(self)
     },
     end_animation = function(allow_write = FALSE) {
-      if (allow_write) self$close_partial_movie_stream()
+      if (self$output_spec$is_video && allow_write) self$close_partial_movie_stream()
       invisible(self)
     },
-    open_partial_movie_stream = function(file_path = NULL) {
-      if (self$format == "png") return(invisible(self))
-      self$close_partial_movie_stream()
-      file_path <- file_path %||% self$partial_movie_files[[length(self$partial_movie_files)]]
-      if (is.null(file_path)) return(invisible(self))
+    open_partial_movie_stream = function(animation_index = NULL, file_path = NULL) {
+      if (!is.null(self$con)) stop("Cannot open a video segment while another segment is still open.", call. = FALSE)
+      if (is.null(file_path)) {
+        idx <- if (is.null(animation_index)) length(self$partial_movie_files) else animation_index + 1
+        file_path <- if (idx >= 1 && idx <= length(self$partial_movie_files)) self$partial_movie_files[[idx]]
+        if (is.null(file_path)) {
+          stop("open_partial_movie_stream() called for a play that has no partial movie file path.", call. = FALSE)
+        }
+      }
       self$partial_path <- file_path
-      self$con <- self$open_pipe(paste0(file_path, ".part", self$partial_extension()), self$partial_format())
+      self$con <- self$open_pipe(paste0(file_path, ".part", self$output_plan$segment_extension))
       invisible(self)
     },
     close_partial_movie_stream = function() {
-      if (is.null(self$con)) return(invisible(self))
+      if (is.null(self$con)) {
+        stop("close_partial_movie_stream() called without an open partial movie stream.", call. = FALSE)
+      }
       status <- close(self$con)
       self$con <- NULL
-      part <- paste0(self$partial_path, ".part", self$partial_extension())
+      part <- paste0(self$partial_path, ".part", self$output_plan$segment_extension)
       if (!is.null(status) && status != 0) {
         unlink(part)
         stop("ffmpeg exited with status ", status, call. = FALSE)
@@ -194,38 +199,74 @@ SceneFileWriterClass <- R6::R6Class("SceneFileWriter", lock_objects = FALSE,
       file.rename(part, self$partial_path)
       invisible(self)
     },
-    # Encoding happens in this process, so there are no background jobs to
-    # wait for; aborting drops the partial file being written.
+    # Segments are encoded in this process while frames are written, so there
+    # are no background jobs to wait for (max_inflight_encoders and
+    # encoder_queue_size only bound upstream's encoder threads); aborting
+    # drops the segment being written.
     join_all_encode_jobs = function() invisible(self),
     abort_encode_jobs = function(reraise_encoder_failures = FALSE) {
       if (!is.null(self$con)) {
         try(close(self$con), silent = TRUE)
         self$con <- NULL
-        unlink(paste0(self$partial_path, ".part", self$partial_extension()))
+        unlink(paste0(self$partial_path, ".part", self$output_plan$segment_extension))
+        logger$info("Discarded partial movie file of aborted animation")
       }
       invisible(self)
     },
-    write_frame = function(frame, num_frames = 1) {
-      if (num_frames < 1) return(invisible(self))
-      if (self$format == "png") {
-        for (i in seq_len(num_frames)) self$output_image(frame, self$image_sequence_directory())
-        self$frames_written <- self$frames_written + num_frames
-        return(invisible(self))
+    # Writes `pixels` (a frame from the renderer) `repeat` times: to the open
+    # segment for video output, as numbered PNG files for a PNG sequence.
+    write_frame = function(pixels, `repeat` = 1) {
+      if (`repeat` < 1) return(invisible(self))
+      if (self$output_spec$is_video && !is.null(self$con)) {
+        bytes <- frame_bytes(pixels)
+        for (i in seq_len(`repeat`)) writeBin(bytes, self$con)
       }
-      if (is.null(self$con)) self$open_partial_movie_stream()
-      if (is.null(self$con)) return(invisible(self))
-      bytes <- frame_bytes(frame)
-      for (i in seq_len(num_frames)) writeBin(bytes, self$con)
-      self$frames_written <- self$frames_written + num_frames
+      if (self$output_spec$is_image_sequence) {
+        for (i in seq_len(`repeat`)) self$output_image(pixels)
+      }
       invisible(self)
     },
-    # Writes one frame of an image sequence as <scene><number>.png.
-    output_image = function(image, target_dir, ext = ".png", zero_pad = 4) {
-      dir.create(target_dir, recursive = TRUE, showWarnings = FALSE)
+    output_image = function(image) {
+      path <- plan_image_frame_path(self$output_plan, self$frame_count)
+      dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+      png::writePNG(frame_to_png_array(image), path)
       self$frame_count <- self$frame_count + 1
-      path <- file.path(target_dir, sprintf(paste0("%s%0", zero_pad, "d%s"), self$scene_name, self$frame_count - 1, ext))
-      img <- if (inherits(image, "nativeRaster")) native_raster_to_array(image) / 255 else image
-      png::writePNG(img, path)
+      invisible(path)
+    },
+    save_image = function(pixels) {
+      if (!self$output_spec$enabled) return(invisible(NULL))
+      path <- self$image_file_path
+      dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+      png::writePNG(frame_to_png_array(pixels), path)
+      self$print_file_ready_message(path)
+      invisible(path)
+    },
+    # Ends the scene: the partial movie files become the movie (and the
+    # section videos); an image sequence is already written.
+    finish = function() {
+      if (self$output_spec$is_video) {
+        self$join_all_encode_jobs()
+        self$combine_to_movie()
+        if (self$output_spec$save_sections) self$combine_to_section_videos()
+        self$clean_cache()
+      } else if (self$output_spec$is_image_sequence) {
+        self$final_file_path <- self$image_sequence_directory
+        logger$info("%d images ready at %s", self$frame_count, self$image_sequence_directory)
+      }
+      if (length(self$subcaptions)) self$write_subcaption_file()
+      invisible(self$final_file_path)
+    },
+    # The ffmpeg concat list of `input_files`, as upstream's concat manifest.
+    concat_manifest_lines = function(input_files) {
+      c("# This file records the segment order used by Manim.",
+        sprintf("file 'file:%s'", gsub("'", "'\\\\''", normalizePath(unlist(input_files), winslash = "/"))))
+    },
+    write_concat_manifest = function(input_files) {
+      path <- self$output_plan$concat_manifest
+      dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+      tmp <- tempfile(paste0(".", basename(path), "."), tmpdir = dirname(path), fileext = ".tmp")
+      writeLines(self$concat_manifest_lines(input_files), tmp)
+      file.rename(tmp, path)
       invisible(path)
     },
     # Concatenates partial movie files into `output_file` (as a GIF when
@@ -236,45 +277,57 @@ SceneFileWriterClass <- R6::R6Class("SceneFileWriter", lock_objects = FALSE,
       dir.create(dirname(output_file), recursive = TRUE, showWarnings = FALSE)
       list_file <- tempfile(fileext = ".txt")
       on.exit(unlink(list_file), add = TRUE)
-      writeLines(sprintf("file '%s'", gsub("'", "'\\\\''", normalizePath(input_files))), list_file)
+      writeLines(self$concat_manifest_lines(input_files), list_file)
       codec <- if (create_gif) {
-        c("-vf", "split[s0][s1];[s0]palettegen=reserve_transparent=1[p];[s1][p]paletteuse", "-loop", "0")
+        palette <- if (self$output_spec$transparent) "palettegen=stats_mode=diff:reserve_transparent=1" else "palettegen=stats_mode=diff"
+        c("-vf", paste0("split[s0][s1];[s0]", palette, "[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle"),
+          "-loop", "0")
       } else {
-        c("-c", "copy", if (self$format == "mp4") c("-movflags", "+faststart"))
+        c("-c", "copy", if (self$output_spec$format == "mp4") c("-movflags", "+faststart"))
       }
-      args <- c("-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", list_file, codec, output_file)
+      args <- c("-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", list_file, if (!includes_sound) "-an",
+                codec, "-metadata", paste0("comment=Rendered with manimR v", utils::packageVersion("manimR")),
+                output_file)
       status <- system2(ffmpeg_path(), shQuote(args))
       if (status != 0) stop("Combining partial movie files failed (ffmpeg status ", status, ")", call. = FALSE)
       invisible(output_file)
     },
     combine_to_movie = function() {
       files <- Filter(Negate(is.null), self$partial_movie_files)
-      if (!length(files)) return(invisible(NULL))
-      self$combine_files(files, self$movie_file_path, create_gif = self$format == "gif")
-      if (length(self$sounds) && self$format %in% c("mp4", "mov", "webm")) self$mux_sounds()
-      self$print_file_ready_message(self$movie_file_path)
-      invisible(self$movie_file_path)
+      if (!length(files)) {
+        logger$info("No animations are contained in this scene.")
+        return(invisible(NULL))
+      }
+      logger$info("Combining to Movie file.")
+      self$write_concat_manifest(files)
+      path <- self$movie_file_path
+      self$combine_files(files, path, create_gif = self$output_spec$is_gif)
+      if (self$includes_sound && !self$output_spec$is_gif) self$mux_sounds()
+      self$print_file_ready_message(path)
+      invisible(path)
     },
     combine_to_section_videos = function() {
       self$finish_last_section()
       saved <- Filter(function(s) !is.null(s$video) && length(s$get_clean_partial_movie_files()), self$sections)
       if (!length(saved)) return(invisible(NULL))
+      dir <- self$sections_output_dir
       entries <- vapply(saved, function(s) {
-        path <- file.path(self$sections_dir(), s$video)
-        self$combine_files(s$get_clean_partial_movie_files(), path, create_gif = self$format == "gif")
-        json_object(s$get_dict(self$sections_dir()))
+        self$combine_files(s$get_clean_partial_movie_files(), file.path(dir, s$video),
+                           create_gif = self$output_spec$is_gif)
+        json_object(s$get_dict(dir))
       }, "")
-      index <- file.path(self$sections_dir(), paste0(self$output_name(), ".json"))
+      index <- self$output_plan$section_index
       writeLines(c("[", paste(entries, collapse = ",\n"), "]"), index)
       invisible(index)
     },
-    # Keeps at most `max_files_cached` partial movie files, dropping the
-    # least recently used (upstream's clean_cache()).
+    # Keeps at most `max_files_cached` partial movie files (-1 keeps all),
+    # dropping the least recently used (upstream's prune_segment_cache()).
     clean_cache = function() {
-      dir <- self$partial_movie_directory()
-      files <- list.files(dir, pattern = paste0("\\", self$partial_extension(), "$"), full.names = TRUE)
+      dir <- self$partial_movie_directory
+      ext <- self$output_plan$segment_extension
+      files <- list.files(dir, pattern = paste0("\\", ext, "$"), full.names = TRUE)
       files <- files[!grepl("\\.part\\.", files)]
-      keep <- cfg("max_files_cached") %||% 100
+      keep <- self$settings$max_files_cached %||% 100
       if (keep >= 0 && length(files) > keep) {
         atimes <- file.info(files)$atime
         unlink(files[order(atimes)][seq_len(length(files) - keep)])
@@ -282,7 +335,7 @@ SceneFileWriterClass <- R6::R6Class("SceneFileWriter", lock_objects = FALSE,
       invisible(self)
     },
     flush_cache_directory = function() {
-      unlink(list.files(self$partial_movie_directory(), full.names = TRUE))
+      unlink(list.files(self$partial_movie_directory, full.names = TRUE))
       invisible(self)
     },
     print_file_ready_message = function(file_path) {
@@ -291,54 +344,16 @@ SceneFileWriterClass <- R6::R6Class("SceneFileWriter", lock_objects = FALSE,
       invisible(self)
     },
     write_subcaption_file = function() {
-      if (!length(self$subcaptions) || self$format == "png") return(invisible(NULL))
-      path <- sub("\\.[A-Za-z0-9]+$", ".srt", self$movie_file_path)
+      path <- self$output_plan$subcaption_file
+      if (is.null(path)) return(invisible(NULL))
       write_srt(self$subcaptions, path)
       invisible(path)
     },
-
-    # Sections (manim.scene.section) ------------------------------------------
-    sections_dir = function() file.path(dirname(self$movie_file_path), "sections"),
-    current_section = function() self$sections[[length(self$sections)]],
-    next_section = function(name = "unnamed", type = "default.normal", skip_animations = FALSE) {
-      self$finish_last_section()
-      video <- NULL
-      if (isTRUE(cfg("save_sections")) && !skip_animations && self$format != "png") {
-        video <- sprintf("%s_%04d_%s.%s", self$output_name(), length(self$sections), section_slug(name), self$format)
-      }
-      self$sections[[length(self$sections) + 1]] <- SectionClass$new(type, video, name, skip_animations)
-      invisible(self)
-    },
-    finish_last_section = function() {
-      k <- length(self$sections)
-      if (k && self$sections[[k]]$is_empty()) self$sections[[k]] <- NULL
-      invisible(self)
-    },
-    add_sound = function(sound_file, time_offset = 0, gain = NULL, gain_to_background = NULL) {
+    add_sound = function(sound_file, time = NULL, gain = NULL, gain_to_background = NULL) {
       path <- if (file.exists(sound_file)) sound_file else get_full_sound_file_path(sound_file)
-      self$add_audio_segment(path, time_offset, gain_to_background)
+      self$add_audio_segment(path, time, gain_to_background)
       self$sounds[[length(self$sounds)]]$gain <- gain
       invisible(self)
-    },
-    # Ends the scene: the partial movie files become the movie (and the
-    # section videos), or the image sequence is already written.
-    finish = function() {
-      self$close_partial_movie_stream()
-      if (self$format == "png") {
-        if (self$frames_written == 0) return(invisible(NULL))
-        self$print_file_ready_message(self$image_sequence_directory())
-        return(invisible(self$movie_file_path))
-      }
-      out <- self$combine_to_movie()
-      if (is.null(out)) return(invisible(NULL))
-      if (isTRUE(cfg("save_sections"))) self$combine_to_section_videos()
-      self$write_subcaption_file()
-      self$clean_cache()
-      invisible(out)
-    },
-    has_output = function() {
-      if (self$format == "png") return(self$frames_written > 0)
-      length(Filter(Negate(is.null), self$partial_movie_files)) > 0
     },
 
     # Audio (upstream builds one pydub segment; manimR keeps the sounds and
@@ -397,7 +412,7 @@ SceneFileWriterClass <- R6::R6Class("SceneFileWriter", lock_objects = FALSE,
       # cuts the movie; WebM needs Opus rather than AAC.
       mix <- paste0(paste0("[a", seq_along(self$sounds), "]", collapse = ""),
                     sprintf("amix=inputs=%d:normalize=0,apad[aout]", length(self$sounds)))
-      acodec <- if (self$format == "webm") "libopus" else "aac"
+      acodec <- if (self$output_spec$format == "webm") webm_audio_codec() else "aac"
       args <- c("-y", "-loglevel", "error", inputs, "-filter_complex", paste(c(filters, mix), collapse = ";"),
                 "-map", "0:v", "-map", "[aout]", "-c:v", "copy", "-c:a", acodec,
                 "-t", sprintf("%.6f", media_duration(tmp)), video)
@@ -409,12 +424,38 @@ SceneFileWriterClass <- R6::R6Class("SceneFileWriter", lock_objects = FALSE,
         warning("Adding sound failed (ffmpeg status ", res, "); the video was written without sound.", call. = FALSE)
       }
       invisible(video)
+    }
+  ),
+  active = list(
+    # Upstream's output paths, from the output plan.
+    output_name = function() self$output_plan$output_stem,
+    image_file_path = function() {
+      plan <- self$output_plan
+      path <- if (self$output_spec$is_image_sequence) with_suffix(plan$image_sequence_dir, ".png")
+        else if (self$output_spec$is_still) plan$primary_artifact else plan$fallback_image
+      if (is.null(path)) stop("This output plan does not contain an image path.", call. = FALSE)
+      path
     },
-    save_image = function(frame, path = NULL) {
-      path <- path %||% self$image_file_path
-      dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
-      png::writePNG(frame, path)
-      invisible(path)
+    image_sequence_directory = function() {
+      path <- self$output_plan$image_sequence_dir
+      if (is.null(path)) stop("This output plan does not contain an image sequence.", call. = FALSE)
+      path
+    },
+    movie_file_path = function() {
+      if (!self$output_spec$is_video || is.null(self$output_plan$primary_artifact)) {
+        stop("This output plan does not contain a video artifact.", call. = FALSE)
+      }
+      self$output_plan$primary_artifact
+    },
+    gif_file_path = function() {
+      if (!self$output_spec$is_gif) stop("This output plan does not contain a GIF artifact.", call. = FALSE)
+      self$movie_file_path
+    },
+    sections_output_dir = function() self$output_plan$sections_dir %||% "",
+    partial_movie_directory = function() {
+      path <- self$output_plan$segment_cache_dir
+      if (is.null(path)) stop("This output plan does not contain video segments.", call. = FALSE)
+      path
     }
   )
 )

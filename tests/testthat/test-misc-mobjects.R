@@ -580,8 +580,9 @@ test_that("Code builds colored lines with line numbers and a background", {
   expect_length(cm$line_numbers$submobjects, 4)
   expect_identical(cm$submobjects[[1]]$mob_id, cm$background$mob_id)
   first <- cm$code_lines$submobjects[[1]]$submobjects
-  expect_length(first, 4)
-  expect_equal(first[[4]]$get_fill_color(), "#CD00CD")
+  # One submobject per character, spaces included, as upstream's Paragraph.
+  expect_length(first, 6)
+  expect_equal(first[[6]]$get_fill_color(), "#CD00CD")
   expect_equal(first[[1]]$get_fill_color(), "#CCCCCC")
   expect_equal(cm$background$get_fill_color(), "#000000")
   same <- Code(code_string = "x\nx\nx\nx", language = "r")
@@ -626,4 +627,20 @@ test_that("ManimBanner matches upstream geometry and expands", {
   expect_true(b$anim$mob_id %in% b$submobject_ids())
   expect_error(b$expand(direction = "up"), "direction")
   expect_s3_class(ManimBanner(dark_theme = FALSE)$create(), "AnimationGroup")
+})
+
+test_that("OpenGL mobject classes are their Cairo counterparts", {
+  c1 <- OpenGLCircle(radius = 2)
+  expect_s3_class(c1, "OpenGLCircle")
+  expect_s3_class(c1, "Circle")
+  expect_equal(c1$width, 4)
+  for (n in names(manimR:::OPENGL_MOBJECT_CLASSES)) {
+    expect_equal(get(paste0(n, "Class"))$get_inherit()$classname, manimR:::OPENGL_MOBJECT_CLASSES[[n]])
+  }
+  s <- OpenGLSurface(function(u, v) c(u, v, u * v), u_range = c(-1, 1), v_range = c(-1, 1), resolution = 8)
+  expect_length(OpenGLSurfaceMesh(s, resolution = c(5, 5))$submobjects, 10)
+  tex <- OpenGLTexturedSurface(s, matrix(c("red", "blue", "green", "white"), 2, 2))
+  cols <- vapply(tex$list_of_faces[c(1, 8, 57, 64)], function(f) f$get_fill_color(), "")
+  expect_equal(toupper(cols), c("#0000FF", "#FF0000", "#FFFFFF", "#00FF00"))
+  expect_identical(get_vectorized_mobject_class(), VMobjectClass)
 })

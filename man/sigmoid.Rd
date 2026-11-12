@@ -30,9 +30,9 @@ function \code{1 / (1 + exp(-x))}. \code{binary_search()} looks, between
 \code{lower_bound} and \code{upper_bound}, for the input at which the monotone
 function \code{f} reaches \code{target}, halving the interval until it is
 shorter than \code{tolerance}; it returns \code{NULL} when \code{target} is not between
-the values at the bounds. Upstream's \code{choose()} and \code{clip()} are not
-ported: use \code{\link[base:choose]{base::choose()}}, and \code{min(max(a, min_a), max_a)} (a \code{clip()}
-export would mask \code{graphics::clip()}).
+the values at the bounds. Upstream's \code{clip()} is \code{\link[=clip_value]{clip_value()}} here (an
+exported \code{clip()} would mask \code{graphics::clip()}), and its \code{choose()} is
+\code{\link[base:choose]{base::choose()}}.
 }
 \examples{
 sigmoid(0)

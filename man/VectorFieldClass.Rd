@@ -130,10 +130,10 @@ Methods: \code{nudge(mob, dt, substeps, pointwise)},
 \code{StreamLines} adds \code{create()}, \code{start_animation()} and \code{end_animation()}.
 }
 \details{
-Upstream colors stream lines in 2D with a background image that
-is sampled per pixel. manimR has no background image coloring, so every
-stream line gets a stroke gradient from the colors at its anchors (the
-method upstream uses for 3D stream lines).
+As upstream, stream lines in the plane are colored through a
+background image of the field's colors (\code{get_colored_background_image()},
+so a line's color changes along it with the field), and 3D stream lines
+get a stroke gradient from the colors at their anchors.
 }
 \examples{
 \dontrun{

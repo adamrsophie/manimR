@@ -242,7 +242,7 @@ test_that("index_labels places 1 based labels like upstream", {
   expect_equal(vapply(labels$submobjects, function(l) l$height, 0), unlist(o$index_labels$heights), tolerance = 1e-9)
   bg <- labels[1]$family_members_with_points()[[1]]
   expect_equal(bg$background_stroke_width, o$index_labels$background_stroke_width[[1]])
-  expect_equal(toupper(rgb_to_color(bg$background_stroke_rgbas[1, 1:3])),
+  expect_equal(toupper(manim_color(rgb_to_color(bg$background_stroke_rgbas[1, 1:3]))),
                toupper(o$index_labels$background_stroke_color[[1]]))
   big <- index_labels(group, label_height = 0.4)
   expect_equal(vapply(big$submobjects, function(l) l$height, 0), unlist(o$index_labels$big_heights), tolerance = 1e-9)

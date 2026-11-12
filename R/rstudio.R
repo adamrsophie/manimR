@@ -43,9 +43,15 @@ scene_at_cursor <- function(ctx, scene_names) {
 #' * `addin_render_all()`: render every scene in the active file.
 #' * `addin_last_frame()`: render only the final frame of the scene under the cursor (fast preview).
 #' * `addin_insert_template()`: insert a scene template at the cursor.
+#' * `addin_render_background()`: render the scene under the cursor as an
+#'   RStudio background job, so the console stays free; the job pane shows
+#'   its log and can stop it, and the result opens in the Viewer when it is
+#'   done.
 #' * `manim_gadget()`: a dialog to pick the scene, quality and format.
 #'
 #' The quality used by the quick addins is `getOption("manimR.addin_quality", "l")`.
+#' Any addin can be bound to a keyboard shortcut with Tools, Modify Keyboard
+#' Shortcuts.
 #' @name rstudio_addins
 NULL
 
@@ -60,6 +66,45 @@ addin_render_scene <- function() {
   out <- render_file(doc$path, name, quality = addin_quality(), found = scenes)
   preview_output(out[1])
   invisible(out)
+}
+
+#' @rdname rstudio_addins
+#' @export
+addin_render_background <- function() {
+  require_rstudio()
+  doc <- active_document_file()
+  scenes <- find_scenes(doc$path)
+  if (!length(scenes)) stop("No Scene subclasses found in the active document.", call. = FALSE)
+  name <- scene_at_cursor(doc$ctx, names(scenes))
+  job_dir <- tempfile("manimR-job-")
+  dir.create(job_dir)
+  result <- file.path(job_dir, "output.rds")
+  script <- file.path(job_dir, "render.R")
+  writeLines(c(
+    sprintf("out <- manimR::render_file(%s, %s, quality = %s)", deparse(doc$path), deparse(name),
+            deparse(addin_quality())),
+    sprintf("saveRDS(unclass(out), %s)", deparse(result))
+  ), script)
+  job <- rstudioapi::jobRunScript(script, name = paste("manimR:", name), workingDir = dirname(doc$path),
+                                  importEnv = FALSE)
+  # Show the result when the job has written it.
+  poll <- function() {
+    if (file.exists(result)) {
+      out <- readRDS(result)
+      if (length(out)) preview_output(out[1])
+    } else {
+      state <- tryCatch(rstudioapi::jobGetState(job), error = function(e) "running")
+      if (state %in% c("idle", "running")) later_call(poll, 1)
+    }
+  }
+  later_call(poll, 1)
+  invisible(job)
+}
+
+# Runs `f` after `delay` seconds when the later package is available.
+later_call <- function(f, delay) {
+  if (requireNamespace("later", quietly = TRUE)) later::later(f, delay)
+  invisible(NULL)
 }
 
 #' @rdname rstudio_addins
@@ -82,8 +127,7 @@ addin_last_frame <- function() {
   scenes <- find_scenes(doc$path)
   if (!length(scenes)) stop("No Scene subclasses found in the active document.", call. = FALSE)
   name <- scene_at_cursor(doc$ctx, names(scenes))
-  out <- render_file(doc$path, name, quality = addin_quality(), write_to_movie = FALSE, save_last_frame = TRUE,
-                     found = scenes)
+  out <- render_file(doc$path, name, quality = addin_quality(), format = "png", found = scenes)
   preview_output(out[1])
   invisible(out)
 }
@@ -130,16 +174,18 @@ manim_gadget <- function() {
       shiny::selectInput("quality", "Quality",
                          c("Low, 480p15" = "l", "Medium, 720p30" = "m", "High, 1080p60" = "h",
                            "Production, 1440p60" = "p", "4K, 2160p60" = "k"), selected = addin_quality()),
-      shiny::selectInput("format", "Format", c("mp4", "gif", "webm", "mov", "png")),
+      shiny::selectInput("format", "Format", c("auto", "mp4", "gif", "webm", "mov", "png-sequence")),
       shiny::checkboxInput("transparent", "Transparent background", FALSE),
       shiny::checkboxInput("last_frame", "Last frame only", FALSE)
     )
   )
   server <- function(input, output, session) {
     shiny::observeEvent(input$done, {
-      args <- list(doc$path, input$scene, quality = input$quality, format = input$format,
+      fmt <- if (isTRUE(input$last_frame)) "png" else input$format
+      # Transparent output needs a format with an alpha channel.
+      if (isTRUE(input$transparent) && fmt == "mp4") fmt <- "mov"
+      args <- list(doc$path, input$scene, quality = input$quality, format = fmt,
                    transparent = input$transparent, found = scene_classes)
-      if (isTRUE(input$last_frame)) args <- c(args, list(write_to_movie = FALSE, save_last_frame = TRUE))
       out <- do.call(render_file, args)
       shiny::stopApp(out)
     })
@@ -157,8 +203,9 @@ manim_gadget <- function() {
 #' Registered automatically when knitr is installed. A chunk with engine
 #' `manim` evaluates its R code, renders the scene named by the chunk option
 #' `scene` (or the last scene defined in the chunk), and embeds the video.
-#' Chunk options `quality`, `format` and `save_last_frame` are passed to
-#' [render()]; `out.width` sets the display width.
+#' Chunk options `quality`, `format` (default `"auto"`, or `"png"` for LaTeX
+#' output) and `save_last_frame` are passed to [render()]; `out.width` sets
+#' the display width.
 #'
 #' ```` markdown
 #' ```{manim, scene = "SquareToCircle", quality = "l"}
@@ -174,6 +221,8 @@ knitr_manim_engine <- function(options) {
   # Evaluating the chunk's own R code is the purpose of a knitr engine, exactly
   # like an `r` chunk; the code comes from the document author.
   if (isTRUE(options$eval)) eval(parse(text = code), envir = env)
+  # The source is R code, so it is shown (and highlighted) as R.
+  options$lang <- options$lang %||% "r"
   out_text <- if (isTRUE(options$echo)) knitr::engine_output(options, options$code, "") else ""
   if (!isTRUE(options$eval)) return(out_text)
   scenes <- find_scenes(envir = env)
@@ -190,26 +239,52 @@ knitr_manim_engine <- function(options) {
   }
   fig_dir <- dirname(knitr::fig_path("", options))
   dir.create(fig_dir, recursive = TRUE, showWarnings = FALSE)
-  fmt <- options$format %||% (if (knitr::is_latex_output()) "png" else "mp4")
-  last <- isTRUE(options$save_last_frame) || fmt == "png"
-  ext <- if (last) "png" else fmt
-  file <- file.path(fig_dir, paste0(options$label, "-", name, ".", ext))
-  args <- list(scenes[[name]], quality = options$quality %||% "l", output_file = file)
-  if (last) args <- c(args, list(write_to_movie = FALSE, save_last_frame = TRUE)) else args$format <- fmt
-  args$media_dir <- file.path(tempdir(), "manimR-knitr")
-  res <- unclass(do.call(render, args))
-  if (!identical(normalizePath(res, mustWork = FALSE), normalizePath(file, mustWork = FALSE))) {
-    if (!file.copy(res, file, overwrite = TRUE)) stop("Could not copy the rendered file to ", file, call. = FALSE)
-  }
-  width <- options$out.width %||% "100%"
+  # Videos play in HTML; LaTeX gets the last frame and other formats (GitHub
+  # Markdown, Word) an animated GIF.
+  fmt <- options$format %||% (if (knitr::is_latex_output()) "png" else if (knitr::is_html_output()) "auto" else "gif")
+  if (isTRUE(options$save_last_frame)) fmt <- "png"
+  # The artifact gets the extension of its format; "auto" writes a video, or
+  # the last frame of a scene without animations.
+  # normalizePath() leaves a file that does not exist yet relative, so the
+  # existing folder is normalized instead.
+  stem <- file.path(normalizePath(fig_dir), paste0(options$label, "-", name))
+  file <- unclass(render(scenes[[name]], quality = options$quality %||% "l", format = fmt, output_file = stem,
+                         media_dir = file.path(tempdir(), "manimR-knitr"), preview = FALSE))
+  ext <- tolower(tools::file_ext(file))
+  # Link the figure folder's copy relative to the document, like knitr does.
+  file <- file.path(fig_dir, basename(file))
+  width <- css_width(options$out.width)
   embed <- if (ext %in% c("mp4", "webm", "mov") && knitr::is_html_output()) {
-    sprintf('<video src="%s" controls autoplay muted loop playsinline style="width:%s"></video>', file, width)
+    sprintf('<video src="%s" controls autoplay muted loop playsinline style="width:%s"></video>',
+            utils::URLencode(video_src(file, fig_dir)), width)
   } else {
     knitr::knit_hooks$get("plot")(file, options)
   }
   paste(c(out_text, embed), collapse = "\n")
 }
 
+# A CSS width from knitr's out.width: a bare number is in pixels, as knitr
+# reads it for images.
+css_width <- function(w) {
+  if (is.null(w) || !length(w)) return("100%")
+  w <- as.character(w[1])
+  if (grepl("^[0-9.]+$", w)) paste0(w, "px") else w
+}
+
+# The path a page uses for a video in fig_dir. rmarkdown keeps figures in
+# <document>_files/ next to the HTML file; pkgdown passes that folder as an
+# absolute path, which only images get rewritten for.
+video_src <- function(file, fig_dir) {
+  files_dir <- dirname(fig_dir)
+  if (grepl("^(/|[A-Za-z]:)", file) && grepl("_files$", basename(files_dir))) {
+    return(substring(file, nchar(dirname(files_dir)) + 2))
+  }
+  file
+}
+
+# Registers the engine when knitr is loaded, without loading knitr for
+# every library(manimR).
 register_knitr_engine <- function() {
-  if (requireNamespace("knitr", quietly = TRUE)) knitr::knit_engines$set(manim = knitr_manim_engine)
+  set_engine <- function(...) knitr::knit_engines$set(manim = knitr_manim_engine)
+  if (isNamespaceLoaded("knitr")) set_engine() else setHook(packageEvent("knitr", "onLoad"), set_engine)
 }

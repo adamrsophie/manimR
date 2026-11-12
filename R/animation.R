@@ -98,16 +98,13 @@ AnimationClass <- R6::R6Class("Animation", lock_objects = FALSE,
       new <- fast_clone(self)
       new$anim_id <- paste0("anim", next_mob_id())
       assign(self$anim_id, new, envir = .memo)
-      cp <- function(x) {
-        if (is_mobject(x)) x$copy(.memo)
-        else if (inherits(x, "Animation")) x$copy(.memo)
-        else x
-      }
       for (nm in mobject_fields(self)) {
         v <- self[[nm]]
-        if (is_mobject(v) || inherits(v, "Animation")) new[[nm]] <- cp(v)
-        else if (is.list(v) && length(v) && !is.data.frame(v)) new[[nm]] <- lapply(v, cp)
+        if (is_mobject(v) || inherits(v, "Animation") || (is.list(v) && length(v) && !is.data.frame(v))) {
+          new[[nm]] <- copy_nested(v, .memo)
+        }
       }
+      copy_private_nested(self, new, .memo)
       new
     },
     interpolate = function(alpha) self$interpolate_mobject(alpha),
@@ -199,11 +196,21 @@ Wait <- constructor(WaitClass)
 #'   [Succession()].
 #' @param ... Mobjects, then named arguments passed to [Animation()].
 #' @param run_time Duration in seconds; zero adds the mobjects instantly.
+#' @param use_override `FALSE` ignores an override of `Add` set with
+#'   [override_animation()] on the first mobject's class.
 #' @export
-Add <- function(..., run_time = 0) {
+Add <- function(..., run_time = 0, use_override = TRUE) {
   args <- list(...)
   nm <- names(args) %||% rep("", length(args))
   mobs <- args[nm == ""]
+  # As upstream's Animation.__new__, an override of Add on the first
+  # mobject's class builds the animation instead.
+  if (isTRUE(use_override) && length(mobs) && is_mobject(mobs[[1]])) {
+    override <- .subset2(mobs[[1]], "animation_override_Add")
+    if (is.function(override)) {
+      return(do.call(override, c(mobs[-1], list(run_time = run_time), args[nm != ""])))
+    }
+  }
   mob <- if (length(mobs) == 1) mobs[[1]] else do.call(Group, mobs)
   do.call(AddClass$new, c(list(mob, run_time = run_time, introducer = TRUE), args[nm != ""]))
 }

@@ -82,8 +82,12 @@ OldMultiCameraClass <- R6::R6Class("OldMultiCamera", inherit = CameraClass, lock
                              height = grid::unit(cam$pixel_height / self$pixel_height, "npc"),
                              just = c("left", "top"), clip = "on")
         grid::pushViewport(vp)
+        # Over a cached frame of the still mobjects, the sub cameras draw
+        # only the moving ones: their background would paint over it, so a
+        # transparent raster takes its place.
         cam$draw_frame(mobjects, include_submobjects = include_submobjects,
-                             excluded_mobjects = excluded_mobjects)
+                       excluded_mobjects = excluded_mobjects,
+                       background_raster = if (!is.null(background_raster)) grDevices::as.raster(matrix("transparent")))
         grid::popViewport()
       }
       invisible(self)

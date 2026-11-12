@@ -20,18 +20,43 @@ find_initializer <- function(generator) {
   NULL
 }
 
+with_formals <- function(f, args) {
+  formals(f) <- args
+  f
+}
+
 build_constructor <- function(generator) {
   init <- find_initializer(generator)
   first <- if (!is.null(init)) names(formals(init))[1] else "mobject"
   if (is.null(first) || first == "...") first <- "mobject"
-  f <- function() {
-    mc <- match.call(expand.dots = TRUE)
-    mc[[1L]] <- function(...) manim_new(generator, first, ...)
-    eval(mc, parent.frame())
+  # With an initializer, the constructor takes its arguments, so completion
+  # and help show them.
+  f <- if (is.null(init)) {
+    function(...) manim_new(generator, first, ...)
+  } else {
+    with_formals(function() {
+      mc <- match.call(expand.dots = TRUE)
+      mc[[1L]] <- function(...) manim_new(generator, first, ...)
+      eval(mc, parent.frame())
+    }, formals(init))
   }
-  if (is.null(init)) return(function(...) manim_new(generator, first, ...))
-  formals(f) <- formals(init)
+  attr(f, "generator") <- generator
   f
+}
+
+# The class generator behind a generator, a constructor function such as
+# ArrowSquareTip, or a class name.
+as_generator <- function(x, what = "class") {
+  if (inherits(x, "R6ClassGenerator")) return(x)
+  if (is.function(x) && inherits(attr(x, "generator"), "R6ClassGenerator")) return(attr(x, "generator"))
+  if (is.character(x) && length(x) == 1) {
+    ns <- asNamespace("manimR")
+    gen <- get0(paste0(x, "Class"), envir = ns) %||% get0(x, envir = ns)
+    if (inherits(gen, "R6ClassGenerator")) return(gen)
+    if (is.function(gen) && inherits(attr(gen, "generator"), "R6ClassGenerator")) return(attr(gen, "generator"))
+  }
+  stop("Expected a ", what, " (a class generator such as ArrowSquareTipClass, its constructor ",
+       "ArrowSquareTip, or a class name)", call. = FALSE)
 }
 
 # Creates an object, unless its first argument (named `first` in the class

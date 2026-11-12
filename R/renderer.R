@@ -10,11 +10,13 @@
 #' Both are created by a scene; construct them yourself only to customize
 #' rendering, for example `MyScene$new(renderer = CairoRenderer(...))`.
 #'
+#' @param file_writer_class The file writer class generator a renderer
+#'   creates for each scene.
 #' @param camera_class The camera class generator.
 #' @param skip_animations Skip rendering animations.
 #' @param ... Arguments passed to the camera.
-#' @param scene_name,module_name,width,height,fps,output_file Output names
-#'   and frame format of a `SceneFileWriter`.
+#' @param settings The settings a scene resolves for its file writer: the
+#'   output plan, the video encoder and the cache settings.
 #' @name CairoRenderer
 #' @format NULL
 #' @usage NULL
@@ -22,6 +24,7 @@ NULL
 
 RendererClass <- R6::R6Class("Renderer", lock_objects = FALSE,
   public = list(
+    file_writer_class = NULL,
     camera = NULL,
     file_writer = NULL,
     capture = NULL,
@@ -31,18 +34,22 @@ RendererClass <- R6::R6Class("Renderer", lock_objects = FALSE,
     num_plays = 0,
     skip_animations = FALSE,
     original_skipping_status = FALSE,
+    animations_hashes = NULL,
     last_frame = NULL,
-    initialize = function(camera_class = CameraClass, skip_animations = FALSE, ...) {
+    # When set (by scene_frame()), the time of the one frame to draw.
+    target_time = NULL,
+    initialize = function(file_writer_class = SceneFileWriterClass, camera_class = CameraClass,
+                          skip_animations = FALSE, ...) {
+      self$file_writer_class <- file_writer_class
       self$camera <- camera_class$new(...)
       self$skip_animations <- skip_animations
       self$original_skipping_status <- skip_animations
+      self$animations_hashes <- list()
     },
-    init_scene = function(scene, module_name = NULL, output_file = NULL) {
-      self$file_writer <- SceneFileWriterClass$new(
-        scene_name = scene$scene_name(), module_name = module_name,
-        width = self$camera$pixel_width, height = self$camera$pixel_height,
-        fps = self$camera$frame_rate, output_file = output_file
-      )
+    # Creates the file writer from the settings the scene resolved.
+    init_scene = function(scene, session_spec = scene$session_spec,
+                          file_writer_settings = scene$file_writer_settings) {
+      self$file_writer <- self$file_writer_class$new(file_writer_settings)
       invisible(self)
     },
     open_device = function() {
@@ -107,8 +114,12 @@ RendererClass <- R6::R6Class("Renderer", lock_objects = FALSE,
       if (!is.null(self$file_writer) && isTRUE(self$file_writer$current_section()$skip_animations)) {
         self$skip_animations <- TRUE
       }
-      if (n < (cfg("from_animation_number") %||% 0)) self$skip_animations <- TRUE
-      if (n > (cfg("upto_animation_number") %||% Inf)) {
+      # Only the last frame is needed for still output.
+      if (isTRUE(self$file_writer$output_spec$is_still)) self$skip_animations <- TRUE
+      from <- cfg("from_animation_number") %||% 0
+      if (from > 0 && n < from) self$skip_animations <- TRUE
+      upto <- cfg("upto_animation_number") %||% -1
+      if (upto >= 0 && n > upto) {
         self$skip_animations <- TRUE
         stop(structure(class = c("manim_end_scene", "condition"), list(message = "end", call = NULL)))
       }
@@ -119,26 +130,26 @@ RendererClass <- R6::R6Class("Renderer", lock_objects = FALSE,
       self$skip_animations <- self$original_skipping_status
       self$update_skipping_status()
       scene$compile_animation_data(...)
+      if (!is.null(self$target_time)) return(self$play_to_target(scene))
       fw <- self$file_writer
       hash <- NULL
       if (self$skip_animations) {
         self$time <- self$time + scene$duration
-      } else if (!is.null(fw)) {
-        if (isTRUE(cfg("disable_caching"))) {
-          hash <- sprintf("uncached_%05d", self$num_plays)
-        } else {
-          hash <- get_hash_from_play_call(scene, self$camera, scene$animations, scene$mobjects)
-          if (fw$is_already_cached(hash)) {
-            logger$info("Animation %d : Using cached data (hash : %s)", self$num_plays, hash)
-            self$skip_animations <- TRUE
-            self$time <- self$time + scene$duration
-          }
+      } else if (isTRUE(cfg("disable_caching"))) {
+        logger$info("Caching disabled.")
+        hash <- sprintf("uncached_%05d", self$num_plays)
+      } else {
+        hash <- get_hash_from_play_call(scene, self$camera, scene$animations, scene$mobjects, backend = "cairo",
+                                        encoder_fingerprint = video_encoder_fingerprint(scene$session_spec$video_encoder))
+        if (fw$is_already_cached(hash)) {
+          logger$info("Animation %d : Using cached data (hash : %s)", self$num_plays, hash)
+          self$skip_animations <- TRUE
+          self$time <- self$time + scene$duration
         }
       }
-      if (!is.null(fw)) {
-        fw$add_partial_movie_file(hash)
-        fw$begin_animation(!self$skip_animations)
-      }
+      fw$add_partial_movie_file(hash)
+      self$animations_hashes[[length(self$animations_hashes) + 1]] <- hash
+      fw$begin_animation(!self$skip_animations, animation_index = self$num_plays)
       scene$begin_animations()
       self$save_static_frame_data(scene, scene$static_mobjects)
       if (scene$is_current_animation_frozen_frame()) {
@@ -147,9 +158,42 @@ RendererClass <- R6::R6Class("Renderer", lock_objects = FALSE,
       } else {
         scene$play_internal()
       }
-      if (!is.null(fw)) fw$end_animation(!self$skip_animations)
+      fw$end_animation(!self$skip_animations)
       self$num_plays <- self$num_plays + 1
       invisible(self)
+    },
+    # scene_frame(): plays that end before the target time step through
+    # their frame times without drawing, so updaters that use dt reach the
+    # state a render gives; the play running at that time steps to its last
+    # frame time at or before it, which is drawn and returned through a
+    # manim_frame_found condition.
+    play_to_target = function(scene) {
+      start <- self$time
+      scene$begin_animations()
+      if (start + scene$duration < self$target_time || !is.finite(self$target_time)) {
+        scene$play_internal(skip_rendering = TRUE)
+        self$time <- start + scene$duration
+        self$num_plays <- self$num_plays + 1
+        return(invisible(self))
+      }
+      target <- max(self$target_time - start, 0)
+      if (self$skip_animations) {
+        scene$update_to_time(target)
+      } else {
+        fps <- scene$camera$frame_rate
+        n <- ceiling(scene$duration * fps - 1e-9)
+        times <- if (n > 0) (seq_len(n) - 1) / fps else 0
+        times <- times[times <= target + 1e-9]
+        for (tt in if (length(times)) times else 0) {
+          scene$update_to_time(tt)
+          if (!is.null(scene$stop_condition) && isTRUE(scene$stop_condition())) break
+        }
+      }
+      self$static_image <- NULL
+      self$update_frame(scene)
+      frame <- self$get_frame()
+      self$close_device()
+      stop(structure(class = c("manim_frame_found", "condition"), list(message = "frame", call = NULL, frame = frame)))
     },
     render = function(scene, time, moving_mobjects) {
       if (self$skip_animations) return(invisible(self))
@@ -169,23 +213,27 @@ RendererClass <- R6::R6Class("Renderer", lock_objects = FALSE,
       self$static_image <- self$get_frame()
       invisible(self$static_image)
     },
+    # Finishes the output as upstream's scene_finished(): the movie or image
+    # sequence, and the last frame for still output (or for automatic video
+    # output of a scene without animations). Returns the artifact path.
     scene_finished = function(scene) {
       on.exit(self$close_device(), add = TRUE)
-      out <- NULL
-      save_last <- isTRUE(cfg("save_last_frame"))
-      if (self$num_plays > 0 && self$file_writer$has_output()) {
-        self$file_writer$subcaptions <- scene$subcaptions
-        out <- self$file_writer$finish()
-      } else {
-        save_last <- TRUE
-      }
-      if (save_last) {
+      fw <- self$file_writer
+      output <- fw$output_spec
+      if (self$num_plays > 0 && (output$is_video || output$is_image_sequence)) {
+        fw$finish()
+      } else if (self$num_plays == 0) {
         self$static_image <- NULL
         self$update_frame(scene)
-        img <- self$file_writer$save_image(self$get_frame())
-        if (is.null(out)) out <- img
       }
-      out
+      if (output$is_still || (self$num_plays == 0 && output$fallback_to_still)) {
+        if (self$num_plays > 0) {
+          self$static_image <- NULL
+          self$update_frame(scene)
+        }
+        fw$save_image(self$get_frame())
+      }
+      fw$final_file_path
     }
   )
 )

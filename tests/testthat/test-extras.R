@@ -50,7 +50,7 @@ test_that("find_scenes and render_file locate scene classes", {
   expect_equal(names(sc), c("Second", "First"))
   dir <- withr_tempdir()
   out <- render_file(f, "First", quality = "l", media_dir = dir)
-  expect_match(out, "First\\.png$")
+  expect_match(out, "First_manimR_v.*\\.png$")
 })
 
 test_that("TangentialArc matches upstream endpoints", {
@@ -107,13 +107,17 @@ test_that("CLI resolution, range, fps and still output path flags work", {
   expect_error(manim_cli(c(f, "-n", "a")), "range")
 })
 
-test_that("transparent output with an .mp4 name becomes .mov", {
+test_that("transparent automatic output is a .mov, and output names get its extension", {
   skip_if_not(nzchar(Sys.which("ffmpeg")))
   dir <- withr_tempdir()
   out <- suppressMessages(render(function(self) self$play(FadeIn(Square()), run_time = 0.2), quality = "l",
-                                 transparent = TRUE, output_file = file.path(dir, "clip.mp4")))
+                                 transparent = TRUE, output_file = file.path(dir, "clip")))
   expect_match(unclass(out), "clip\\.mov$")
   expect_true(file.exists(out))
+  # As upstream, a name with another extension keeps it and gains the format's.
+  out2 <- suppressMessages(render(function(self) self$play(FadeIn(Square()), run_time = 0.2), quality = "l",
+                                  transparent = TRUE, output_file = file.path(dir, "clip.mp4")))
+  expect_match(unclass(out2), "clip\\.mp4\\.mov$")
 })
 
 test_that("a short sound does not cut the movie", {

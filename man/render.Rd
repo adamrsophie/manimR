@@ -10,7 +10,7 @@ render(
   format = NULL,
   output_file = NULL,
   save_last_frame = NULL,
-  preview = FALSE,
+  preview = NULL,
   transparent = NULL,
   module_name = NULL,
   scene_name = NULL,
@@ -23,34 +23,41 @@ function of one argument \code{self} used as \code{construct()}. A scene instanc
 keeps the camera it was created with, so quality and other camera
 settings only apply when \code{scene} is a class or a function.}
 
-\item{quality}{One of \code{"l"}, \code{"m"}, \code{"h"}, \code{"p"}, \code{"k"}. Defaults to the
-current \code{\link[=manim_config]{manim_config()}} quality.}
+\item{quality}{One of \code{"l"}, \code{"m"}, \code{"h"}, \code{"p"}, \code{"k"} or a preset name
+of \link{QUALITIES}. Defaults to the current \code{\link[=manim_config]{manim_config()}} quality.}
 
-\item{format}{Output format: \code{"mp4"}, \code{"gif"}, \code{"webm"}, \code{"mov"} or \code{"png"}
-(an image sequence).}
+\item{format}{The artifact to write: \code{"auto"} (the default: MP4, or MOV
+when transparent; a scene without animations is saved as its last
+frame), \code{"mp4"}, \code{"mov"}, \code{"webm"}, \code{"gif"}, \code{"png"} (only the last
+frame), \code{"png-sequence"} (every frame) or \code{"none"}.}
 
-\item{output_file}{Output path. Defaults to
-\verb{media/videos/<module>/<quality>/<Scene>.<format>}.}
+\item{output_file}{Name of the artifact. A relative name is placed in the
+video directory (or the images directory for PNG output), as upstream's
+\code{-o}; an absolute path is used as it is. Defaults to the scene name in
+\verb{media/videos/<module>/<quality>/} (videos) or \verb{media/images/<module>/}
+(images).}
 
-\item{save_last_frame}{Also write the final frame as a PNG.}
+\item{save_last_frame}{\code{TRUE} is short for \code{format = "png"}.}
 
-\item{preview}{Open the result when done (the RStudio Viewer when available).}
+\item{preview}{Open the result when done (the RStudio Viewer when
+available). Defaults to the \code{preview} setting.}
 
 \item{transparent}{Render with a transparent background.}
 
-\item{module_name}{Folder name under \verb{media/}; defaults to the scene
-file name when known.}
+\item{module_name}{Folder name under \verb{media/videos/} and \verb{media/images/};
+\code{\link[=render_file]{render_file()}} uses the script name. Defaults to \code{"manimR"}.}
 
 \item{scene_name}{Name used for output files; defaults to the scene class name.}
 
 \item{...}{Further \code{\link[=manim_config]{manim_config()}} settings for this render, such as
-\code{background_color} or \code{frame_rate}.}
+\code{background_color}, \code{frame_rate}, \code{save_sections} or \code{dry_run}.}
 }
 \value{
-The output path, invisibly, with class \code{manim_output}.
+The path of the artifact, invisibly, with class \code{manim_output};
+\code{NULL} when nothing is written (\code{format = "none"} or \code{dry_run}).
 }
 \description{
-Renders a scene to a video (or image) file, like \verb{manim render} does.
+Renders a scene to a video or image file, like \verb{manim render} does.
 }
 \examples{
 \dontrun{

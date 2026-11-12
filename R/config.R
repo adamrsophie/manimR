@@ -41,48 +41,148 @@ default_config <- function() {
     frame_height = 8,
     background_color = "#000000",
     background_opacity = 1,
-    media_dir = "media",
-    format = "mp4",
-    transparent = FALSE,
-    save_last_frame = FALSE,
-    write_to_movie = TRUE,
+    format = "auto",
     save_sections = FALSE,
+    zero_pad = 4,
     preview = FALSE,
-    disable_caching = FALSE,
-    verbosity = "INFO",
+    live_preview = FALSE,
+    show_in_file_browser = FALSE,
+    preview_command = NULL,
+    dry_run = FALSE,
+    write_all = FALSE,
+    scene_names = character(),
+    input_file = NULL,
     output_file = NULL,
-    tex_template = NULL,
-    from_animation_number = 0,
-    upto_animation_number = Inf,
+    media_dir = "media",
+    log_dir = "{media_dir}/logs",
+    log_to_file = FALSE,
+    assets_dir = "./",
+    video_dir = "{media_dir}/videos/{module_name}/{quality}",
+    sections_dir = "{video_dir}/sections",
+    images_dir = "{media_dir}/images/{module_name}",
+    tex_dir = "{media_dir}/Tex",
+    text_dir = "{media_dir}/texts",
+    partial_movie_dir = "{video_dir}/partial_movie_files/{scene_name}",
+    disable_caching = FALSE,
+    disable_caching_warning = FALSE,
+    max_files_cached = 100,
+    flush_cache = FALSE,
+    video_codec = "auto",
+    pixel_format = "auto",
+    video_encoder_options = list(),
+    max_inflight_encoders = 1,
+    encoder_queue_size = 8,
+    verbosity = "INFO",
     progress_bar = TRUE,
+    media_loglevel = "ERROR",
+    media_embed = NULL,
+    media_width = "60%",
+    notify_outdated_version = TRUE,
+    from_animation_number = 0,
+    upto_animation_number = -1,
+    renderer = "cairo",
+    enable_gui = FALSE,
+    gui_location = c(0, 0),
+    fullscreen = FALSE,
+    window_position = "UR",
+    window_size = "default",
+    window_monitor = 0,
+    use_projection_fill_shaders = FALSE,
+    use_projection_stroke_shaders = FALSE,
+    enable_wireframe = FALSE,
+    no_latex_cleanup = FALSE,
+    tex_template = NULL,
+    tex_template_file = NULL,
+    plugins = character(),
+    seed = NULL,
+    # Computed once from the default 1920 x 1080 pixels, as upstream: quality
+    # and pixel sizes do not change it, cameras adapt their frame height.
+    frame_width = 8 * 1920 / 1080,
+    # manimR settings with no upstream counterpart: external programs, the
+    # module name of scenes rendered from R code, and curve flattening.
     ffmpeg = "ffmpeg",
     typst = "typst",
-    curve_tolerance = 0.25,
-    assets_dir = "./",
-    renderer = "cairo",
-    flush_cache = FALSE,
-    max_files_cached = 100
+    module_name = NULL,
+    curve_tolerance = 0.25
   )
+}
+
+# Settings computed from others, which manim_config() translates when set.
+CONFIG_TRANSLATED <- c("transparent", "save_last_frame", "frame_size", "frame_x_radius", "frame_y_radius")
+
+config_names <- function() c(names(default_config()), CONFIG_TRANSLATED)
+
+check_choice <- function(name, value, choices) {
+  if (!is.character(value) || length(value) != 1 || !value %in% choices) {
+    stop(name, " must be one of ", paste(choices, collapse = ", "), call. = FALSE)
+  }
 }
 
 #' Get or set the manimR configuration
 #'
 #' Called with no arguments, returns the current configuration as a list.
-#' Named arguments update it. `quality` accepts manim's quality flags:
-#' `"l"` (854x480, 15 fps), `"m"` (1280x720, 30 fps), `"h"` (1920x1080, 60 fps),
-#' `"p"` (2560x1440, 60 fps) and `"k"` (3840x2160, 60 fps), or the preset
-#' names of [QUALITIES] such as `"low_quality"` and `"example_quality"`.
-#' `renderer` accepts `"cairo"`; `"opengl"` is accepted for compatibility and
-#' renders with the same Cairo style renderer, the only one ported. The
-#' [config] object gives the same settings with upstream's `config$name`
-#' syntax.
+#' Named arguments update it; an unknown name is an error, as upstream's
+#' `config`. The [config] object gives the same settings with upstream's
+#' `config$name` syntax, [with_manim_config()] and [tempconfig()] change
+#' them for a block of code, and [digest_config_file()] reads them from a
+#' `manim.cfg` file.
 #'
-#' @param ... Named settings, e.g. `quality = "l"`, `background_color = WHITE`,
-#'   `format = "gif"`, `media_dir = "media"`, `pixel_width`, `pixel_height`,
-#'   `frame_rate`, `frame_height`, `transparent`, `tex_template`. The returned
-#'   list also reports the derived `frame_width`, `frame_x_radius` and
-#'   `frame_y_radius`.
-#' @return The configuration list, invisibly when setting.
+#' The settings, with upstream's names and defaults:
+#'
+#' * Frame: `quality` (a flag `"l"` 854x480 at 15 fps, `"m"` 1280x720 at 30,
+#'   `"h"` 1920x1080 at 60, `"p"` 2560x1440 at 60, `"k"` 3840x2160 at 60, or a
+#'   preset name of [QUALITIES]), `pixel_width`, `pixel_height`,
+#'   `frame_size` (both at once), `frame_rate`, `frame_height` (8),
+#'   `frame_width` (derived from the aspect ratio unless set),
+#'   `frame_x_radius`, `frame_y_radius`, `background_color`,
+#'   `background_opacity`, `transparent` (`TRUE` sets `background_opacity`
+#'   to 0).
+#' * Output: `format`, the artifact a render writes: `"auto"` (the default:
+#'   MP4, or MOV when transparent; a scene without animations is saved as
+#'   its last frame), `"mp4"`, `"mov"`, `"webm"`, `"gif"`, `"png"` (only the
+#'   last frame), `"png-sequence"` (every frame) or `"none"`.
+#'   `save_last_frame = TRUE` is short for `format = "png"`. `dry_run` renders
+#'   without writing files, `save_sections` also writes one video per section,
+#'   `zero_pad` (4) is the number of digits in PNG sequence file names,
+#'   `output_file` names the artifact (relative to its directory below),
+#'   `from_animation_number` and `upto_animation_number` (-1: all) select
+#'   animations.
+#' * Directories, with `{name}` placeholders resolved by [get_dir()]:
+#'   `media_dir` ("media"), `video_dir`
+#'   ("\{media_dir\}/videos/\{module_name\}/\{quality\}"), `images_dir`, `sections_dir`,
+#'   `partial_movie_dir`, `tex_dir`, `text_dir`, `log_dir`, `assets_dir`
+#'   (where sounds and images are looked up), `input_file` (the script
+#'   being rendered; its name is the module name) and manimR's
+#'   `module_name` for scenes rendered from R code ("manimR").
+#' * Encoding: `video_codec`, `pixel_format` (both `"auto"`) and
+#'   `video_encoder_options` (a named list of ffmpeg options such as
+#'   `list(crf = "18")`) for the cached video segments;
+#'   `max_inflight_encoders` and `encoder_queue_size` are validated but
+#'   encoding runs in the R process, one segment at a time.
+#' * Caching: `disable_caching`, `disable_caching_warning`,
+#'   `max_files_cached` (100; -1 keeps all), and manimR's `flush_cache`.
+#' * Presentation and logging: `preview` (open the result), `preview_command`,
+#'   `show_in_file_browser`, `verbosity` ("INFO"), `progress_bar`,
+#'   `log_to_file` (write a log per scene to `log_dir`), `media_loglevel`.
+#' * LaTeX: `tex_template` (a [TexTemplate()]), `tex_template_file`,
+#'   `no_latex_cleanup` (keep .aux, .dvi and .log files in `tex_dir`).
+#' * Other: `seed` (random seed of every scene), `renderer` (`"cairo"`;
+#'   `"opengl"` is accepted and renders with the Cairo style renderer, the
+#'   only one ported), `plugins`, `write_all`, `scene_names`,
+#'   `notify_outdated_version`, and the OpenGL window settings
+#'   `enable_gui`, `live_preview`, `gui_location`, `fullscreen`,
+#'   `window_position`, `window_size`, `window_monitor`,
+#'   `use_projection_fill_shaders`, `use_projection_stroke_shaders`,
+#'   `enable_wireframe`, which have no effect on the Cairo style renderer
+#'   (asking for a live preview is an error, as upstream), and the Jupyter
+#'   settings `media_embed` and `media_width`.
+#' * manimR only: `ffmpeg` and `typst` (paths of those programs) and
+#'   `curve_tolerance`.
+#'
+#' @param ... Named settings.
+#' @return The configuration list (including the derived `frame_width`,
+#'   `frame_x_radius`, `frame_y_radius`, `transparent` and
+#'   `save_last_frame`), invisibly when setting.
 #' @export
 #' @examples
 #' old <- manim_config(quality = "l")
@@ -95,9 +195,67 @@ manim_config <- function(...) {
     cfg$frame_width <- frame_width()
     cfg$frame_x_radius <- frame_x_radius()
     cfg$frame_y_radius <- frame_y_radius()
+    cfg$transparent <- cfg("transparent")
+    cfg$save_last_frame <- cfg("save_last_frame")
     return(cfg)
   }
   old <- cfg
+  if (is.null(names(args)) || any(!nzchar(names(args)))) stop("manim_config() settings must be named", call. = FALSE)
+  if ("write_to_movie" %in% names(args)) {
+    stop("write_to_movie is not a setting any more (manim 0.22): use format = \"png\" for the last frame only, ",
+         "or format = \"none\" for no output.", call. = FALSE)
+  }
+  unknown <- setdiff(names(args), config_names())
+  if (length(unknown)) {
+    stop("Unknown setting", if (length(unknown) > 1) "s", ": ", paste(unknown, collapse = ", "),
+         ". See ?manim_config for the settings.", call. = FALSE)
+  }
+  # Settings derived from others (upstream's config properties).
+  if (!is.null(args$transparent)) {
+    if (!is.logical(args$transparent) || length(args$transparent) != 1 || is.na(args$transparent)) {
+      stop("transparent must be TRUE or FALSE", call. = FALSE)
+    }
+    args$background_opacity <- as.numeric(!args$transparent)
+  }
+  if (!is.null(args$save_last_frame)) {
+    if (!is.logical(args$save_last_frame) || length(args$save_last_frame) != 1 || is.na(args$save_last_frame)) {
+      stop("save_last_frame must be boolean", call. = FALSE)
+    }
+    if (args$save_last_frame) {
+      args$format <- "png"
+    } else if (is.null(args$format) && identical(parse_output_format(cfg$format), "png")) {
+      args$format <- "auto"
+    }
+  }
+  if (!is.null(args$frame_x_radius)) args$frame_width <- 2 * args$frame_x_radius
+  if (!is.null(args$frame_y_radius)) args$frame_height <- 2 * args$frame_y_radius
+  if (!is.null(args$frame_size)) {
+    args$pixel_width <- args$frame_size[1]
+    args$pixel_height <- args$frame_size[2]
+  }
+  args[intersect(names(args), CONFIG_TRANSLATED)] <- NULL
+  if ("format" %in% names(args)) {
+    args["format"] <- list(parse_output_format(args$format))
+    if (identical(args$format, "webm")) {
+      message("WARNING Output format set as webm, this can be slower than other formats")
+    }
+  }
+  if (!is.null(args$verbosity)) check_choice("verbosity", args$verbosity, names(LOG_LEVELS))
+  if (!is.null(args$media_loglevel)) check_choice("media_loglevel", args$media_loglevel, names(LOG_LEVELS))
+  if (!is.null(args$zero_pad) && !(is.numeric(args$zero_pad) && args$zero_pad >= 0 && args$zero_pad <= 9)) {
+    stop("zero_pad must be between 0 and 9", call. = FALSE)
+  }
+  for (k in c("max_inflight_encoders", "encoder_queue_size")) {
+    if (!is.null(args[[k]]) && !(is.numeric(args[[k]]) && args[[k]] > 0)) stop(k, " must be positive", call. = FALSE)
+  }
+  if (!is.null(args$max_files_cached) && !(is.numeric(args$max_files_cached) && args$max_files_cached >= -1)) {
+    stop("max_files_cached must be non-negative or -1", call. = FALSE)
+  }
+  if (!is.null(args$tex_template_file) && nzchar(args$tex_template_file) &&
+      file.access(args$tex_template_file, 4) != 0) {
+    message("WARNING Custom TeX template ", args$tex_template_file, " not found or not readable.")
+    args["tex_template_file"] <- list(NULL)
+  }
   if (!is.null(args$renderer)) {
     if (!args$renderer %in% unlist(RendererType)) stop("Unknown renderer '", args$renderer, "'", call. = FALSE)
     if (args$renderer == RendererType$OPENGL) {
@@ -131,7 +289,15 @@ with_manim_config <- function(settings, code) {
   force(code)
 }
 
-cfg <- function(name) .manim$config[[name]]
+# One setting; `transparent` and `save_last_frame` are derived from
+# background_opacity and format, as upstream's config properties.
+cfg <- function(name) {
+  switch(name,
+    transparent = (.manim$config$background_opacity %||% 1) < 1,
+    save_last_frame = identical(parse_output_format(.manim$config$format), "png"),
+    .manim$config[[name]]
+  )
+}
 
 frame_height <- function() cfg("frame_height")
 # An explicitly set frame_width (config$frame_width <- w) wins, as upstream.

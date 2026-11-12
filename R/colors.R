@@ -21,12 +21,14 @@ manim_color_table <- function() {
 #' @param color A color.
 #' @return `manim_color()` returns an uppercase hex string. `color_to_rgb()`
 #'   returns a numeric vector in `[0, 1]`; `color_to_rgba()` includes alpha.
+#'   `rgb_to_color()` and `rgba_to_color()` return a [ManimColor()], which
+#'   keeps the exact channel values (and alpha) and works as a hex string.
 #' @export
 #' @examples
 #' manim_color("red")
 #' color_to_rgb(BLUE)
 manim_color <- function(color) {
-  rgba_to_color(color_to_rgba(color))
+  rgb_hex(color_to_rgba(color)[1:3])
 }
 
 #' @rdname manim_color
@@ -44,6 +46,8 @@ color_to_rgba <- function(color, alpha = NULL) {
     if (length(v) == 3) v <- c(v, 1)
   } else {
     if (is.null(color) || length(color) == 0 || is.na(color)) color <- "#000000"
+    # Hex written as 0xRRGGBB, as upstream's ManimColor accepts.
+    if (grepl("^0[xX][0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$", color)) color <- sub("^0[xX]", "#", color)
     key <- tolower(color)
     tab <- manim_color_table()
     if (key %in% names(tab)) color <- tab[[key]]
@@ -56,17 +60,20 @@ color_to_rgba <- function(color, alpha = NULL) {
 #' @rdname manim_color
 #' @param rgb,rgba Numeric vectors in `[0, 1]`.
 #' @export
-rgb_to_color <- function(rgb) {
-  rgb <- pmin(pmax(rgb[1:3], 0), 1)
-  # ManimColor.to_hex truncates int(x * 255); the epsilon keeps exact
-  # channel values such as 88 / 255 from dropping to 87.
-  v <- floor(rgb * 255 + 1e-6)
-  sprintf("#%02X%02X%02X", v[1], v[2], v[3])
-}
+rgb_to_color <- function(rgb) new_manim_color(c(rgb[1:3], 1))
 
 #' @rdname manim_color
 #' @export
-rgba_to_color <- function(rgba) rgb_to_color(rgba[1:3])
+rgba_to_color <- function(rgba) new_manim_color(if (length(rgba) == 3) c(rgba, 1) else rgba[1:4])
+
+# The hex string of RGB values in [0, 1], as ManimColor.to_hex(): it
+# truncates int(x * 255); the epsilon keeps exact channel values such as
+# 88 / 255 from dropping to 87.
+rgb_hex <- function(rgb) {
+  rgb <- pmin(pmax(rgb[1:3], 0), 1)
+  v <- floor(rgb * 255 + 1e-6)
+  sprintf("#%02X%02X%02X", v[1], v[2], v[3])
+}
 
 #' Color arithmetic
 #'
@@ -77,7 +84,8 @@ rgba_to_color <- function(rgba) rgb_to_color(rgba[1:3])
 #' interpolate_color(RED, BLUE, 0.5)
 #' color_gradient(c(RED, YELLOW, GREEN), 5)
 interpolate_color <- function(color1, color2, alpha) {
-  rgb_to_color(interpolate(color_to_rgb(color1), color_to_rgb(color2), alpha))
+  # All four channels, as upstream's ManimColor.interpolate().
+  new_manim_color(interpolate(color_to_rgba(color1), color_to_rgba(color2), alpha))
 }
 
 #' @rdname interpolate_color

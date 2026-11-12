@@ -64,7 +64,9 @@ pyramid <- Polyhedron(
   rbind(c(1, 1, 0), c(1, -1, 0), c(-1, -1, 0), c(-1, 1, 0), c(0, 0, 2)),
   list(c(1, 2, 5), c(2, 3, 5), c(3, 4, 5), c(4, 1, 5), c(1, 2, 3, 4))
 )
+\donttest{
 oct <- Octahedron(edge_length = 3)
 oct$graph[1]$set_color(RED)
 oct$faces[3]$set_color(YELLOW)
+}
 }

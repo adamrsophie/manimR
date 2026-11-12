@@ -1,0 +1,230 @@
+url: https://adamrsophie.github.io/manimR/
+
+template:
+  bootstrap: 5
+  light-switch: true
+  bslib:
+    primary: "#236B8E"
+    base_font: {google: "Inter"}
+    heading_font: {google: "Space Grotesk"}
+    code_font: {google: "JetBrains Mono"}
+
+home:
+  title: "manimR: Mathematical Animation in Native R"
+  description: >
+    A native R port of Manim Community: build scenes from vectorized
+    mobjects, animate them, and render videos, GIFs and images.
+
+navbar:
+  structure:
+    left: [intro, articles, reference, news]
+    right: [search, lightswitch, github]
+
+articles:
+- title: Basics
+  navbar: Basics
+  contents:
+  - manimR
+  - '`coming-from-python`'
+- title: Building scenes
+  navbar: Building scenes
+  contents:
+  - mobjects
+  - animations
+  - updaters
+  - '`text-and-math`'
+  - graphing
+  - '`cameras-and-3d`'
+  - '`colors-images`'
+- title: Output and tools
+  navbar: Output and tools
+  contents:
+  - rendering
+  - '`rstudio-knitr-shiny`'
+  - utilities
+
+reference:
+- title: Scenes
+  desc: Scene classes and the scene manager.
+  contents:
+  - Scene
+  - MovingCameraScene
+  - ZoomedScene
+  - ThreeDScene
+  - VectorScene
+  - interactive_scene
+  - Manager
+  - Section
+  - DefaultSectionType
+  - manim_scene
+- title: Rendering and output
+  desc: Render scenes to video, GIF and images, from R or the command line.
+  contents:
+  - render
+  - render_file
+  - find_scenes
+  - manim_cli
+  - preview_output
+  - manim_check
+  - get_dir
+  - digest_config_file
+  - plot.Mobject
+  - CairoRenderer
+- title: Configuration and logging
+  contents:
+  - config
+  - manim_config
+  - with_manim_config
+  - QUALITIES
+  - RESAMPLING_ALGORITHMS
+  - logger
+- title: Mobjects
+  desc: The base classes, groups and indexing.
+  contents:
+  - MobjectClass
+  - VMobjectClass
+  - GroupClass
+  - VGroupClass
+  - VDictClass
+  - VectorizedPointClass
+  - '`[.Mobject`'
+  - print_family
+  - set_default
+  - class_methods
+  - factory_classes
+  - as_mobject
+- title: Geometry
+  contents:
+  - geometry
+  - boolean_ops
+  - BraceClass
+  - LabelClass
+  - DashedVMobject
+  - CurvesAsSubmobjects
+  - ScreenRectangleClass
+  - ManimBannerClass
+- title: Text, math and tables
+  contents:
+  - TextClass
+  - MarkupText
+  - Paragraph
+  - BulletedList
+  - register_font
+  - font_constants
+  - tex
+  - TexTemplateClass
+  - TexTemplateLibrary
+  - tex_to_svg_file
+  - typst
+  - typst_to_svg_file
+  - CodeClass
+  - DecimalNumberClass
+  - MatrixClass
+  - matrix_to_tex_string
+  - get_det_text
+  - TableClass
+- title: Graphing
+  contents:
+  - coordinate_systems
+  - NumberLine
+  - function_graphs
+  - graph_scale
+  - probability
+  - GenericGraphClass
+  - VectorFieldClass
+- title: Three dimensions
+  contents:
+  - three_dimensions
+  - polyhedra
+  - get_3d_vmob_start_corner_index
+  - get_shaded_rgb
+- title: Images, SVG and point clouds
+  contents:
+  - image_mobject
+  - SVGMobjectClass
+  - point_cloud
+  - opengl_point_cloud
+  - opengl_mobjects
+  - image_helpers
+- title: Animations
+  contents:
+  - AnimationClass
+  - creation
+  - fading
+  - growing
+  - indication
+  - movement
+  - rotation
+  - transform
+  - transform_matching
+  - composition
+  - number_animations
+  - update_animations
+  - AnimatedBoundaryClass
+  - ChangeSpeedClass
+  - change_speed_add_updater
+  - WaitClass
+  - Add
+  - Broadcast
+  - prepare_animation
+  - override_animation
+- title: Updaters and value trackers
+  contents:
+  - ValueTrackerClass
+  - updater_helpers
+- title: Rate functions and paths
+  contents:
+  - rate_funcs
+  - unit_interval
+  - paths
+- title: Cameras
+  contents:
+  - CameraClass
+  - MovingCameraClass
+  - MultiCameraClass
+  - MappingCameraClass
+  - ThreeDCameraClass
+  - BackgroundColoredVMobjectDisplayer
+- title: Colors
+  contents:
+  - manim_colors
+  - color_palettes
+  - ManimColor
+  - manim_color
+  - color_conversions
+  - interpolate_color
+  - RandomColorGenerator
+- title: Constants and units
+  contents:
+  - constants
+  - units
+  - interface_constants
+  - upstream_modules
+- title: Math utilities
+  contents:
+  - space_ops
+  - bezier
+  - partial_bezier_points
+  - proportions_along_bezier_curve_for_point
+  - get_smooth_cubic_bezier_handle_points
+  - is_closed
+  - interpolate
+  - sigmoid
+  - quaternion_mult
+  - earclip_triangulation
+  - polylabel
+  - clip_value
+- title: Programming utilities
+  contents:
+  - list_helpers
+  - dict_helpers
+  - path_helpers
+  - command_helpers
+  - assert_is_mobject_method
+  - get_plugins
+- title: RStudio, knitr, Shiny and testing
+  contents:
+  - rstudio_addins
+  - knitr_manim_engine
+  - manimOutput
+  - scene_frame

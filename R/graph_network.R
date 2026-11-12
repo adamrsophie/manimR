@@ -82,7 +82,7 @@ graph_rescale_layout <- function(pos, scale = 1) {
 
 # Turn an n x 2 or n x 3 matrix of positions into a named list of 3D points.
 graph_pos_list <- function(pos, ids) {
-  if (ncol(pos) == 2) pos <- cbind(pos, 0)
+  if (ncol(pos) < 3) pos <- cbind(pos, matrix(0, nrow(pos), 3 - ncol(pos)))
   stats::setNames(lapply(seq_along(ids), function(i) as.numeric(pos[i, 1:3])), ids)
 }
 
@@ -172,40 +172,49 @@ graph_layout_spectral <- function(graph, scale = 2, ...) {
 }
 
 # Fruchterman and Reingold force directed layout, as networkx.spring_layout
-# (its dense solver). `pos` optionally gives starting positions (a named
-# list); other vertices start at random positions, as upstream.
-graph_layout_spring <- function(graph, scale = 2, k = NULL, pos = NULL, iterations = 50, threshold = 1e-4,
-                                seed = NULL, ...) {
+# (its dense solver), in `dim` dimensions. `pos` optionally gives starting
+# positions (a named list), `fixed` names vertices that keep them; other
+# vertices start at random positions, as upstream. `center` shifts the
+# result (not used when vertices are fixed, as networkx).
+graph_layout_spring <- function(graph, scale = 2, k = NULL, pos = NULL, fixed = NULL, iterations = 50,
+                                threshold = 1e-4, weight = "weight", center = NULL, dim = 2, seed = NULL, ...) {
   ids <- graph$vertex_ids()
   n <- length(ids)
+  dim <- as.integer(dim)
+  if (dim < 1) stop("cannot handle dimensions < 1", call. = FALSE)
+  center <- if (is.null(center)) rep(0, dim) else as.numeric(center)
+  if (length(center) != dim) stop("length of center coordinates must match dimension of layout", call. = FALSE)
   if (n == 0) return(list())
-  if (n == 1) return(graph_pos_list(matrix(0, 1, 2), ids))
+  if (n == 1) return(graph_pos_list(matrix(center, 1, dim), ids))
   A <- graph_adjacency(ids, graph$edge_pairs, symmetric = !graph$directed)
   start <- pos
   dom_size <- if (is.null(start)) 1 else max(unlist(start))
   if (dom_size == 0) dom_size <- 1
-  pos <- if (is.null(seed)) matrix(stats::runif(2 * n), ncol = 2)
-    else vf_with_seed(seed, matrix(stats::runif(2 * n), ncol = 2))
+  pos <- if (is.null(seed)) matrix(stats::runif(dim * n), ncol = dim)
+    else vf_with_seed(seed, matrix(stats::runif(dim * n), ncol = dim))
   if (!is.null(start)) {
     pos <- pos * dom_size
-    for (i in seq_len(n)) if (!is.null(start[[ids[i]]])) pos[i, ] <- as.numeric(start[[ids[i]]])[1:2]
+    for (i in seq_len(n)) if (!is.null(start[[ids[i]]])) pos[i, ] <- as.numeric(start[[ids[i]]])[seq_len(dim)]
   }
+  fixed_idx <- if (is.null(fixed)) integer() else which(ids %in% as.character(fixed))
+  if (length(fixed_idx) && is.null(start)) stop("fixed vertices need starting positions in pos", call. = FALSE)
   if (is.null(k)) k <- sqrt(1 / n)
-  t <- max(diff(range(pos[, 1])), diff(range(pos[, 2]))) * 0.1
+  t <- max(apply(pos, 2, function(col) diff(range(col)))) * 0.1
   dt <- t / (iterations + 1)
   for (it in seq_len(iterations)) {
-    dx <- outer(pos[, 1], pos[, 1], `-`)
-    dy <- outer(pos[, 2], pos[, 2], `-`)
-    distance <- pmax(sqrt(dx^2 + dy^2), 0.01)
+    deltas <- lapply(seq_len(dim), function(d) outer(pos[, d], pos[, d], `-`))
+    distance <- pmax(sqrt(Reduce(`+`, lapply(deltas, function(x) x^2))), 0.01)
     w <- k * k / distance^2 - A * distance / k
-    disp <- cbind(rowSums(dx * w), rowSums(dy * w))
+    disp <- do.call(cbind, lapply(deltas, function(x) rowSums(x * w)))
     len <- pmax(sqrt(rowSums(disp^2)), 0.01)
     delta_pos <- disp * (t / len)
+    if (length(fixed_idx)) delta_pos[fixed_idx, ] <- 0
     pos <- pos + delta_pos
     t <- t - dt
     if (sqrt(sum(delta_pos^2)) / n < threshold) break
   }
-  graph_pos_list(graph_rescale_layout(pos, scale), ids)
+  if (!length(fixed_idx)) pos <- sweep(graph_rescale_layout(pos, scale), 2, center, `+`)
+  graph_pos_list(pos, ids)
 }
 
 # All pairs shortest path lengths in edges (directed for DiGraph); Inf when

@@ -61,6 +61,24 @@ OpenGLPMobjectClass <- R6::R6Class("OpenGLPMobject", inherit = PMobjectClass, lo
       self$rgbas <- matrix(color_to_rgba(self$color), 1, 4)
       invisible(self)
     },
+    # Adds points with the colors `rgbas`, or one `color` (yellow when
+    # neither is given) at `opacity`, which defaults to the opacity of the
+    # last color row, as upstream.
+    add_points = function(points, rgbas = NULL, color = NULL, opacity = NULL) {
+      points <- as_points(points)
+      n <- nrow(points)
+      if (is.null(rgbas) && is.null(color)) color <- PURE_YELLOW
+      if (!is.null(color)) {
+        if (is.null(opacity)) opacity <- if (nrow(self$rgbas)) self$rgbas[nrow(self$rgbas), 4] else 1
+        new_rgbas <- matrix(color_to_rgba(color, opacity), n, 4, byrow = TRUE)
+      } else {
+        new_rgbas <- as.matrix(rgbas)
+        if (nrow(new_rgbas) != n) stop("points and rgbas must have same length", call. = FALSE)
+      }
+      self$points <- rbind(self$points, points)
+      self$rgbas <- rbind(self$rgbas, new_rgbas)
+      invisible(self)
+    },
     set_gloss = function(gloss) {
       self$gloss <- gloss
       invisible(self)

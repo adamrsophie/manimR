@@ -129,7 +129,7 @@ test_that("Riemann rectangles: count, widths and total area", {
   expect_length(ax$get_riemann_rectangles(g, dx = 0.1)$submobjects, 60)
 
   neg <- ax$get_riemann_rectangles(ax$plot(function(x) -1), x_range = c(0, 1), dx = 0.5, color = BLUE)
-  expect_equal(neg$submobjects[[1]]$get_fill_color(), invert_color(BLUE))
+  expect_equal(neg$submobjects[[1]]$get_fill_color(), manim_color(invert_color(BLUE)))
 })
 
 test_that("get_area outlines the region under the graph", {
@@ -429,4 +429,27 @@ test_that("labels match upstream placement", {
   cp <- ComplexPlane(x_range = c(-2, 2, 1), y_range = c(-2, 2, 1))$add_coordinates()
   close(cws(cp$coordinate_labels), o$complex)
   close(cws(NumberLine(x_range = c(0, 2, 1), scaling = LogBase(), include_numbers = TRUE)$labels), o$log_labels)
+})
+
+test_that("SampleSpace makes braces with labels for its parts", {
+  skip_if_not(nzchar(Sys.which("latex")) && nzchar(Sys.which("dvisvgm")))
+  skip_on_cran()
+  space <- SampleSpace(width = 6, height = 4)
+  space$divide_horizontally(0.3)
+  side <- space$get_side_braces_and_labels(c("P(A)", "P(B)"))
+  expect_length(side$submobjects, 2)
+  expect_length(side$submobjects[[1]]$submobjects, 2)
+})
+
+test_that("StreamLines can end after a skipped long wait", {
+  S <- function(self) {
+    sl <- StreamLines(function(p) c(1, 0.2, 0), virtual_time = 2, x_range = c(-2, 2, 1), y_range = c(-1, 1, 1))
+    self$add(sl)
+    sl$start_animation(flow_speed = 1.5)
+    self$wait(1.5)
+    self$play(sl$end_animation())
+  }
+  d <- withr_tempdir()
+  f <- render(S, format = "png", quality = "l", media_dir = d, preview = FALSE)
+  expect_true(file.exists(f))
 })

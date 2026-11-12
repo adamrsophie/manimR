@@ -35,8 +35,11 @@ CameraClass$set("public", "set_pixel_array", function(pixel_array, convert_from_
   invisible(self)
 })
 
+# A background set here (or from a function) is what draw_frame() paints
+# behind the mobjects, instead of the background color or image.
 CameraClass$set("public", "set_background", function(pixel_array, convert_from_floats = FALSE) {
   self$background <- if (convert_from_floats) self$convert_pixel_array(pixel_array) else pixel_array
+  self$custom_background <- TRUE
   invisible(self)
 })
 

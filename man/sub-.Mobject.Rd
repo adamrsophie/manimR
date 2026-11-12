@@ -3,6 +3,7 @@
 \name{[.Mobject}
 \alias{[.Mobject}
 \alias{[<-.Mobject}
+\alias{[[<-.Mobject}
 \alias{length.Mobject}
 \alias{[[.Mobject}
 \title{Index submobjects}
@@ -10,6 +11,8 @@
 \method{[}{Mobject}(x, i, ...)
 
 \method{[}{Mobject}(x, i) <- value
+
+\method{[[}{Mobject}(x, i) <- value
 
 \method{length}{Mobject}(x)
 

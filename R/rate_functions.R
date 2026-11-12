@@ -36,9 +36,9 @@ zero <- function(f) {
 #' `lower_bound` and `upper_bound`, for the input at which the monotone
 #' function `f` reaches `target`, halving the interval until it is
 #' shorter than `tolerance`; it returns `NULL` when `target` is not between
-#' the values at the bounds. Upstream's `choose()` and `clip()` are not
-#' ported: use [base::choose()], and `min(max(a, min_a), max_a)` (a `clip()`
-#' export would mask `graphics::clip()`).
+#' the values at the bounds. Upstream's `clip()` is [clip_value()] here (an
+#' exported `clip()` would mask `graphics::clip()`), and its `choose()` is
+#' [base::choose()].
 #'
 #' @param x Numeric vector.
 #' @return `sigmoid()`: numeric vector. `binary_search()`: a number or `NULL`.

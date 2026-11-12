@@ -15,5 +15,8 @@ find_scenes(file = NULL, envir = NULL)
 A named list of scene class generators, in definition order.
 }
 \description{
-Find scenes defined in a file or environment
+Sourcing a script runs its code, but calls of \code{\link[=render]{render()}},
+\code{\link[=render_file]{render_file()}}, \code{\link[=manim_cli]{manim_cli()}}, \code{\link[=preview_output]{preview_output()}} and \code{\link[=manim_gadget]{manim_gadget()}}
+in it do nothing, so a script that ends with \code{render(MyScene)} is not
+rendered twice by \code{\link[=render_file]{render_file()}}, \code{\link[=manim_cli]{manim_cli()}} or the RStudio addins.
 }

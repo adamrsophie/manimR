@@ -35,15 +35,21 @@ Scene <- R6::R6Class("Scene", lock_objects = FALSE,
     always_update_mobjects = FALSE,
     random_seed = NULL,
     camera_class = NULL,
+    skip_animations = FALSE,
+    session_spec = NULL,
+    output_plan = NULL,
+    file_writer_settings = NULL,
     initialize = function(camera_class = NULL, always_update_mobjects = FALSE, random_seed = NULL,
-                          skip_animations = NULL, renderer = NULL, ...) {
+                          skip_animations = FALSE, renderer = NULL, ...) {
       self$camera_class <- camera_class %||% self$default_camera_class()
       self$always_update_mobjects <- always_update_mobjects
-      self$random_seed <- random_seed
-      if (!is.null(random_seed)) set.seed(random_seed)
-      skip <- skip_animations %||% !isTRUE(cfg("write_to_movie"))
-      self$renderer <- renderer %||% CairoRendererClass$new(camera_class = self$camera_class, skip_animations = skip, ...)
+      self$random_seed <- random_seed %||% cfg("seed")
+      self$skip_animations <- skip_animations
+      self$renderer <- renderer %||% CairoRendererClass$new(camera_class = self$camera_class,
+                                                            skip_animations = skip_animations, ...)
       self$camera <- self$renderer$camera
+      self$init_output()
+      if (!is.null(self$random_seed)) set.seed(self$random_seed)
       self$mobjects <- list()
       self$foreground_mobjects <- list()
       self$moving_mobjects <- list()
@@ -63,10 +69,35 @@ Scene <- R6::R6Class("Scene", lock_objects = FALSE,
     setup = function() invisible(NULL),
     construct = function() invisible(NULL),
     tear_down = function() invisible(NULL),
+    # Resolves what this scene's render writes, from the current settings,
+    # as upstream's Scene.__init__ does: the render session, the output
+    # paths, the file writer settings and the optional log file.
+    # `module_name` and `output_file` override the settings of those names.
+    init_output = function(module_name = NULL, output_file = NULL) {
+      self$session_spec <- resolve_render_session(class(self$renderer)[1])
+      module <- module_name %||% resolve_module_name()
+      wd <- getwd()
+      layout <- resolve_media_layout(self$session_spec$output, module, self$scene_name(), wd)
+      self$output_plan <- resolve_output_plan(layout, self$session_spec$output, self$scene_name(),
+                                              output_file %||% get_dir("output_file"))
+      self$file_writer_settings <- scene_file_writer_settings(self$output_plan, self$session_spec$video_encoder, wd)
+      log_file <- resolve_file_log_path(layout, module, self$scene_name())
+      if (!is.null(log_file)) {
+        dir.create(dirname(log_file), recursive = TRUE, showWarnings = FALSE)
+        file.create(log_file)
+        .manim$log_file <- log_file
+        logger$info("Log file will be saved in %s", log_file)
+      }
+      self$renderer$init_scene(self, self$session_spec, self$file_writer_settings)
+      invisible(self)
+    },
     # Rendering runs through the scene's Manager (created on first use), as
-    # upstream's Scene.render() does.
+    # upstream's Scene.render() does. Returns the path of the artifact.
     render = function(preview = FALSE, module_name = NULL, output_file = NULL) {
-      self$get_manager()$render(preview = preview, module_name = module_name, output_file = output_file)
+      if (!is.null(module_name) || !is.null(output_file) || !is.null(self$scene_name_override)) {
+        self$init_output(module_name, output_file)
+      }
+      self$get_manager()$render(preview = preview)
     },
     get_manager = function() self$manager %||% ManagerClass$new(self),
 
@@ -121,10 +152,12 @@ Scene <- R6::R6Class("Scene", lock_objects = FALSE,
         list(lst, FALSE)
       }
       r <- replace_in(self$mobjects)
-      if (r[[2]]) self$mobjects <- r[[1]]
-      else {
+      if (r[[2]]) {
+        self$mobjects <- r[[1]]
+      } else {
         r <- replace_in(self$foreground_mobjects)
-        if (r[[2]]) self$foreground_mobjects <- r[[1]]
+        if (!r[[2]]) stop("Could not find ", class(old_mobject)[1], " in scene", call. = FALSE)
+        self$foreground_mobjects <- r[[1]]
       }
       invisible(self)
     },
@@ -303,9 +336,17 @@ Scene <- R6::R6Class("Scene", lock_objects = FALSE,
         n <- ceiling(self$duration * fps - 1e-9)
         if (n > 0) (seq_len(n) - 1) / fps else numeric()
       }
-      for (t in times) {
+      pb <- if (!self$renderer$skip_animations && length(times) > 1 && show_progress_bar()) {
+        message(sprintf("Animation %d: %s", self$renderer$num_plays,
+                        paste(vapply(self$animations, function(a) class(a)[1], ""), collapse = ", ")))
+        utils::txtProgressBar(min = 0, max = length(times), style = 3, file = stderr())
+      }
+      if (!is.null(pb)) on.exit(close(pb), add = TRUE)
+      for (k in seq_along(times)) {
+        t <- times[k]
         self$update_to_time(t)
         if (!skip_rendering) self$renderer$render(self, t, self$moving_mobjects)
+        if (!is.null(pb)) utils::setTxtProgressBar(pb, k)
         if (!is.null(self$stop_condition) && isTRUE(self$stop_condition())) break
       }
       for (a in self$animations) {
@@ -420,4 +461,13 @@ manim_scene <- function(construct, name = "Scene", base = Scene, setup = NULL) {
     setup(self)
   }
   R6::R6Class(name, inherit = base, lock_objects = FALSE, public = pub)
+}
+
+# A progress bar per animation, as upstream's tqdm bar, in interactive
+# sessions and the command line (not while knitting). progress_bar is
+# TRUE, "display" or "leave" to show it, FALSE or "none" to hide it.
+show_progress_bar <- function() {
+  pb <- cfg("progress_bar")
+  on <- isTRUE(pb) || (is.character(pb) && pb %in% c("display", "leave"))
+  on && !isTRUE(getOption("knitr.in.progress")) && (interactive() || isTRUE(.manim$cli_running))
 }

@@ -12,6 +12,9 @@
 #' @param num_components Number of anchor points used to approximate an arc.
 #' @param arc_center Center of the arc.
 #' @param start,end Start and end points of a line or arc.
+#' @param tip_length Length of tips added with `add_tip()`.
+#' @param normal_vector Normal of the plane tips are drawn in.
+#' @param tip_style List of style arguments for added tips.
 #' @param point Location of the dot's center.
 #' @param color,fill_color,fill_opacity,stroke_opacity Color, fill color,
 #'   fill opacity and stroke opacity of the shape.
@@ -83,7 +86,7 @@ TipableVMobjectClass <- R6::R6Class("TipableVMobject", inherit = VMobjectClass, 
     },
     get_unpositioned_tip = function(tip_shape = NULL, tip_length = NULL, tip_width = NULL) {
       style <- list()
-      if (is.null(tip_shape)) tip_shape <- ArrowTriangleFilledTipClass
+      tip_shape <- if (is.null(tip_shape)) ArrowTriangleFilledTipClass else as_generator(tip_shape, "tip shape")
       if (identical(tip_shape, ArrowTriangleFilledTipClass)) {
         style$width <- tip_width %||% self$get_default_tip_length()
       }

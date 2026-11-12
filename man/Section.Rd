@@ -19,11 +19,11 @@ is not saved.}
 }
 \description{
 A scene is split into sections with its \code{next_section()} method. Each
-section records the plays it contains (\code{partial_movie_files}; manimR
-encodes each scene in one pass, so the entries are \code{NULL} placeholders,
-one per play, as upstream stores for skipped plays) and, when
-\code{manim_config(save_sections = TRUE)}, the file name of its own video
-(\code{video}, relative to the sections directory).
+section records the partial movie files of the plays it contains
+(\code{partial_movie_files}, with \code{NULL} for skipped plays, as upstream) and,
+when \code{manim_config(save_sections = TRUE)}, the file name of its own video
+(\code{video}, relative to the sections directory), which is joined from those
+partial movie files.
 }
 \details{
 \verb{$is_empty()} tells whether the section has no plays, \verb{$get_dict()}

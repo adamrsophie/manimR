@@ -80,23 +80,44 @@ texcode_for_environment <- function(environment) {
   list(begin = begin, end = end)
 }
 
+# The template of the tex_template setting, else one read from
+# tex_template_file, else the default template (upstream's
+# config.tex_template).
 default_tex_template <- function() {
   tpl <- cfg("tex_template")
-  if (is.null(tpl)) {
-    if (is.null(.manim$default_tex_template)) .manim$default_tex_template <- TexTemplate()
-    tpl <- .manim$default_tex_template
+  if (!is.null(tpl)) return(tpl)
+  file <- cfg("tex_template_file")
+  if (!is.null(file) && nzchar(file)) {
+    if (!identical(.manim$tex_template_file, file)) {
+      .manim$tex_template_from_file <- TexTemplateClass$from_file(file)
+      .manim$tex_template_file <- file
+    }
+    return(.manim$tex_template_from_file)
   }
-  tpl
+  if (is.null(.manim$default_tex_template)) .manim$default_tex_template <- TexTemplate()
+  .manim$default_tex_template
 }
 
-tex_dir <- function() file.path(cfg("media_dir") %||% "media", "Tex")
+tex_dir <- function() get_dir("tex_dir") %||% file.path(cfg("media_dir") %||% "media", "Tex")
+
+# Deletes every file in the tex directory that is not an .svg or .tex file,
+# as upstream's delete_nonsvg_files(); runs unless no_latex_cleanup is set.
+delete_nonsvg_files <- function(additional_endings = character()) {
+  keep <- c(".svg", ".tex", additional_endings)
+  files <- list.files(tex_dir(), full.names = TRUE)
+  ends <- paste0(".", tools::file_ext(files))
+  unlink(files[!ends %in% keep & !dir.exists(files)])
+  invisible(NULL)
+}
 
 tex_hash <- function(expression) substr(digest::digest(expression, algo = "sha256", serialize = FALSE), 1, 16)
 
 #' Compile LaTeX to SVG
 #'
 #' Writes the expression into the template, compiles it and converts the
-#' result with `dvisvgm`, caching files in `media/Tex`.
+#' result with `dvisvgm`, caching files in the `tex_dir` setting (`media/Tex`). The
+#' .aux, .dvi and .log files are deleted afterwards unless
+#' `manim_config(no_latex_cleanup = TRUE)`.
 #'
 #' @param expression LaTeX code.
 #' @param environment Optional environment such as `"align*"`.
@@ -138,7 +159,7 @@ tex_to_svg_file <- function(expression, environment = NULL, tex_template = NULL)
   args <- c(if (fmt == ".pdf") "--pdf", "--page=1", "--no-fonts", "--verbosity=0", paste0("--output=", svg_file), out_file)
   system2("dvisvgm", shQuote(args), stdout = FALSE, stderr = FALSE)
   if (!file.exists(svg_file)) stop("dvisvgm could not convert ", out_file, " to SVG.", call. = FALSE)
-  for (ext in c(".aux", ".log", fmt)) if (file.exists(paste0(base, ext))) unlink(paste0(base, ext))
+  if (!isTRUE(cfg("no_latex_cleanup"))) delete_nonsvg_files()
   svg_file
 }
 
@@ -344,7 +365,7 @@ MathTexClass <- R6::R6Class("MathTex", inherit = SingleStringMathTexClass, lock_
                           tex_environment = "align*", tex_template = NULL) {
       args <- list(...)
       nm <- names(args) %||% rep("", length(args))
-      strings <- vapply(args[nm == ""], function(s) paste(as.character(s), collapse = ""), "")
+      strings <- unname(vapply(args[nm == ""], function(s) paste(as.character(s), collapse = ""), ""))
       kwargs <- args[nm != ""]
       self$arg_separator <- arg_separator
       self$tex_to_color_map <- tex_to_color_map %||% list()

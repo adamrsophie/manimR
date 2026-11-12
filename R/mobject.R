@@ -17,6 +17,11 @@ updater_takes_dt <- function(f) "dt" %in% names(formals(args(f)) %||% list())
 #'   `updaters`, `name`. Active bindings `width`, `height`, `depth` get or set
 #'   the size. The active binding `animate` records method calls as an
 #'   animation, as in `scene$play(sq$animate$shift(RIGHT)$scale(2))`.
+#' @param color Color of the mobject.
+#' @param name Name; the class name by default.
+#' @param z_index Drawing order: higher values are drawn on top.
+#' @param ... Fields of the class to set, such as those [set_default()]
+#'   gives; any other name is an error.
 #' @aliases Mobject
 #' @export
 MobjectClass <- R6::R6Class("Mobject",
@@ -37,9 +42,17 @@ MobjectClass <- R6::R6Class("Mobject",
     initialize = function(color = "#FFFFFF", name = NULL, z_index = 0, ...) {
       extra <- list(...)
       if (length(extra)) {
-        bad <- names(extra)
-        if (is.null(bad) || any(bad == "")) stop("Unnamed arguments are not allowed here.", call. = FALSE)
-        for (nm in bad) self[[nm]] <- extra[[nm]]
+        nms <- names(extra)
+        if (is.null(nms) || any(nms == "")) stop("Unnamed arguments are not allowed here.", call. = FALSE)
+        # Only settings of the class pass through (as set_default() and
+        # subclasses use them); anything else is a mistake, as upstream's
+        # TypeError for an unexpected keyword argument.
+        unknown <- nms[!vapply(nms, exists, NA, envir = self, inherits = FALSE)]
+        if (length(unknown)) {
+          stop(class(self)[1], "() got unexpected argument", if (length(unknown) > 1) "s", ": ",
+               paste(unknown, collapse = ", "), call. = FALSE)
+        }
+        for (nm in nms) assign(nm, extra[[nm]], envir = self)
       }
       self$mob_id <- next_mob_id()
       self$name <- name %||% class(self)[1]
@@ -124,15 +137,13 @@ MobjectClass <- R6::R6Class("Mobject",
       # Like Python's deepcopy, mobjects and animations held in fields (or in
       # lists) are copied through the shared memo, so references between them
       # stay consistent in the copy.
-      cp <- function(x) if (is_mobject(x) || inherits(x, "Animation")) x$copy(.memo) else x
       for (nm in mobject_fields(self)) {
         v <- .subset2(self, nm)
-        if (is_mobject(v) || inherits(v, "Animation")) {
-          new[[nm]] <- cp(v)
-        } else if (is.list(v) && length(v) && !is.data.frame(v)) {
-          new[[nm]] <- lapply(v, cp)
+        if (is_mobject(v) || inherits(v, "Animation") || (is.list(v) && length(v) && !is.data.frame(v))) {
+          assign(nm, copy_nested(v, .memo), envir = new)
         }
       }
+      copy_private_nested(self, new, .memo)
       new
     },
     # Upstream's name for generate_points() in some classes.
@@ -276,8 +287,12 @@ MobjectClass <- R6::R6Class("Mobject",
       }, ...)
       invisible(self)
     },
-    apply_function = function(func, about_point = ORIGIN, ...) {
-      self$apply_points_function_about_point(function(p) apply_rowwise(p, func), about_point = about_point, ...)
+    # about_point defaults to the origin unless about_edge is given, as
+    # upstream.
+    apply_function = function(func, about_point = NULL, about_edge = NULL, ...) {
+      if (is.null(about_point) && is.null(about_edge)) about_point <- ORIGIN
+      self$apply_points_function_about_point(function(p) apply_rowwise(p, func), about_point = about_point,
+                                             about_edge = about_edge, ...)
       invisible(self)
     },
     apply_function_to_position = function(func) {
@@ -287,12 +302,14 @@ MobjectClass <- R6::R6Class("Mobject",
       for (sm in self$submobjects) sm$apply_function_to_position(func)
       invisible(self)
     },
-    apply_matrix = function(matrix, about_point = ORIGIN, ...) {
+    apply_matrix = function(matrix, about_point = NULL, about_edge = NULL, ...) {
+      if (is.null(about_point) && is.null(about_edge)) about_point <- ORIGIN
       m <- as.matrix(matrix)
       full <- diag(self$dim)
       full[seq_len(nrow(m)), seq_len(ncol(m))] <- m
       tm <- t(full)
-      self$apply_points_function_about_point(function(p) p %*% tm, about_point = about_point, ...)
+      self$apply_points_function_about_point(function(p) p %*% tm, about_point = about_point,
+                                             about_edge = about_edge, ...)
       invisible(self)
     },
     apply_complex_function = function(func, ...) {
@@ -448,8 +465,10 @@ MobjectClass <- R6::R6Class("Mobject",
     },
 
     # Color ----------------------------------------------------------------
-    set_color = function(color = "#FFFF00", family = TRUE) {
-      if (family) for (sm in self$submobjects) sm$set_color(color, family)
+    # `alpha` is accepted for upstream's signature; the base class has no
+    # opacity of its own.
+    set_color = function(color = "#FFFF00", alpha = NULL, family = TRUE) {
+      if (family) for (sm in self$submobjects) sm$set_color(color, family = family)
       self$color <- manim_color(color)
       invisible(self)
     },
@@ -601,12 +620,31 @@ MobjectClass <- R6::R6Class("Mobject",
     },
 
     # Family ---------------------------------------------------------------
+    # The mobject and all its submobjects, depth first, each once (the last
+    # occurrence is kept, as remove_list_redundancies() does). A mobject on
+    # the current path is skipped, so cycles end, as upstream's _iter_family().
+    # Upstream's get_*/set_* fallbacks for its size properties
+    # (Mobject.__getattr__), which much existing code still uses.
+    get_width = function() self$width,
+    get_height = function() self$height,
+    get_depth = function() self$depth,
+    set_width = function(value) {
+      self$width <- value
+      invisible(self)
+    },
+    set_height = function(value) {
+      self$height <- value
+      invisible(self)
+    },
+    set_depth = function(value) {
+      self$depth <- value
+      invisible(self)
+    },
     get_family = function(recurse = TRUE) {
-      fam <- c(list(self), unlist(lapply(self$submobjects, function(m) m$get_family()), recursive = FALSE))
-      if (length(fam) > 1) {
-        ids <- vapply(fam, function(m) m$mob_id, "")
-        if (anyDuplicated(ids)) fam <- fam[!duplicated(ids, fromLast = TRUE)]
-      }
+      if (!length(self$submobjects)) return(list(self))
+      fam <- iter_family(self, character())
+      ids <- vapply(fam, function(m) m$mob_id, "")
+      if (anyDuplicated(ids)) fam <- fam[!duplicated(ids, fromLast = TRUE)]
       fam
     },
     family_members_with_points = function() {
@@ -637,8 +675,8 @@ MobjectClass <- R6::R6Class("Mobject",
       self$submobjects <- self$submobjects[order(keys)]
       invisible(self)
     },
-    shuffle = function(recurse = FALSE) {
-      if (recurse) for (sm in self$submobjects) sm$shuffle(recurse = TRUE)
+    shuffle = function(recursive = FALSE) {
+      if (recursive) for (sm in self$submobjects) sm$shuffle(recursive = TRUE)
       self$submobjects <- self$submobjects[sample.int(length(self$submobjects))]
       invisible(self)
     },
@@ -881,7 +919,9 @@ Group <- constructor(GroupClass)
     if (!inherits(x, c("VDict", "GenericGraph"))) stop("Character indices need a VDict or a Graph", call. = FALSE)
     return(x$get(if (length(i) > 1) as.list(i) else i))
   }
-  sm <- x$submobjects
+  # As upstream, a mobject with points of its own comes first, then its
+  # submobjects (Mobject.split()).
+  sm <- x$split()
   if (is.logical(i)) i <- which(rep_len(i, length(sm)))
   if (length(i) == 1 && i > 0) return(sm[[i]])
   sel <- sm[i]
@@ -893,19 +933,58 @@ Group <- constructor(GroupClass)
 #' @param value A mobject to store under key `i` of a [VDict].
 #' @export
 `[<-.Mobject` <- function(x, i, value) {
-  if (!inherits(x, "VDict") || !is.character(i) || length(i) != 1) {
-    stop("Only a VDict entry can be assigned with [<-, as vd[\"key\"] <- mobject", call. = FALSE)
+  # A group member by position, as upstream's VGroup.__setitem__.
+  if (is.numeric(i) && length(i) == 1 && inherits(x, c("VGroup", "Group")) && !inherits(x, "VDict")) {
+    if (!is_mobject(value)) stop("Only a mobject can be put into a group", call. = FALSE)
+    x$submobjects[[i]] <- value
+    return(x)
   }
+  if (!inherits(x, "VDict") || !is.character(i) || length(i) != 1) {
+    stop("Only a group member (vg[2] <- mobject) or a VDict entry (vd[\"key\"] <- mobject) can be assigned ",
+         "with [<-", call. = FALSE)
+  }
+  # Replaces the value of an existing key, as upstream's __setitem__.
+  if (x$has_key(i)) x$remove(i)
   x$add_key_value_pair(i, value)
   x
 }
 
 #' @rdname sub-.Mobject
 #' @export
-length.Mobject <- function(x) length(x$submobjects)
+`[[<-.Mobject` <- function(x, i, value) {
+  if (inherits(x, "VDict") && is.character(i) && length(i) == 1 && !exists(i, envir = x, inherits = FALSE)) {
+    if (x$has_key(i)) x$remove(i)
+    x$add_key_value_pair(i, value)
+    return(x)
+  }
+  # Anything else sets a field, as for any R6 object.
+  assign(i, value, envir = x)
+  x
+}
+
+#' @rdname sub-.Mobject
+#' @export
+length.Mobject <- function(x) length(x$submobjects) + (nrow(x$points) > 0)
 
 #' @export
-`+.Mobject` <- function(e1, e2) Group(e1, e2)
+`+.Mobject` <- function(e1, e2) {
+  # A group plus a mobject is a group of the same kind with one more member,
+  # as upstream's VGroup.__add__; other mobjects are grouped.
+  if (inherits(e1, c("VGroup", "Group"))) {
+    return(do.call(e1$get_group_class(), c(e1$submobjects, list(e2))))
+  }
+  Group(e1, e2)
+}
+
+#' @export
+`-.Mobject` <- function(e1, e2) {
+  if (missing(e2) || !inherits(e1, c("VGroup", "Group"))) {
+    stop("Only a member can be taken out of a VGroup or Group", call. = FALSE)
+  }
+  out <- do.call(e1$get_group_class(), e1$submobjects)
+  out$remove(e2)
+  out
+}
 
 #' @export
 as.list.Mobject <- function(x, ...) x$submobjects
@@ -993,4 +1072,40 @@ arrange_in_grid_impl <- function(self, rows, cols, buff, cell_alignment, row_ali
     if (!is.null(dict) && i %in% names(dict)) return(dict[[i]])
   }
   .subset2(x, i)
+}
+
+iter_family <- function(m, active) {
+  if (m$mob_id %in% active) return(list())
+  active <- c(active, m$mob_id)
+  c(list(m), unlist(lapply(m$submobjects, iter_family, active = active), recursive = FALSE))
+}
+
+# Copies the mobjects and animations in `x`, at any depth of nested lists,
+# through the shared memo of a deep copy.
+copy_nested <- function(x, memo) {
+  if (is_mobject(x) || inherits(x, "Animation")) return(x$copy(memo))
+  if (is.list(x) && length(x) && !is.data.frame(x) && !is.environment(x)) {
+    y <- lapply(x, copy_nested, memo = memo)
+    attributes(y) <- attributes(x)
+    return(y)
+  }
+  x
+}
+
+# Copies the mobjects and animations held in the private fields of `old`
+# into the private fields of its clone `new` through the same memo, so a
+# private reference to a submobject points to the copy's submobject, as with
+# Python's deepcopy of every instance attribute.
+copy_private_nested <- function(old, new, memo) {
+  op <- .subset2(old, ".__enclos_env__")$private
+  np <- .subset2(new, ".__enclos_env__")$private
+  if (!is.environment(op) || !is.environment(np)) return(invisible(NULL))
+  for (nm in ls(op, all.names = TRUE)) {
+    if (bindingIsActive(nm, op) || !exists(nm, envir = np, inherits = FALSE) || bindingIsLocked(nm, np)) next
+    v <- get(nm, envir = op, inherits = FALSE)
+    if (is_mobject(v) || inherits(v, "Animation") || (is.list(v) && length(v) && !is.data.frame(v))) {
+      assign(nm, copy_nested(v, memo), envir = np)
+    }
+  }
+  invisible(NULL)
 }

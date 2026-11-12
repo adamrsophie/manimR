@@ -31,36 +31,53 @@ ManagerClass <- R6::R6Class("Manager", lock_objects = FALSE,
       self$scene <- scene
       scene$manager <- self
     },
-    render = function(preview = FALSE, module_name = NULL, output_file = NULL) {
-      sc <- self$scene
-      self$renderer$init_scene(sc, module_name = module_name, output_file = output_file)
+    render = function(preview = FALSE) {
+      presentation <- self$session_spec$presentation
+      open_after <- isTRUE(preview) || isTRUE(presentation$open_after_render)
+      if (open_after && !self$output_spec$enabled) stop("Previewing after render requires a media artifact.", call. = FALSE)
       ok <- FALSE
-      on.exit(if (!ok) {
-        fw <- self$renderer$file_writer
-        if (!is.null(fw)) fw$abort_encode_jobs()
-        self$renderer$close_device()
+      on.exit({
+        if (!ok) {
+          self$file_writer$abort_encode_jobs()
+          self$renderer$close_device()
+        }
+        .manim$log_file <- NULL
       }, add = TRUE)
       self$setup()
       # Reaching the configured animation boundary (-n) ends the scene
       # normally, as upstream's EndSceneEarlyException does.
       tryCatch(self$construct(), manim_end_scene = function(e) NULL)
       self$tear_down()
-      out <- self$post_construct()
+      self$post_construct()
       ok <- TRUE
-      out
+      if (open_after || isTRUE(presentation$show_in_file_browser)) {
+        open_media_file(self$file_writer, preview = open_after,
+                        show_in_file_browser = isTRUE(presentation$show_in_file_browser))
+      }
+      invisible(self$file_writer$final_file_path)
     },
     setup = function() self$scene$setup(),
     construct = function() self$scene$construct(),
     tear_down = function() self$scene$tear_down(),
-    # Finishes the output; a scene without plays is saved as its last frame,
-    # as upstream does for automatic video output.
+    # Finishes the output after construct() and tear_down(). A scene without
+    # animations cannot make an explicitly requested video; automatic video
+    # output saves its last frame instead.
     post_construct = function() {
-      out <- self$renderer$scene_finished(self$scene)
-      if (self$num_plays == 0 && isTRUE(cfg("write_to_movie")) && !isTRUE(cfg("save_last_frame")) &&
-          !identical(cfg("format"), "png")) {
-        logger$warning("%s has no play calls. Its last frame has been saved as a PNG instead.", self$scene$scene_name())
+      output <- self$output_spec
+      empty_video <- self$num_plays == 0 && output$is_video
+      if (empty_video && !output$fallback_to_still) {
+        stop(self$scene$scene_name(), " has no play calls, so the explicitly requested ", toupper(output$format),
+             " output cannot be produced. Use format = \"png\" to save its last frame.", call. = FALSE)
       }
-      out
+      self$renderer$scene_finished(self$scene)
+      if (empty_video && output$fallback_to_still && !is.null(self$file_writer$final_file_path)) {
+        logger$warning("%s has no play calls. Automatic video output has been saved as a PNG instead.",
+                       self$scene$scene_name())
+      }
+      if (self$num_plays > 0 || output$enabled) {
+        logger$info("Rendered %s\nPlayed %d animations", self$scene$scene_name(), self$num_plays)
+      }
+      invisible(self$file_writer$final_file_path)
     },
     play = function(..., subcaption = NULL, subcaption_duration = NULL, subcaption_offset = 0) {
       start <- self$time
@@ -74,14 +91,13 @@ ManagerClass <- R6::R6Class("Manager", lock_objects = FALSE,
       invisible(self)
     },
     next_section = function(name = "unnamed", section_type = DefaultSectionType$NORMAL, skip_animations = FALSE) {
-      if (is.null(self$file_writer)) stop("next_section() needs a scene being rendered", call. = FALSE)
       self$file_writer$next_section(name, section_type, skip_animations)
       invisible(self)
     },
     add_subcaption = function(content, duration = 1, offset = 0) {
       start <- self$time + offset
-      self$scene$subcaptions <- c(self$scene$subcaptions,
-                                  list(list(content = content, start = start, end = start + duration)))
+      fw <- self$file_writer
+      fw$subcaptions <- c(fw$subcaptions, list(list(content = content, start = start, end = start + duration)))
       invisible(self)
     },
     # No sound is added while animations are skipped.
@@ -94,17 +110,8 @@ ManagerClass <- R6::R6Class("Manager", lock_objects = FALSE,
   active = list(
     # What the render writes, and how it is presented (upstream's OutputSpec
     # and RenderSessionSpec), from the current settings.
-    output_spec = function() {
-      fmt <- self$file_writer$format %||% cfg("format")
-      list(format = fmt, is_video = isTRUE(cfg("write_to_movie")) && fmt != "png",
-           is_still = !isTRUE(cfg("write_to_movie")), is_image_sequence = identical(fmt, "png"),
-           is_gif = identical(fmt, "gif"), save_last_frame = isTRUE(cfg("save_last_frame")),
-           save_sections = isTRUE(cfg("save_sections")), transparent = isTRUE(cfg("transparent")))
-    },
-    session_spec = function() {
-      list(preview = isTRUE(cfg("preview")), from_animation_number = cfg("from_animation_number"),
-           upto_animation_number = cfg("upto_animation_number"), renderer = cfg("renderer"))
-    },
+    output_spec = function() self$session_spec$output,
+    session_spec = function() self$scene$session_spec,
     renderer = function() self$scene$renderer,
     camera = function() self$scene$renderer$camera,
     file_writer = function() self$scene$renderer$file_writer,

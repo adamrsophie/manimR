@@ -56,6 +56,9 @@ rotation_about_z <- function(angle) {
 #' @rdname space_ops
 #' @export
 rotate_vector <- function(vector, angle, axis = OUT) {
+  if (length(vector) > 3) stop("Vector must have the correct dimensions.", call. = FALSE)
+  # A 2D vector lies in the xy plane, as upstream pads it with z = 0.
+  if (length(vector) == 2) vector <- c(vector, 0)
   drop(rotation_matrix(angle, axis) %*% vector)
 }
 
@@ -309,11 +312,10 @@ thick_diagonal <- function(dim, thickness = 2) {
 #'   left to right; with no arguments it returns `c(1, 0, 0, 0)`.
 #' * `quaternion_from_angle_axis()` returns the rotation quaternion
 #'   `c(cos(angle / 2), sin(angle / 2) * axis)`.
-#' * `angle_axis_from_quaternion()` returns `list(angle, axis)`. As in manim
-#'   0.20.1, an angle above `PI` is replaced by `TAU - angle` while the axis
-#'   is kept. For a quaternion with zero vector part the axis is
-#'   `c(1, 0, 0)`; manim 0.20.1 raises an error there, which newer upstream
-#'   versions fix in the same way.
+#' * `angle_axis_from_quaternion()` returns `list(angle, axis)`. As upstream,
+#'   an angle above `PI` is replaced by `TAU - angle` and the axis is
+#'   negated, which describes the same rotation. For a quaternion with zero
+#'   vector part the axis is `c(1, 0, 0)`.
 #' * `quaternion_conjugate()` negates the vector part.
 #'
 #' @param ... Quaternions.

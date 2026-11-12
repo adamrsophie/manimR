@@ -14,12 +14,9 @@ is_closed(points)
 }
 \description{
 Returns \code{TRUE} when the first and last rows of \code{points} are close, using
-the tolerance \code{1e-8 + 1e-5 * start} per coordinate. This reproduces manim
-0.20.1 exactly, including its quirk: the tolerance uses the signed start
-coordinate (no \code{abs()}), so a spline whose first point has a negative
-coordinate never counts as closed. Smooth handles (see
-\code{\link[=get_smooth_cubic_bezier_handle_points]{get_smooth_cubic_bezier_handle_points()}}) depend on this test, so keeping
-the quirk keeps manimR's curves identical to upstream's.
+the tolerance \code{1e-8 + 1e-5 * abs(start)} per coordinate, as upstream.
+Smooth handles (see \code{\link[=get_smooth_cubic_bezier_handle_points]{get_smooth_cubic_bezier_handle_points()}}) depend on
+this test.
 }
 \examples{
 is_closed(rbind(c(0, 0, 0), c(1, 2, 3), c(0, 0, 0)))

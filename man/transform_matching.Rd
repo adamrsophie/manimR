@@ -9,9 +9,9 @@
 \alias{TransformMatchingTex}
 \title{Transform matching parts}
 \usage{
-TransformMatchingShapes(mobject, target_mobject, ...)
+TransformMatchingShapes(mobject, target_mobject, ..., use_override = TRUE)
 
-TransformMatchingTex(mobject, target_mobject, ...)
+TransformMatchingTex(mobject, target_mobject, ..., use_override = TRUE)
 }
 \arguments{
 \item{mobject}{The starting mobject.}
@@ -25,6 +25,9 @@ character vector or list mapping keys of source parts to keys of target
 parts that should be transformed into each other although they differ
 (useful with \code{TransformMatchingTex()}); and arguments passed to the part
 animations, for example \code{path_arc} or \code{run_time}.}
+
+\item{use_override}{\code{FALSE} ignores an animation override set with
+\code{\link[=override_animation]{override_animation()}} on the class of \code{mobject}.}
 }
 \description{
 These animations map the parts of \code{mobject} and \code{target_mobject} to keys

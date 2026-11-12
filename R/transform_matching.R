@@ -23,6 +23,8 @@
 #'   parts that should be transformed into each other although they differ
 #'   (useful with `TransformMatchingTex()`); and arguments passed to the part
 #'   animations, for example `path_arc` or `run_time`.
+#' @param use_override `FALSE` ignores an animation override set with
+#'   [override_animation()] on the class of `mobject`.
 #' @name transform_matching
 #' @examples
 #' \dontrun{
@@ -146,7 +148,7 @@ TransformMatchingShapesClass <- R6::R6Class("TransformMatchingShapes", inherit =
 
 #' @rdname transform_matching
 #' @export
-TransformMatchingShapes <- function(mobject, target_mobject, ...) {
+TransformMatchingShapes <- function(mobject, target_mobject, ..., use_override = TRUE) {
   ov <- animation_override("TransformMatchingShapes", mobject, match.call(), parent.frame())
   if (!is.null(ov)) return(ov$value)
   TransformMatchingShapesClass$new(mobject, target_mobject, ...)
@@ -178,6 +180,8 @@ TransformMatchingTexClass <- R6::R6Class("TransformMatchingTex", inherit = Trans
 
 #' @rdname transform_matching
 #' @export
-TransformMatchingTex <- function(mobject, target_mobject, ...) {
+TransformMatchingTex <- function(mobject, target_mobject, ..., use_override = TRUE) {
+  ov <- animation_override("TransformMatchingTex", mobject, match.call(), parent.frame())
+  if (!is.null(ov)) return(ov$value)
   TransformMatchingTexClass$new(mobject, target_mobject, ...)
 }

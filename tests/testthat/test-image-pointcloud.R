@@ -103,8 +103,8 @@ test_that("PMobject color, sorting, filtering and alignment", {
   p$sort_points()
   expect_equal(p$points[, 1], c(0, 1, 2))
   p$set_color_by_gradient(RED, GREEN)
-  expect_equal(rgb_to_color(p$rgbas[1, 1:3]), manim_color(RED))
-  expect_equal(rgb_to_color(p$rgbas[3, 1:3]), manim_color(GREEN))
+  expect_equal(manim_color(rgb_to_color(p$rgbas[1, 1:3])), manim_color(RED))
+  expect_equal(manim_color(rgb_to_color(p$rgbas[3, 1:3])), manim_color(GREEN))
   p$filter_out(function(pt) pt[1] > 1.5)
   expect_equal(nrow(p$points), 2)
   expect_equal(p$point_from_proportion(1), c(1, 0, 0))
@@ -153,4 +153,40 @@ test_that("images and point clouds match upstream points", {
   m <- Mobject1D()
   m$add_line(c(-1, 0, 0), c(1, 0.5, 0))
   expect_equal(m$points, mat(o$mobject1d_line), tolerance = 1e-8)
+})
+
+test_that("edge-on and collapsed images are skipped instead of failing", {
+  im <- ImageMobject(matrix(c("red", "blue", "green", "white"), 2, 2), scale_to_resolution = FALSE)
+  im$rotate(pi / 2, axis = RIGHT + UP)
+  expect_s3_class(im$get_image(pixel_width = 160, pixel_height = 90), "nativeRaster")
+  im2 <- ImageMobject(matrix(c("red", "blue", "green", "white"), 2, 2), scale_to_resolution = FALSE)
+  im2$apply_matrix(matrix(c(1, 1, 0, 0, 0, 0, 0, 0, 1), 3, byrow = TRUE))
+  expect_s3_class(im2$get_image(pixel_width = 160, pixel_height = 90), "nativeRaster")
+})
+
+test_that("shearing a one-row image keeps both columns", {
+  im <- ImageMobject(matrix(c("red", "blue"), 1, 2), scale_to_resolution = FALSE)
+  im$set_resampling_algorithm("nearest")
+  im$scale(3)
+  im$apply_matrix(matrix(c(1, 0.5, 0, 0, 1, 0, 0, 0, 1), 3, byrow = TRUE))
+  a <- manimR:::native_raster_to_array(im$get_image(pixel_width = 160, pixel_height = 90))
+  px <- matrix(a, ncol = 4)
+  red <- sum(px[, 1] == 255 & px[, 2] == 0 & px[, 3] == 0)
+  blue <- sum(px[, 1] == 0 & px[, 2] == 0 & px[, 3] == 255)
+  expect_gt(red, 100)
+  expect_gt(blue, 100)
+})
+
+test_that("bilinear and bicubic resampling differ, as in Pillow", {
+  draw <- function(alg) {
+    a <- array(255, c(3, 3, 4))
+    a[, , 1:3] <- rep(c(0, 255, 0, 255, 0, 255, 0, 255, 0), 3)
+    m <- ImageMobject(a, scale_to_resolution = FALSE)
+    m$set_resampling_algorithm(alg)
+    m$get_image(pixel_width = 160, pixel_height = 90)
+  }
+  expect_false(identical(draw("bilinear"), draw("bicubic")))
+  w <- manimR:::cubic_weights(c(0, 0.25, 0.5))
+  expect_equal(rowSums(w), c(1, 1, 1))
+  expect_equal(w[1, ], c(0, 1, 0, 0))
 })

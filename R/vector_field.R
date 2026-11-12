@@ -73,10 +73,10 @@ vf_with_seed <- function(seed, expr) {
 #' @param padding Distance agents may leave the spawning area.
 #' @param stroke_width Stroke width of the stream lines.
 #' @param ... Passed to [VGroup()].
-#' @details Upstream colors stream lines in 2D with a background image that
-#'   is sampled per pixel. manimR has no background image coloring, so every
-#'   stream line gets a stroke gradient from the colors at its anchors (the
-#'   method upstream uses for 3D stream lines).
+#' @details As upstream, stream lines in the plane are colored through a
+#'   background image of the field's colors (`get_colored_background_image()`,
+#'   so a line's color changes along it with the field), and 3D stream lines
+#'   get a stroke gradient from the colors at their anchors.
 #' @export
 #' @examples
 #' \dontrun{
@@ -121,7 +121,7 @@ VectorFieldClass <- R6::R6Class("VectorField", inherit = VGroupClass, lock_objec
       c2 <- self$rgbs[min(i + 2, nrow(self$rgbs)), ]
       interpolate(c1, c2, alpha %% 1)
     },
-    pos_to_color = function(pos) rgb_to_color(self$pos_to_rgb(pos)),
+    pos_to_color = function(pos) rgb_hex(self$pos_to_rgb(pos)),
     shift_func = function(func, shift_vector) vector_field_shift_func(func, shift_vector),
     scale_func = function(func, scalar) vector_field_scale_func(func, scalar),
     fit_to_coordinate_system = function(coordinate_system) {
@@ -329,6 +329,10 @@ StreamLinesClass <- R6::R6Class("StreamLines", inherit = VectorFieldClass, lock_
       outside_box <- function(p) any(p < lo | p > hi)
 
       max_steps <- ceiling(virtual_time / dt) + 1
+      # As upstream, flat stream lines show the field's colors through a
+      # background image; 3D ones get a gradient from their anchors.
+      flat <- isTRUE(all.equal(as.numeric(r$z), c(0, 0.5, 0.5)))
+      if (!self$single_color && flat) self$background_img <- self$get_colored_background_image()
       for (k in seq_len(nrow(start_points))) {
         pts <- matrix(0, max_steps + 1, 3)
         pts[1, ] <- start_points[k, ]
@@ -346,6 +350,9 @@ StreamLinesClass <- R6::R6Class("StreamLines", inherit = VectorFieldClass, lock_
         line$set_points_smoothly(pts[seq(1, n, by = step), , drop = FALSE])
         if (self$single_color) {
           line$set_stroke(color = self$color, width = self$stroke_width, opacity = opacity)
+        } else if (flat) {
+          line$color_using_background_image(self$background_img)
+          line$set_stroke(width = self$stroke_width, opacity = opacity)
         } else {
           anchors <- line$get_anchors()
           if (nrow(anchors) > 0) {
@@ -384,7 +391,9 @@ StreamLinesClass <- R6::R6Class("StreamLines", inherit = VectorFieldClass, lock_
       updater <- function(mob, dt) {
         for (line in mob$stream_lines) {
           line$time <- line$time + dt * flow_speed
-          if (line$time >= mob$virtual_time) line$time <- line$time - mob$virtual_time
+          # A modulo where upstream subtracts once, so one long step (a
+          # skipped wait) also wraps around.
+          if (line$time >= mob$virtual_time) line$time <- line$time %% mob$virtual_time
           line$anim$interpolate(min(max(line$time / line$anim$run_time, 0), 1))
         }
         mob

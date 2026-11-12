@@ -11,7 +11,8 @@ render_file(file, scenes = NULL, ..., found = NULL)
 
 \item{scenes}{Scene class names; \code{NULL} renders all.}
 
-\item{...}{Passed to \code{\link[=render]{render()}}, for example \code{quality = "l"}.}
+\item{...}{Passed to \code{\link[=render]{render()}}, for example \code{quality = "l"}. An
+\code{output_file} can only be given when one scene is rendered.}
 
 \item{found}{Named list of scene generators, as returned by
 \code{\link[=find_scenes]{find_scenes()}}; by default the scenes defined in \code{file}.}
@@ -21,7 +22,9 @@ Output paths, invisibly.
 }
 \description{
 Sources \code{file} and renders the named scenes (all scenes when \code{scenes} is
-\code{NULL}). Output goes to \verb{media/videos/<file name>/<quality>/}.
+\code{NULL}), each with its own copy of the settings, as \verb{manim render} does.
+The script's name is the module name of the output directories
+(\verb{media/videos/<file name>/<quality>/}).
 }
 \examples{
 \dontrun{

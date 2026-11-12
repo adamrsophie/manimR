@@ -28,6 +28,6 @@ Path to the SVG file.
 Writes the markup into a minimal Typst document (auto sized page, no
 margin, 10pt text) and compiles it with the \code{typst} command line
 compiler. The \code{.typ} source and the \code{.svg} result are cached in
-\code{media/Typst} under a hash of the full source. Set the compiler path with
+the \code{tex_dir} setting (\code{media/Tex}) under a hash of the full source. Set the compiler path with
 \code{manim_config(typst = "/path/to/typst")} when it is not on the \code{PATH}.
 }

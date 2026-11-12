@@ -96,7 +96,7 @@ earclip_triangulation <- function(verts, ring_ends) {
 # vertex row I, and links P (previous) and N (next). Removing a node keeps
 # its own links, as earcut relies on. Returns 1 based rows of `xy`, three per
 # triangle.
-# ponytail: earcut's z-order hash only speeds up the ear test for rings above
+# Limitation: earcut's z-order hash only speeds up the ear test for rings above
 # 80 points (the result is the same), so it is skipped; the ear test is
 # O(n) per candidate, O(n^2) per polygon.
 earcut_ring <- function(xy) {

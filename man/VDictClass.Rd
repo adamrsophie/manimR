@@ -5,15 +5,20 @@
 \alias{VDict}
 \title{VDict}
 \usage{
-VDict(mapping = list(), show_keys = FALSE, ...)
+VDict(mapping_or_iterable = list(), show_keys = FALSE, ...)
 }
 \arguments{
-\item{mapping}{A named list of VMobjects.}
+\item{mapping_or_iterable}{A named list of VMobjects, or a list of
+\code{list(key, mobject)} pairs.}
 
-\item{show_keys}{Whether to show the keys as text next to each value.}
+\item{show_keys}{Whether to show the keys next to the values.}
 
 \item{...}{Passed to \code{\link[=VGroup]{VGroup()}}.}
 }
 \description{
-A VGroup whose submobjects are addressed by name.
+A VGroup whose submobjects are addressed by key, as
+upstream's \code{VDict}: \code{d$add(list(s = Square()))} adds pairs,
+\code{d$remove("s")} removes one, \code{d[["s"]]} or \code{d$get("s")} reads one and
+\code{d[["s"]] <- Circle()} replaces it. With \code{show_keys = TRUE} each value
+gets its key as a \code{\link[=Tex]{Tex()}} label on its left (this needs LaTeX).
 }

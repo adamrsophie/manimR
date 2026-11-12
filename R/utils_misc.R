@@ -260,7 +260,11 @@ guarantee_empty_existence <- function(path) {
 #' @rdname path_helpers
 #' @export
 seek_full_path_from_defaults <- function(file_name, default_dir, extensions) {
-  candidates <- c(path.expand(file_name), file.path(default_dir, paste0(file_name, c("", extensions))))
+  # As pathlib's default_dir / file_name, an absolute file name ignores
+  # default_dir.
+  base <- path.expand(file_name)
+  if (!grepl("^(/|[A-Za-z]:|\\\\)", base)) base <- file.path(default_dir, file_name)
+  candidates <- c(path.expand(file_name), paste0(base, c("", extensions)))
   hit <- candidates[file.exists(candidates)]
   if (length(hit)) return(hit[1])
   stop("From: ", getwd(), ", could not find ", file_name, " at either of these locations: ",
@@ -310,7 +314,7 @@ open_file <- function(file_path, in_browser = FALSE) {
   } else {
     stop("Unable to identify your operating system...", call. = FALSE)
   }
-  if (!is.null(cfg("preview_command"))) cmd <- cfg("preview_command")
+  if (nzchar(cfg("preview_command") %||% "")) cmd <- cfg("preview_command")
   system2(cmd[1], c(cmd[-1], shQuote(target)), wait = FALSE)
   invisible(NULL)
 }
@@ -538,4 +542,21 @@ clip_value <- function(a, min_a, max_a) {
   if (a < min_a) return(min_a)
   if (a > max_a) return(max_a)
   a
+}
+
+# Opens the artifact of a finished render, as upstream's open_media_file():
+# in the RStudio Viewer or system viewer, or with preview_command, and in
+# the file browser.
+open_media_file <- function(file_writer, preview, show_in_file_browser) {
+  path <- file_writer$final_file_path
+  if (is.null(path)) {
+    logger$warning("No media artifact is available to open.")
+    return(invisible(NULL))
+  }
+  if (show_in_file_browser) open_file(path, in_browser = TRUE)
+  if (preview) {
+    if (nzchar(cfg("preview_command") %||% "")) open_file(path) else preview_output(path)
+    logger$info("Previewed File at: '%s'", path)
+  }
+  invisible(path)
 }

@@ -4,12 +4,15 @@
 \alias{Add}
 \title{Add}
 \usage{
-Add(..., run_time = 0)
+Add(..., run_time = 0, use_override = TRUE)
 }
 \arguments{
 \item{...}{Mobjects, then named arguments passed to \code{\link[=Animation]{Animation()}}.}
 
 \item{run_time}{Duration in seconds; zero adds the mobjects instantly.}
+
+\item{use_override}{\code{FALSE} ignores an override of \code{Add} set with
+\code{\link[=override_animation]{override_animation()}} on the first mobject's class.}
 }
 \description{
 Adds mobjects to the scene instantly, useful inside

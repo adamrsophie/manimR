@@ -72,6 +72,9 @@ tempconfig(temp, code)
 \code{left_side}, \code{right_side}) are computed on read; \code{frame_width} can also
 be set, as upstream allows, and then stays fixed until set again.
 \code{config$quality <- "low_quality"} applies a preset from \link{QUALITIES}.
+Three of upstream's methods are there too: \code{config$digest_file(path)}
+reads a \code{manim.cfg} file (\code{\link[=digest_config_file]{digest_config_file()}}), \code{config$get_dir(key, ...)} resolves a directory setting (\code{\link[=get_dir]{get_dir()}}) and
+\code{config$update(list(...))} changes several settings.
 }
 \details{
 \code{manim_frame} is upstream's read only \code{frame} object: the frame sizes and

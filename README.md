@@ -1,4 +1,4 @@
-# manimR
+# manimR <a href="https://adamrsophie.github.io/manimR/"><img src="man/figures/logo.png" align="right" height="139" alt="manimR website" /></a>
 
 manimR is a native R port of [Manim Community](https://www.manim.community/), the
 animation engine for explanatory math videos. Scenes, mobjects, animations,
@@ -7,6 +7,25 @@ Manim examples translate almost line by line. Rendering is done in R with
 [grid](https://stat.ethz.ch/R-manual/R-devel/library/grid/html/00Index.html)
 on an offscreen [ragg](https://ragg.r-lib.org/) device, and frames are
 streamed to `ffmpeg`.
+
+The website, <https://adamrsophie.github.io/manimR/>, has the full
+reference and a set of articles that show every feature with rendered
+videos:
+
+* [Getting started](https://adamrsophie.github.io/manimR/articles/manimR.html)
+  and [Coming from Python manim](https://adamrsophie.github.io/manimR/articles/coming-from-python.html)
+* [Mobjects and geometry](https://adamrsophie.github.io/manimR/articles/mobjects.html),
+  [Animations](https://adamrsophie.github.io/manimR/articles/animations.html),
+  [Updaters and value trackers](https://adamrsophie.github.io/manimR/articles/updaters.html)
+* [Text, math and tables](https://adamrsophie.github.io/manimR/articles/text-and-math.html),
+  [Graphs, plots and coordinate systems](https://adamrsophie.github.io/manimR/articles/graphing.html),
+  [Cameras and 3D scenes](https://adamrsophie.github.io/manimR/articles/cameras-and-3d.html),
+  [Colors, images, SVG and point clouds](https://adamrsophie.github.io/manimR/articles/colors-images.html)
+* [Rendering, configuration and output](https://adamrsophie.github.io/manimR/articles/rendering.html),
+  [RStudio, knitr, Quarto and Shiny](https://adamrsophie.github.io/manimR/articles/rstudio-knitr-shiny.html),
+  [Math and utility functions](https://adamrsophie.github.io/manimR/articles/utilities.html)
+
+The same articles are installed with the package; see `browseVignettes("manimR")`.
 
 ## Installation
 
@@ -75,7 +94,9 @@ render(function(self) {
 | `manim -pql file.py S` | `render_file("file.R", "S", quality = "l", preview = TRUE)` |
 
 Every constructor `Foo()` has an exported R6 generator `FooClass` for
-subclassing, for example `R6::R6Class("MyShape", inherit = VMobjectClass, ...)`.
+subclassing, for example `R6::R6Class("MyShape", inherit = VMobjectClass, ...)`,
+including the classes upstream defines only to preset arguments
+(`MathTableClass`, `ReplacementTransformClass`, and so on).
 Constructors show the full argument list of their class, so RStudio's
 completion lists the same arguments as Manim's documentation. Class wide
 defaults work like Manim's `set_default()`: `set_default(Text, font_size = 60)`.
@@ -87,15 +108,30 @@ renames are the ones above, made so no export masks a base R function
 `tests/testthat/test-api-coverage.R` checks this against the upstream
 source, for every exported name and every public method of every exported
 class. Colors are hex strings; `ManimColor()` wraps one when you need
-upstream's color methods.
+upstream's color methods. As upstream, a misspelled argument
+(`Circle(raduis = 2)`) or setting (`manim_config(qualty = "l")`) is an error.
+
+Two exports share names with other packages: `Matrix()` and `MatrixClass`
+(also in the Matrix package) and `Cross()` (also in purrr as `cross()`, a
+different case). Attach manimR last, or write `manimR::Matrix()`.
 
 ## Rendering options
 
-`render()` and `manim_config()` accept Manim's settings: `quality`
-(`"l"`, `"m"`, `"h"`, `"p"`, `"k"`), `format` (`"mp4"`, `"gif"`, `"webm"`,
-`"mov"`, `"png"`), `transparent`, `save_last_frame`, `background_color`,
-`frame_rate`, `media_dir` and more. Output goes to
-`media/videos/<file>/<quality>/<Scene>.mp4` like Manim.
+`render()` and `manim_config()` take Manim 0.22's settings: `quality`
+(`"l"`, `"m"`, `"h"`, `"p"`, `"k"`), `transparent`, `background_color`,
+`frame_rate`, `media_dir` and the rest (see `?manim_config`). `format`
+chooses the artifact: `"auto"` (MP4, or MOV when transparent; a scene with
+no animations is saved as its last frame), `"mp4"`, `"mov"`, `"webm"`,
+`"gif"`, `"png"` (only the last frame; `save_last_frame = TRUE` means the
+same), `"png-sequence"` (every frame) or `"none"`; `dry_run = TRUE` renders
+without writing files. Output goes to
+`media/videos/<module>/<quality>/<Scene>.mp4` and
+`media/images/<module>/` like Manim, and the directory settings
+(`video_dir`, `images_dir`, `partial_movie_dir`, `tex_dir`, ...) take the
+same `{media_dir}`, `{module_name}`, `{quality}` and `{scene_name}`
+placeholders (`get_dir()` resolves them). A `manim.cfg` file is read with
+`digest_config_file()`, and the command line reads one in the working
+directory.
 
 Scenes can be split with `self$next_section("name")`; with
 `save_sections = TRUE` each section is also written to its own video under
@@ -104,11 +140,17 @@ skips a section while you work on later ones. `self$add_sound()` and
 `self$play(..., subcaption = "...")` add audio and an `.srt` subtitle file.
 
 As in Manim, each play is written to its own partial movie file, named by a
-hash of the camera, the animations and the scene's mobjects, and the files
+hash of the renderer, the encoder settings, the camera, the animations and
+the scene's mobjects (including the values updaters use), and the files
 are joined into the movie. Rendering again reuses the files of unchanged
 plays; `disable_caching = TRUE` (`--disable_caching`) renders everything,
 `flush_cache = TRUE` (`--flush_cache`) empties the cache first, and
-`max_files_cached` (default 100) limits its size.
+`max_files_cached` (default 100) limits its size. `video_codec`,
+`pixel_format` and `video_encoder_options` choose how the segments are
+encoded.
+
+`scene_frame(MyScene, t = 2.5)` renders the single frame at 2.5 seconds
+without writing a video, and `plot()` shows it.
 
 From a terminal:
 
@@ -116,9 +158,12 @@ From a terminal:
 Rscript -e 'manimR::manim_cli()' scenes.R SquareToCircle -ql -p
 ```
 
-The command line accepts Manim's common flags: `-ql`/`-qm`/`-qh`/`-qp`/`-qk`,
-`-p`, `-s`, `-t`, `-a`, `-o FILE`, `-n N,M`, `-r W,H`, `--fps`, `--format`,
-`--save_sections`, `--disable_caching` and `--flush_cache`.
+The command line takes all of `manim render`'s options (`-ql`, `-p`, `-s`,
+`-t`, `-a`, `-o FILE`, `-n N,M`, `-r W,H`, `--fps`, `--format`,
+`--save_sections`, `--dry_run`, `--media_dir`, `-c manim.cfg`,
+`--encoder-option crf=18`, ...) and the subcommands `checkhealth`,
+`cfg show|write|export`, `init project|scene`, `plugins -l` and
+`cache clear`; see `?manim_cli`.
 
 ## RStudio
 
@@ -129,11 +174,31 @@ The package installs RStudio addins (Addins menu):
 * **Render all scenes in file**.
 * **Preview last frame**: renders only the final frame, which is much faster.
 * **Insert scene template**.
+* **Render scene in background**: renders as an RStudio background job and
+  shows the result when it is done.
 * **Render with options**: a dialog to choose scene, quality, format and
   transparency.
 
 Set `options(manimR.addin_quality = "m")` to change the quality the quick
 addins use. `plot(mobject)` draws any mobject in the Plots pane.
+
+## Shiny
+
+`manimOutput()` and `renderManim()` show a scene in a Shiny app and render
+it again when the inputs it uses change:
+
+```r
+output$scene <- renderManim({
+  n <- input$sides
+  function(self) self$play(Create(RegularPolygon(n = n)))
+})
+```
+
+## Other R graphics and data
+
+`as_mobject()` turns a ggplot2 chart, a grid grob or base graphics into a
+vector mobject that can be animated, and `GraphClass$from_igraph()` builds a
+`Graph()` from an igraph graph.
 
 ## R Markdown and Quarto
 
@@ -146,7 +211,10 @@ SquareToCircle <- R6::R6Class("SquareToCircle", inherit = Scene,
 ```
 ````
 
-HTML output embeds the video; PDF output embeds the last frame.
+HTML output embeds the video, PDF output the last frame and other formats
+(GitHub Markdown, Word) a GIF. The same engine works in Quarto documents
+that use the knitr engine. In an `r` chunk, the value of `render()` is
+embedded the same way when it is printed.
 
 ## Differences from Python manim
 
@@ -155,7 +223,10 @@ HTML output embeds the video; PDF output embeds the last frame.
   Cairo context helpers have no counterpart. `manim_config(renderer =
   "opengl")` is accepted but renders the same way. The OpenGL point clouds
   (`DotCloud`, `TrueDot`, `OpenGLPMobject`) are drawn as round dots like
-  upstream's shader draws them.
+  upstream's shader draws them, and the other OpenGL mobject classes
+  (`OpenGLCircle`, `OpenGLSurface`, ...) are subclasses of their Cairo
+  counterparts. The GPU pipeline itself (shaders, the OpenGL camera and
+  window) is not ported.
 * Interactive mode (`scene$interactive_embed()`, `embed()`, `interact()`)
   opens a Shiny window instead of upstream's OpenGL window: it shows the
   live scene, takes the same key and mouse events (orbit, pan, zoom, `r`,
@@ -165,12 +236,18 @@ HTML output embeds the video; PDF output embeds the last frame.
   `Config/manimR/plugin: true` (see `get_plugins()`), not Python entry
   points.
 * `Text()` uses system fonts through `textshaping` and `systemfonts` instead of
-  Pango. Ligatures are off by default so each character maps to one glyph.
+  Pango, so glyph shapes and metrics follow the installed fonts.
+  `MarkupText()` wraps and justifies lines at upstream's Pango layout width.
 * Boolean operations (`Union()`, `Intersection()`, `Difference()`,
   `Exclusion()`) use the `polyclip` package, so their results are made of
   straight segments.
-* `Code()` highlights R and Python with a built in tokenizer instead of
-  Pygments.
+* `Code()` highlights with Pygments, as upstream, when Python with the
+  pygments module is installed; without it, a built in tokenizer highlights
+  R and Python.
+* Video segments are encoded in the R process, one at a time;
+  `max_inflight_encoders` and `encoder_queue_size` are accepted but have no
+  effect.
+* Copy mobjects with `$copy()`; R6's `$clone()` keeps the original's id.
 * `ImplicitFunction()` traces contours with `grDevices::contourLines()`
   instead of an adaptive quadtree.
 * Graph layouts, including `"planar"`, are native ports of the networkx

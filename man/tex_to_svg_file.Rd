@@ -18,5 +18,7 @@ Path to the SVG file.
 }
 \description{
 Writes the expression into the template, compiles it and converts the
-result with \code{dvisvgm}, caching files in \code{media/Tex}.
+result with \code{dvisvgm}, caching files in the \code{tex_dir} setting (\code{media/Tex}). The
+.aux, .dvi and .log files are deleted afterwards unless
+\code{manim_config(no_latex_cleanup = TRUE)}.
 }

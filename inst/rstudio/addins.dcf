@@ -3,6 +3,11 @@ Description: Render the manimR scene defined at or above the cursor and play it 
 Binding: addin_render_scene
 Interactive: false
 
+Name: Render scene in background
+Description: Render the manimR scene at the cursor as an RStudio background job, keeping the console free.
+Binding: addin_render_background
+Interactive: false
+
 Name: Render all scenes in file
 Description: Render every manimR scene defined in the active file.
 Binding: addin_render_all

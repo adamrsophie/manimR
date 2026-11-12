@@ -18,7 +18,8 @@ TYPST_DUPLICATE_LABEL_SUFFIX <- "__manim_typst_dup_"
 TYPST_LABEL_RE <- "(?s)^(.*)\\s*:\\s*([a-zA-Z_][a-zA-Z0-9_-]*)\\s*$"
 TYPST_SVG_LEAF_TAGS <- c("circle", "ellipse", "image", "line", "path", "polygon", "polyline", "rect", "text", "use")
 
-typst_dir <- function() file.path(cfg("media_dir") %||% "media", "Typst")
+# Typst sources and SVGs are cached in the tex directory, as upstream does.
+typst_dir <- function() tex_dir()
 
 typst_hash <- function(content) {
   substr(digest::digest(enc2utf8(content), algo = "sha256", serialize = FALSE), 1, 16)
@@ -32,7 +33,7 @@ typst_executable <- function() unname(Sys.which(path.expand(cfg("typst") %||% "t
 #' Writes the markup into a minimal Typst document (auto sized page, no
 #' margin, 10pt text) and compiles it with the `typst` command line
 #' compiler. The `.typ` source and the `.svg` result are cached in
-#' `media/Typst` under a hash of the full source. Set the compiler path with
+#' the `tex_dir` setting (`media/Tex`) under a hash of the full source. Set the compiler path with
 #' `manim_config(typst = "/path/to/typst")` when it is not on the `PATH`.
 #'
 #' @param typst_code Body of the Typst document.

@@ -84,6 +84,11 @@ DecimalNumberClass <- R6::R6Class("DecimalNumber", inherit = VMobjectClass, lock
       self$fill_opacity <- fill_opacity
       self$set_submobjects_from_number(number)
       self$init_colors()
+      # init_colors() paints the whole family, the background rectangle too;
+      # give it back its own style (upstream leaves it opaque white).
+      if (self$include_background_rectangle && !is.null(self$background_rectangle)) {
+        self$background_rectangle$set_style(fill_color = cfg("background_color"), fill_opacity = 0.75, stroke_width = 0)
+      }
     },
     get_num_string = function(number) {
       if (is.complex(number)) {

@@ -13,8 +13,9 @@ knitr_manim_engine(options)
 Registered automatically when knitr is installed. A chunk with engine
 \code{manim} evaluates its R code, renders the scene named by the chunk option
 \code{scene} (or the last scene defined in the chunk), and embeds the video.
-Chunk options \code{quality}, \code{format} and \code{save_last_frame} are passed to
-\code{\link[=render]{render()}}; \code{out.width} sets the display width.
+Chunk options \code{quality}, \code{format} (default \code{"auto"}, or \code{"png"} for LaTeX
+output) and \code{save_last_frame} are passed to \code{\link[=render]{render()}}; \code{out.width} sets
+the display width.
 }
 \details{
 \if{html}{\out{<div class="sourceCode markdown">}}\preformatted{```\{manim, scene = "SquareToCircle", quality = "l"\}

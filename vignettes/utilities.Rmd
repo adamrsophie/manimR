@@ -1,0 +1,928 @@
+---
+title: "Math and utility functions"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Math and utility functions}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 3.94, out.width = "100%")
+library(manimR)
+manim_config(verbosity = "WARNING", progress_bar = FALSE)
+# The website shows every scene as a video; installed vignettes and
+# R CMD check show the last frame of each scene instead.
+in_pkgdown <- identical(Sys.getenv("IN_PKGDOWN"), "true")
+knitr::opts_chunk$set(format = if (in_pkgdown) "auto" else "png", quality = "l")
+# Renders made outside manim chunks, and LaTeX caches, go to a temporary
+# directory instead of the working directory.
+manim_config(media_dir = file.path(tempdir(), "manimR-media"))
+has_latex <- nzchar(Sys.which("latex")) && nzchar(Sys.which("dvisvgm"))
+has_typst <- nzchar(Sys.which("typst"))
+```
+
+```{r helpers, include = FALSE}
+has_ffmpeg <- nzchar(Sys.which("ffmpeg"))
+```
+
+Behind every mobject and animation sits a toolbox of plain R functions:
+vector algebra, Bezier curve helpers, interpolation, rate functions, path
+functions, list helpers and file helpers. They are exported so you can use
+them in your own scenes. This vignette walks through all of them, printing
+their results and drawing pictures where geometry helps.
+
+Everything here works on ordinary R values. A point or a vector is a
+numeric vector of length 3, `c(x, y, z)`, and a set of points is an
+`n x 3` matrix with one point per row. Results that are tiny floating
+point noise (such as `6.1e-17` instead of `0`) are rounded with
+`zapsmall()` in the examples so they read well.
+
+## Constants
+
+### Directions
+
+The direction constants are unit vectors. Add and scale them to build
+points: `2 * RIGHT + UP` is the point `(2, 1, 0)`.
+
+```{r directions}
+rbind(ORIGIN, UP, DOWN, LEFT, RIGHT, IN, OUT)
+rbind(UL, UR, DL, DR)
+rbind(X_AXIS, Y_AXIS, Z_AXIS)
+2 * RIGHT + UP
+```
+
+`UL`, `UR`, `DL` and `DR` are the diagonal corners (`UL = UP + LEFT`), so
+they are not unit vectors. `IN` and `OUT` point into and out of the screen;
+`OUT` is the default rotation axis everywhere.
+
+```{r directions-picture}
+dirs <- list(RIGHT = RIGHT, UR = UR, UP = UP, UL = UL, LEFT = LEFT, DL = DL, DOWN = DOWN, DR = DR)
+cols <- color_gradient(c(BLUE, GREEN, YELLOW, RED), length(dirs))
+pic <- VGroup()
+for (i in seq_along(dirs)) {
+  d <- dirs[[i]]
+  pic$add(Arrow(ORIGIN, 2 * d, buff = 0, color = cols[i]))
+  pic$add(Text(names(dirs)[i], font_size = 26, color = cols[i])$move_to(2.6 * d))
+}
+plot(pic)
+```
+
+### Angles
+
+`PI` and `TAU` (which is `2 * PI`, one full turn) are the usual circle
+constants. Angles are in radians; multiply by `DEGREES` to write them in
+degrees.
+
+```{r angles}
+c(PI = PI, TAU = TAU, DEGREES = DEGREES)
+90 * DEGREES
+```
+
+### Buffers and defaults
+
+Buffers are the standard gaps used by `next_to()`, `to_edge()`,
+`arrange()` and friends. The `DEFAULT_` constants are the defaults of
+strokes, fonts, dots, dashes, arrow tips, waits and point clouds.
+
+```{r buffers}
+c(SMALL_BUFF = SMALL_BUFF, MED_SMALL_BUFF = MED_SMALL_BUFF,
+  MED_LARGE_BUFF = MED_LARGE_BUFF, LARGE_BUFF = LARGE_BUFF,
+  DEFAULT_MOBJECT_TO_EDGE_BUFFER = DEFAULT_MOBJECT_TO_EDGE_BUFFER,
+  DEFAULT_MOBJECT_TO_MOBJECT_BUFFER = DEFAULT_MOBJECT_TO_MOBJECT_BUFFER)
+c(DEFAULT_STROKE_WIDTH = DEFAULT_STROKE_WIDTH, DEFAULT_FONT_SIZE = DEFAULT_FONT_SIZE,
+  DEFAULT_DOT_RADIUS = DEFAULT_DOT_RADIUS, DEFAULT_SMALL_DOT_RADIUS = DEFAULT_SMALL_DOT_RADIUS,
+  DEFAULT_DASH_LENGTH = DEFAULT_DASH_LENGTH, DEFAULT_ARROW_TIP_LENGTH = DEFAULT_ARROW_TIP_LENGTH,
+  DEFAULT_WAIT_TIME = DEFAULT_WAIT_TIME,
+  DEFAULT_POINTWISE_FUNCTION_RUN_TIME = DEFAULT_POINTWISE_FUNCTION_RUN_TIME,
+  SCALE_FACTOR_PER_FONT_POINT = SCALE_FACTOR_PER_FONT_POINT,
+  DEFAULT_POINT_DENSITY_1D = DEFAULT_POINT_DENSITY_1D,
+  DEFAULT_POINT_DENSITY_2D = DEFAULT_POINT_DENSITY_2D)
+```
+
+The units `Pixels`, `Percent()`, `Degrees` and `Munits` convert other
+measures into scene units; they are described in
+[Mobjects and geometry](mobjects.html).
+
+### Font, joint and cap constants
+
+The font constants are the strings that `Text()` accepts for `slant` and
+`weight`, so `Text("Hi", weight = BOLD)` reads like upstream code.
+
+```{r font-constants}
+c(NORMAL, ITALIC, OBLIQUE)
+c(THIN, ULTRALIGHT, LIGHT, SEMILIGHT, BOOK, NORMAL, MEDIUM, SEMIBOLD, BOLD, ULTRABOLD, HEAVY, ULTRAHEAVY)
+str(LineJointType)
+str(CapStyleType)
+```
+
+`LineJointType` and `CapStyleType` name the values of a VMobject's
+`joint_type` and `cap_style`: how the corners of a thick stroke are joined
+and how the open ends are capped.
+
+```{r joints-and-caps}
+zigzag <- rbind(c(-1, -0.6, 0), c(-0.3, 0.6, 0), c(0.3, -0.6, 0), c(1, 0.6, 0))
+joints <- VGroup()
+for (j in c("round", "bevel", "miter")) {
+  line <- VMobject(stroke_width = 30, color = BLUE, joint_type = LineJointType[[toupper(j)]])
+  line$set_points_as_corners(zigzag)
+  joints$add(VGroup(line, Text(paste("joint:", j), font_size = 24)$next_to(line, DOWN)))
+}
+caps <- VGroup()
+for (cp in c("butt", "round", "square")) {
+  line <- Line(LEFT, RIGHT, stroke_width = 40, color = ORANGE, cap_style = CapStyleType[[toupper(cp)]])
+  caps$add(VGroup(line, Text(paste("cap:", cp), font_size = 24)$next_to(line, DOWN)))
+}
+plot(VGroup(joints$arrange(RIGHT, buff = 1), caps$arrange(RIGHT, buff = 1.2))$arrange(DOWN, buff = 0.8))
+```
+
+### Interface constants
+
+A few constants come from upstream's command line interface and
+interactive scenes: the messages printed when a scene is missing, the key
+codes of Shift and Ctrl, the default window position, and the renderer
+names the `renderer` setting accepts.
+
+```{r interface-constants}
+cat(SCENE_NOT_FOUND_MESSAGE, NO_SCENE_MESSAGE, INVALID_NUMBER_MESSAGE, sep = "\n")
+cat(CHOOSE_NUMBER_MESSAGE)
+EPILOG
+str(CONTEXT_SETTINGS)
+c(SHIFT_VALUE = SHIFT_VALUE, CTRL_VALUE = CTRL_VALUE, START_X = START_X, START_Y = START_Y)
+unlist(RendererType)
+```
+
+### Upstream style module access
+
+Python code often writes `rate_functions.ease_in_sine` or `color.BLUE_C`.
+The lists `rate_functions` and `color` give the same access, which helps
+when porting a scene line by line. Everything inside them is also exported
+directly.
+
+```{r modules}
+rate_functions$smooth(0.25)
+identical(rate_functions$smooth, smooth_rate)
+color$BLUE_C
+color$X11$BEIGE
+```
+
+## Vectors and space operations
+
+### Lengths, products and centers
+
+```{r vectors}
+v <- c(3, 4, 0)
+get_norm(v)
+normalize(v)
+normalize(ORIGIN, fall_back = RIGHT) # a zero vector has no direction
+cross(RIGHT, UP)
+cross2d(RIGHT, UP)                   # the z component of the cross product
+get_unit_normal(RIGHT, UR)
+midpoint(LEFT, UP)
+center_of_mass(rbind(LEFT, RIGHT, 3 * UP))
+```
+
+`cross2d()` also works row by row on matrices, which is handy when many
+segments are tested at once:
+
+```{r cross2d-rows}
+cross2d(rbind(RIGHT, UP, UR), rbind(UP, RIGHT, UR))
+```
+
+### Angles and rotations
+
+`angle_of_vector()` gives the angle of a vector in the plane, measured
+counterclockwise from `RIGHT`; `angle_between_vectors()` gives the
+unsigned angle between two vectors in space.
+
+```{r angles-of-vectors}
+angle_of_vector(UP) / DEGREES
+angle_of_vector(DL) / DEGREES
+angle_between_vectors(RIGHT, UR) / DEGREES
+```
+
+`rotation_matrix(angle, axis)` returns the 3 x 3 matrix of a rotation about
+`axis` (by the right hand rule), `rotation_about_z()` is the special case of
+the z axis, and `rotate_vector()` applies such a rotation to a vector.
+`z_to_vector()` returns the rotation that takes the z axis to a given
+direction, which is how 3D mobjects are oriented.
+
+```{r rotations}
+zapsmall(rotation_matrix(PI / 2, OUT))
+zapsmall(rotation_about_z(PI / 2))
+zapsmall(rotate_vector(RIGHT, PI / 2))
+zapsmall(rotate_vector(RIGHT, PI / 2, axis = UP)) # around the y axis
+zapsmall(z_to_vector(RIGHT))
+zapsmall(z_to_vector(RIGHT) %*% OUT)
+```
+
+`compass_directions(n)` spreads `n` unit vectors evenly around the circle,
+and `regular_vertices(n)` returns the vertices of a regular polygon with
+the angle it started from.
+
+```{r compass}
+zapsmall(compass_directions(4))
+rv <- regular_vertices(5, radius = 2)
+zapsmall(rv$vertices)
+rv$start_angle / DEGREES
+```
+
+A picture puts these together: a fan of vectors made with
+`rotate_vector()`, a pentagon from `regular_vertices()` and the eight
+`compass_directions()`.
+
+```{r rotation-picture}
+v <- c(2, 0.6, 0)
+fan <- VGroup(lapply(0:5, function(k) {
+  Arrow(ORIGIN, rotate_vector(v, k * TAU / 12), buff = 0, color = interpolate_color(BLUE, YELLOW, k / 5))
+}))
+pent <- regular_vertices(5, radius = 1.6)$vertices
+pentagon <- VGroup(Polygon(pent, color = GREEN), # a matrix of vertices works too
+                   VGroup(lapply(1:5, function(i) Dot(pent[i, ], color = YELLOW))))
+comp <- compass_directions(8, start_vect = RIGHT)
+compass <- VGroup(lapply(1:8, function(i) Arrow(ORIGIN, 1.5 * comp[i, ], buff = 0, color = RED)))
+plot(VGroup(fan, pentagon, compass)$arrange(RIGHT, buff = 1))
+```
+
+### Complex numbers
+
+The plane doubles as the complex plane: `complex_to_R3()` turns `x + yi`
+into `c(x, y, 0)` and `R3_to_complex()` goes back.
+`complex_func_to_R3_func()` wraps a function of a complex number into a
+function of a point, which is what `apply_function()` expects.
+
+```{r complex}
+complex_to_R3(1 + 2i)
+R3_to_complex(c(3, -1, 0))
+square_it <- complex_func_to_R3_func(function(z) z^2)
+square_it(c(1, 1, 0)) # (1 + i)^2 = 2i
+```
+
+Here a grid of lines is bent by `z^2 / 2`. Each line gets extra curves
+first (`insert_n_curves()`) so the bent copy stays smooth.
+
+```{r complex-picture}
+make_grid <- function() {
+  g <- VGroup()
+  for (k in seq(-1.5, 1.5, by = 0.5)) {
+    g$add(Line(c(-1.5, k, 0), c(1.5, k, 0), color = BLUE, stroke_width = 2))
+    g$add(Line(c(k, -1.5, 0), c(k, 1.5, 0), color = YELLOW, stroke_width = 2))
+  }
+  for (line in g$submobjects) line$insert_n_curves(20)
+  g
+}
+half_square <- complex_func_to_R3_func(function(z) z^2 / 2)
+before <- make_grid()
+after <- make_grid()$apply_function(half_square)
+plot(VGroup(before, after)$arrange(RIGHT, buff = 1.5))
+```
+
+### Intersections and bisectors
+
+`line_intersection()` intersects two lines in the plane, each given by two
+points. `find_intersection()` takes a point and a direction for each line
+instead, and handles many pairs at once when given matrices.
+`perpendicular_bisector()` returns the two end points of the perpendicular
+bisector of a segment.
+
+```{r intersections}
+l1 <- rbind(c(-3, -1, 0), c(1, 2, 0))
+l2 <- rbind(c(-3, 2, 0), c(0, -1.5, 0))
+p <- line_intersection(l1, l2)
+p
+find_intersection(c(0, 0, 0), c(1, 1, 0), c(2, 0, 0), c(-1, 1, 0))
+find_intersection(rbind(ORIGIN, ORIGIN), rbind(RIGHT, UR),
+                  rbind(c(2, 1, 0), c(0, 3, 0)), rbind(DOWN, RIGHT)) # one pair per row
+seg <- rbind(c(1.5, -1, 0), c(4, 1, 0))
+pb <- perpendicular_bisector(seg)
+pb
+```
+
+```{r intersections-picture}
+plot(VGroup(
+  Line(l1[1, ], l1[2, ], color = BLUE),
+  Line(l2[1, ], l2[2, ], color = GREEN),
+  Dot(p, color = YELLOW, radius = 0.12),
+  Line(seg[1, ], seg[2, ], color = RED),
+  Dot(seg[1, ], color = RED), Dot(seg[2, ], color = RED),
+  DashedLine(pb[1, ], pb[2, ], color = WHITE),
+  Dot(midpoint(seg[1, ], seg[2, ]), color = WHITE)
+))
+```
+
+### Polygons: area, orientation and winding
+
+`shoelace()` computes the signed area of a polygon (positive when its
+vertices run clockwise) and `shoelace_direction()` turns the sign into
+`"CW"` or `"CCW"`. `get_winding_number()` counts how many times a closed
+path winds counterclockwise around the origin.
+
+```{r polygons}
+unit_square <- rbind(c(0, 0), c(1, 0), c(1, 1), c(0, 1))
+shoelace(unit_square)
+shoelace_direction(unit_square)
+shoelace_direction(unit_square[4:1, ])
+get_winding_number(Circle()$points)
+get_winding_number(Circle()$shift(3 * RIGHT)$points) # origin outside
+```
+
+### Spherical coordinates
+
+`cartesian_to_spherical()` returns `c(r, theta, phi)`: the distance from the
+origin, the angle around the z axis, and the angle down from the z axis.
+`spherical_to_cartesian()` goes back.
+
+```{r spherical}
+s <- cartesian_to_spherical(c(1, 1, 1))
+s
+spherical_to_cartesian(s)
+zapsmall(spherical_to_cartesian(c(2, 0, PI / 2)))
+```
+
+### Banded matrices
+
+`thick_diagonal()` returns a 0/1 matrix with a band of ones around the
+diagonal.
+
+```{r thick-diagonal}
+thick_diagonal(5, thickness = 2)
+```
+
+## Quaternions
+
+Quaternions are numeric vectors `c(w, x, y, z)`. They describe 3D rotations
+(upstream's OpenGL camera stores its orientation as one). `quaternion_from_angle_axis()` builds the
+rotation quaternion, `quaternion_mult()` multiplies any number of
+quaternions from left to right, `quaternion_conjugate()` negates the vector
+part, and `angle_axis_from_quaternion()` recovers the angle and axis.
+Rotating a vector `v` by `q` is the product `q * v * conj(q)`, with `v` as a
+quaternion whose real part is zero:
+
+```{r quaternions}
+q <- quaternion_from_angle_axis(PI / 2, OUT)
+q
+zapsmall(quaternion_mult(q, c(0, RIGHT), quaternion_conjugate(q))) # RIGHT turns to UP
+quaternion_mult() # the identity
+str(angle_axis_from_quaternion(q))
+```
+
+## Interpolation and simple functions
+
+`interpolate(start, end, alpha)` blends linearly and works on numbers,
+points and whole matrices of points. `inverse_interpolate()` answers the
+reverse question, `match_interpolate()` maps a value from one range to
+another, and `mid()` is the midpoint.
+
+```{r interpolate}
+interpolate(0, 10, 0.3)
+interpolate(LEFT, UP, 0.5)
+inverse_interpolate(0, 10, 3)
+match_interpolate(0, 100, 0, 10, 3) # 3 on [0, 10] is 30 on [0, 100]
+mid(2, 4)
+```
+
+`integer_interpolate()` splits a progress value into an index and the
+fraction left over; `DrawBorderThenFill()`, for example, uses it to split
+its progress into an outline stage and a fill stage. The index is 0 based, as upstream's: add 1
+before using it to index an R vector.
+
+```{r integer-interpolate}
+str(integer_interpolate(0, 10, 0.46))
+str(integer_interpolate(0, 10, 1))
+```
+
+`sigmoid()` is the logistic function, `binary_search()` inverts a monotone
+function numerically (returning `NULL` when the target is out of reach),
+and `clip_value()` clamps a number to a range. It is called `clip_value()`
+because an exported `clip()` would mask `graphics::clip()`; upstream's
+`choose()` is simply `base::choose()`.
+
+```{r simple-functions}
+sigmoid(c(-4, 0, 4))
+binary_search(function(x) x^2 + 3 * x + 1, target = 11, lower_bound = 0, upper_bound = 5)
+binary_search(function(x) x^2 + 3 * x + 1, target = 71, lower_bound = 0, upper_bound = 5)
+clip_value(5, 0, 3)
+clip_value(-1, 0, 3)
+choose(5, 2)
+```
+
+## Bezier curves
+
+Every VMobject is a chain of cubic Bezier curves, stored four control
+points per curve (anchor, handle, handle, anchor). The helpers below work
+on such control points, given as a matrix with one point per row.
+
+### Evaluating a curve
+
+`bezier(points)` returns a function of `t` in `[0, 1]`; give it a vector of
+`t` values to get a matrix of points.
+
+```{r bezier}
+cubic <- rbind(c(-3, -1, 0), c(-2, 2, 0), c(1, -2, 0), c(3, 1, 0))
+curve <- bezier(cubic)
+curve(0.5)
+curve(c(0, 0.25, 1))
+```
+
+### Cutting curves into pieces
+
+`partial_bezier_points(points, a, b)` returns the control points of the
+part of the curve between `t = a` and `t = b`. `split_bezier()` cuts at one
+`t` and stacks both halves; `subdivide_bezier()` cuts into `n` equal
+parameter pieces; `bezier_remap()` subdivides a path of several curves until
+it has a requested number of curves, which is how two paths are made
+compatible before a `Transform`.
+
+```{r bezier-pieces}
+partial_bezier_points(cubic, 0.25, 0.75)
+nrow(split_bezier(cubic, 0.5))
+nrow(subdivide_bezier(cubic, 3))
+nrow(bezier_remap(Square()$points, 7)) / 4 # a square's 4 curves become 7
+```
+
+The picture shows the control polygon (dashed), the whole curve (blue), the
+part from `t = 0.25` to `t = 0.75` (yellow) and the points where
+`subdivide_bezier()` cuts it in three (red).
+
+```{r bezier-picture}
+whole <- VMobject(color = BLUE, stroke_width = 4)
+whole$set_points(cubic)
+middle <- VMobject(color = YELLOW, stroke_width = 10)
+middle$set_points(partial_bezier_points(cubic, 0.25, 0.75))
+pieces <- subdivide_bezier(cubic, 3)
+cuts <- VGroup(lapply(c(4, 8), function(i) Dot(pieces[i, ], color = RED, radius = 0.1)))
+control <- VGroup(
+  DashedLine(cubic[1, ], cubic[2, ], color = GREY_B), DashedLine(cubic[2, ], cubic[3, ], color = GREY_B),
+  DashedLine(cubic[3, ], cubic[4, ], color = GREY_B),
+  VGroup(lapply(1:4, function(i) Dot(cubic[i, ], color = WHITE)))
+)
+plot(VGroup(control, whole, middle, cuts))
+```
+
+### Finding a point on a curve
+
+`proportions_along_bezier_curve_for_point()` solves for the parameters at
+which the curve passes through a point, and `point_lies_on_bezier()` says
+whether there is any.
+
+```{r point-on-bezier}
+p <- curve(0.3)
+proportions_along_bezier_curve_for_point(p, cubic)
+point_lies_on_bezier(p, cubic)
+point_lies_on_bezier(c(0, 0, 0), cubic)
+```
+
+### Smooth splines
+
+`get_smooth_cubic_bezier_handle_points()` computes handles that join a list
+of anchors into a smooth spline (this is what `set_points_smoothly()` and
+`make_smooth()` use). It returns the first and second handle of each
+curve.
+
+```{r smooth-handles}
+anchors <- rbind(c(-4, -1, 0), c(-2, 1.5, 0), c(0, -1, 0), c(2, 1, 0), c(4, -1.5, 0))
+h <- get_smooth_cubic_bezier_handle_points(anchors)
+h
+```
+
+Interleaving anchors and handles gives the points of a VMobject:
+
+```{r smooth-picture}
+n <- nrow(anchors) - 1
+pts <- do.call(rbind, lapply(seq_len(n), function(i) {
+  rbind(anchors[i, ], h$h1[i, ], h$h2[i, ], anchors[i + 1, ])
+}))
+spline <- VMobject(color = YELLOW, stroke_width = 6)
+spline$set_points(pts)
+handles <- VGroup(lapply(seq_len(n), function(i) {
+  VGroup(Line(anchors[i, ], h$h1[i, ], color = GREY_B, stroke_width = 2),
+         Line(h$h2[i, ], anchors[i + 1, ], color = GREY_B, stroke_width = 2),
+         Dot(h$h1[i, ], color = GREY_B, radius = 0.05), Dot(h$h2[i, ], color = GREY_B, radius = 0.05))
+}))
+plot(VGroup(handles, spline, VGroup(lapply(1:5, function(i) Dot(anchors[i, ], color = RED)))))
+```
+
+`is_closed()` tells whether a spline ends where it starts, which decides
+whether the smoothing also wraps around the start point. It reproduces
+upstream's test exactly, including a quirk: the tolerance uses the signed
+first coordinate, so a spline starting at a negative coordinate never
+counts as closed.
+
+```{r is-closed}
+is_closed(rbind(c(0, 0, 0), c(1, 2, 0), c(0, 0, 0)))
+is_closed(rbind(c(1, 1, 0), c(1, 2, 0), c(1.5, 1, 0)))
+is_closed(rbind(c(-1, 0, 0), c(1, 2, 0), c(-1, 0, 0))) # the quirk
+```
+
+## Triangulation and the pole of inaccessibility
+
+### Ear clipping
+
+`earclip_triangulation(verts, ring_ends)` cuts a polygon, possibly with
+holes, into triangles. `verts` lists the vertices of every ring one after
+the other, and `ring_ends` gives the cumulative vertex count at the end of
+each ring. The result holds row indices of `verts`, three per triangle.
+
+```{r earclip}
+outer <- rbind(c(-3, -2, 0), c(3, -2, 0), c(3, 2, 0), c(-3, 2, 0))
+hole <- rbind(c(-1, -1, 0), c(-1, 1, 0), c(1, 1, 0), c(1, -1, 0))
+verts <- rbind(outer, hole)
+tri <- matrix(earclip_triangulation(verts, ring_ends = c(4, 8)), ncol = 3, byrow = TRUE)
+tri
+```
+
+```{r earclip-picture}
+tri_cols <- color_gradient(c(BLUE, TEAL, GREEN, YELLOW), nrow(tri))
+triangles <- VGroup(lapply(seq_len(nrow(tri)), function(k) {
+  Polygon(verts[tri[k, ], ], color = WHITE, stroke_width = 2, fill_color = tri_cols[k], fill_opacity = 0.8)
+}))
+plot(triangles)
+```
+
+### Polylabel
+
+`polylabel()` finds the point inside a polygon that is farthest from its
+edges, the pole of inaccessibility, which is the best spot for a label.
+It returns the point `c` and its distance `d` to the nearest edge.
+`LabeledPolygram()` uses it to place its label.
+
+```{r polylabel}
+L_shape <- rbind(c(-3, -2), c(3, -2), c(3, -0.5), c(-1, -0.5), c(-1, 2), c(-3, 2), c(-3, -2))
+pole <- polylabel(list(L_shape))
+pole
+```
+
+```{r polylabel-picture}
+shape <- Polygon(cbind(L_shape[-7, ], 0), color = BLUE, fill_opacity = 0.3)
+center <- c(pole$c, 0)
+plot(VGroup(shape, Circle(radius = pole$d, color = YELLOW)$move_to(center), Dot(center, color = YELLOW)))
+```
+
+## Rate functions
+
+A rate function maps the progress of an animation, a number `t` from 0 to
+1, to how far along the animation should be. The default for most
+animations is `smooth_rate()` (upstream's `smooth`, renamed so it does not
+mask `stats::smooth()`). Pass any rate function as `rate_func`:
+
+```{r rate-func-usage, eval = FALSE}
+self$play(sq$animate$shift(RIGHT), rate_func = there_and_back)
+self$play(Create(circle, rate_func = ease_out_bounce))
+self$play(dot$animate(rate_func = linear)$shift(UP))
+```
+
+Rate functions take a single number. To evaluate one on many values, use
+`vapply()` (or `sapply()`):
+
+```{r rate-func-values}
+t <- c(0, 0.25, 0.5, 0.75, 1)
+vapply(t, smooth_rate, numeric(1))
+vapply(t, there_and_back, numeric(1))
+round(vapply(t, ease_out_back, numeric(1)), 3)
+```
+
+### Every rate function
+
+The grid below plots all of them. The dotted lines mark 0 and 1; curves
+that leave that band overshoot (the `back` and `elastic` families) or pull
+back first (`running_start`).
+
+```{r rate-grid, fig.height = 11}
+rf <- rate_functions[setdiff(names(rate_functions),
+                             c("unit_interval", "zero", "not_quite_there", "squish_rate_func"))]
+names(rf)[names(rf) == "smooth"] <- "smooth_rate"
+rf[["not_quite_there()"]] <- not_quite_there()
+rf[["squish_rate_func(smooth_rate)"]] <- squish_rate_func(smooth_rate)
+t <- seq(0, 1, length.out = 201)
+op <- par(mfrow = c(8, 6), mar = c(1.2, 1.4, 1.6, 0.4), mgp = c(2, 0.35, 0), tcl = -0.2,
+          cex.main = 0.68, cex.axis = 0.6, font.main = 1)
+for (nm in names(rf)) {
+  y <- vapply(t, rf[[nm]], numeric(1))
+  plot(t, y, type = "l", lwd = 2, col = "#236B8E", main = nm, xlab = "", ylab = "",
+       ylim = range(0, 1, y))
+  abline(h = c(0, 1), col = "grey70", lty = 3)
+}
+par(op)
+```
+
+For reference, the families are:
+
+* Basic: `linear`, `smooth_rate`, `smoothstep`, `smootherstep`,
+  `smoothererstep`, `double_smooth`, `rush_into`, `rush_from`, `slow_into`,
+  `lingering`, `exponential_decay`.
+* Back and forth: `there_and_back`, `there_and_back_with_pause`, `wiggle`,
+  `running_start`.
+* Factories that build a rate function from another one:
+  `not_quite_there(func, proportion)` stops at `proportion` of the way and
+  `squish_rate_func(func, a, b)` runs `func` only between `a` and `b`.
+* Easing curves, each in three versions: `ease_in_` starts slowly,
+  `ease_out_` ends slowly and `ease_in_out_` does both.
+
+| curve | ease in | ease out | ease in and out |
+|:--|:--|:--|:--|
+| sine | `ease_in_sine` | `ease_out_sine` | `ease_in_out_sine` |
+| quad | `ease_in_quad` | `ease_out_quad` | `ease_in_out_quad` |
+| cubic | `ease_in_cubic` | `ease_out_cubic` | `ease_in_out_cubic` |
+| quart | `ease_in_quart` | `ease_out_quart` | `ease_in_out_quart` |
+| quint | `ease_in_quint` | `ease_out_quint` | `ease_in_out_quint` |
+| expo | `ease_in_expo` | `ease_out_expo` | `ease_in_out_expo` |
+| circ | `ease_in_circ` | `ease_out_circ` | `ease_in_out_circ` |
+| back | `ease_in_back` | `ease_out_back` | `ease_in_out_back` |
+| elastic | `ease_in_elastic` | `ease_out_elastic` | `ease_in_out_elastic` |
+| bounce | `ease_in_bounce` | `ease_out_bounce` | `ease_in_out_bounce` |
+
+### Shape parameters
+
+Some rate functions take an extra argument after `t`: `inflection` for
+`smooth_rate()`, `rush_into()`, `rush_from()` and `there_and_back()`;
+`pause_ratio` for `there_and_back_with_pause()`; `pull_factor` for
+`running_start()`; `wiggles` for `wiggle()`; and `half_life` for
+`exponential_decay()`. Fix them with a small wrapper:
+
+```{r rate-params}
+smooth_rate(0.3)
+smooth_rate(0.3, inflection = 4)
+gentle <- function(t) smooth_rate(t, inflection = 4)
+wiggle(0.3, wiggles = 4)
+```
+
+### Writing your own
+
+Any R function of one number works as a rate function. It should usually
+return 0 at `t = 0` and 1 at `t = 1`, so the animation starts and ends where
+expected. `unit_interval()` clamps a function to 0 before the start and 1
+after the end, and `zero()` makes it 0 outside `[0, 1]`; these are upstream's
+decorators.
+
+```{r own-rate}
+three_steps <- function(t) (floor(3 * t) + smooth_rate((3 * t) %% 1)) / 3
+power_rate <- function(p) function(t) t^p # a factory, like not_quite_there()
+cubed <- power_rate(3)
+clamped <- unit_interval(function(t) t^2)
+c(three_steps(0.5), cubed(0.5), clamped(1.5), zero(function(t) t^2)(1.5))
+```
+
+Plotted a little beyond `[0, 1]`, only the clamped version stays at 0 and
+1 outside the unit interval. Animations only ever evaluate `t` inside it,
+so clamping matters when you call a rate function yourself.
+
+```{r own-rate-plot, fig.height = 2.6}
+op <- par(mfrow = c(1, 3), mar = c(2, 2, 2, 0.5), mgp = c(2, 0.4, 0), tcl = -0.2, cex.main = 0.9)
+fs <- list(three_steps = three_steps, `power_rate(3)` = cubed, `unit_interval(t^2)` = clamped)
+for (nm in names(fs)) {
+  x <- seq(-0.2, 1.2, length.out = 281)
+  plot(x, vapply(x, fs[[nm]], numeric(1)), type = "l", lwd = 2, col = "#236B8E", main = nm, xlab = "", ylab = "")
+  abline(v = c(0, 1), col = "grey70", lty = 3)
+}
+par(op)
+```
+
+The race below moves five dots the same distance in the same time with
+different rate functions. `there_and_back` returns to its start, so its dot
+ends where it began.
+
+```{manim rate-race}
+RateRace <- R6::R6Class("RateRace", inherit = Scene,
+  public = list(construct = function() {
+    funcs <- list(linear = linear, smooth_rate = smooth_rate, there_and_back = there_and_back,
+                  ease_out_bounce = ease_out_bounce, three_steps = three_steps)
+    cols <- c(BLUE, GREEN, YELLOW, ORANGE, RED)
+    dots <- list()
+    for (i in seq_along(funcs)) {
+      y <- 2.4 - (i - 1) * 1.2
+      label <- Text(names(funcs)[i], font_size = 26, color = cols[i])$move_to(c(-4.6, y, 0))
+      track <- Line(c(-2.5, y, 0), c(5.5, y, 0), color = GREY_D, stroke_width = 2)
+      dots[[i]] <- Dot(c(-2.5, y, 0), radius = 0.15, color = cols[i])
+      self$add(label, track, dots[[i]])
+    }
+    self$play(lapply(seq_along(funcs), function(i) {
+      dots[[i]]$animate(rate_func = funcs[[i]])$shift(8 * RIGHT)
+    }), run_time = 2)
+    self$wait(0.3)
+  })
+)
+```
+
+## Path functions
+
+During a `Transform`, every point travels from where it is to where it is
+going. A path function decides the route: it takes the start points, the
+end points and the progress `alpha`, and returns the points at that
+moment. Each `*_path()` constructor returns such a function.
+
+```{r path-functions}
+straight_path()
+start <- rbind(LEFT)
+end <- rbind(RIGHT)
+zapsmall(straight_path()(start, end, 0.5))
+zapsmall(path_along_arc(PI)(start, end, 0.5))
+zapsmall(clockwise_path()(start, end, 0.5))
+zapsmall(counterclockwise_path()(start, end, 0.5))
+zapsmall(spiral_path(PI)(start, end, 0.5))
+zapsmall(path_along_circles(PI, circles_centers = ORIGIN)(start, end, 0.5))
+```
+
+* `straight_path()` moves in a straight line (the default).
+* `path_along_arc(arc_angle, axis)` swings along a circular arc of
+  `arc_angle` radians; positive angles turn counterclockwise.
+  `clockwise_path()` and `counterclockwise_path()` are half turns.
+* `path_along_circles(arc_angle, circles_centers, axis)` turns every
+  point about a center you choose while it also slides toward its target.
+  When the target is not exactly the start turned about that center, the
+  shape deforms on the way: in the scene below, the dot shrinks to a point
+  halfway, because each of its points meets the opposite one.
+* `spiral_path(angle, axis)` moves toward the target while rotating, so
+  points spiral in.
+
+Pass a path function to an animation as `path_func`. `Transform()` also
+takes `path_arc`, a shortcut for `path_along_arc()` (and `path_arc_axis`,
+`path_arc_centers`); `ClockwiseTransform()` and
+`CounterclockwiseTransform()` use half turns.
+
+Because a path function is an ordinary R function, you can sample it to
+draw the route a point will take. The scene below does that for six
+choices, drawing each route in gray, then runs the six transforms at once.
+
+```{manim path-compare}
+route <- function(path, a, b) {
+  pts <- t(vapply(seq(0, 1, length.out = 60), function(al) as.numeric(path(rbind(a), rbind(b), al)), numeric(3)))
+  VMobject(color = GREY_C, stroke_width = 3)$set_points_as_corners(pts)
+}
+PathCompare <- R6::R6Class("PathCompare", inherit = Scene,
+  public = list(construct = function() {
+    panels <- list(
+      list(label = "straight_path()", center = c(-4.6, 1.2, 0), args = list(path_func = straight_path())),
+      list(label = "clockwise_path()", center = c(0, 1.2, 0), args = list(path_func = clockwise_path())),
+      list(label = "counterclockwise_path()", center = c(4.6, 1.2, 0),
+           args = list(path_func = counterclockwise_path())),
+      list(label = "path_arc = PI / 2", center = c(-4.6, -2.3, 0), args = list(path_arc = PI / 2)),
+      list(label = "spiral_path(PI)", center = c(0, -2.3, 0), args = list(path_func = spiral_path(PI))),
+      list(label = "path_along_circles()", center = c(4.6, -2.3, 0),
+           args = list(path_func = path_along_circles(PI, c(4.6, -1.8, 0))))
+    )
+    cols <- c(BLUE, GREEN, YELLOW, ORANGE, RED, PURPLE)
+    anims <- list()
+    for (i in seq_along(panels)) {
+      pnl <- panels[[i]]
+      a <- pnl$center + LEFT
+      b <- pnl$center + RIGHT
+      path <- pnl$args$path_func %||% path_along_arc(pnl$args$path_arc)
+      dot <- Dot(a, color = cols[i], radius = 0.12)
+      title <- Text(pnl$label, font_size = 22)$move_to(pnl$center + c(0, if (i <= 3) 1.6 else 1, 0))
+      self$add(title, route(path, a, b), Circle(radius = 0.12, color = GREY_B)$move_to(b), dot)
+      anims[[i]] <- do.call(Transform, c(list(dot, dot$copy()$move_to(b)), pnl$args))
+    }
+    self$play(anims, run_time = 2)
+    self$wait(0.3)
+  })
+)
+```
+
+## List and dictionary helpers
+
+These are ports of `manim.utils.iterables` and `manim.utils.config_ops`.
+They work on R vectors and lists; atomic input gives atomic output.
+
+```{r list-helpers}
+adjacent_pairs(1:4)            # cyclic: the last pair wraps around
+adjacent_n_tuples(1:5, 3)[1:2]
+concatenate_lists(1:2, 3:4, 5)
+list_difference_update(1:5, c(2, 4))
+list_update(c(1, 2, 3, 4), c(2, 5)) # 2 moves to the end
+remove_list_redundancies(c(1, 2, 1, 3, 2, 4)) # keeps the last copy
+str(remove_nones(list(1, NULL, 0, "", "a", FALSE)))
+stretch_array_to_length(1:3, 7)
+str(make_even(1:3, 4:8))
+str(make_even_by_cycling(1:2, 1:5))
+```
+
+`listify()` and `tuplify()` turn a value into a list (R has no tuples, so
+both return lists); given a mobject they return its submobjects.
+`all_elements_are_instances()` checks classes, accepting a class name or
+an R6 generator.
+
+```{r listify}
+str(listify("a"))
+str(tuplify(1:2))
+length(listify(VGroup(Circle(), Square())))
+all_elements_are_instances(list(Circle(), Square()), "VMobject")
+all_elements_are_instances(list(Circle(), Square()), CircleClass)
+```
+
+The dictionary helpers merge nested named lists.
+`update_dict_recursively()` updates an environment in place (as upstream
+updates a dict) but returns a new list when given a list, so assign the
+result. `DictAsObject()` turns a named list into an environment you can read
+with `$`.
+
+```{r dict-helpers}
+defaults <- list(color = "white", stroke = list(width = 4, opacity = 1))
+str(merge_dicts_recursively(defaults, list(stroke = list(width = 8))))
+settings <- update_dict_recursively(defaults, list(color = "red"))
+settings$color
+obj <- DictAsObject(list(x = 1, y = "two"))
+obj$y
+```
+
+## File and path helpers
+
+Ports of `manim.utils.file_ops`, and the image and sound lookups. These
+examples only touch the session's temporary directory.
+
+```{r path-helpers}
+add_extension_if_not_present("scene", ".png")
+add_extension_if_not_present("scene.png", ".png")
+work <- guarantee_existence(file.path(tempdir(), "manimR-utilities"))
+dir.exists(work)
+fresh <- guarantee_empty_existence(file.path(work, "frames")) # deletes, then recreates
+length(list.files(fresh))
+```
+
+`seek_full_path_from_defaults()` finds a file by name in a directory,
+trying each extension in turn. `get_full_raster_image_path()` and
+`get_full_sound_file_path()` do the same for images (`.jpg`, `.jpeg`,
+`.png`, `.gif`, `.ico`) and sounds (`.wav`, `.mp3`) in the `assets_dir`
+setting; `color_using_background_image()`, for example, looks up an image
+given by name this way.
+
+```{r seek-files}
+png::writePNG(array(0.5, c(4, 4, 3)), file.path(work, "logo.png"))
+basename(seek_full_path_from_defaults("logo", work, c(".jpg", ".png")))
+with_manim_config(list(assets_dir = work), basename(get_full_raster_image_path("logo")))
+writeLines("", file.path(work, "click.wav")) # a stand in for a real sound file
+basename(get_full_sound_file_path("click", assets_dir = work))
+```
+
+`modify_atime()` sets a file's access time to now (the renderer does this
+when it reuses a cached partial movie), `ensure_executable()` says whether a program can be run,
+and `open_file()` opens a file with the system viewer:
+
+```{r file-misc}
+modify_atime(file.path(work, "logo.png"))
+unname(ensure_executable("ffmpeg"))
+ensure_executable("surely-not-a-program")
+```
+
+```{r open-file, eval = FALSE}
+open_file("media/videos/scene/480p15/MyScene.mp4")
+open_file("media/videos", in_browser = TRUE) # show the folder instead
+```
+
+## Command helpers
+
+`capture()` runs a program (the first element of a character vector, then
+its arguments) and returns its output, error output and exit code.
+`get_dir_layout()` lists every file below a directory.
+
+```{r capture}
+res <- capture(c(file.path(R.home("bin"), "Rscript"), "-e", "cat(6 * 7)"))
+str(res)
+get_dir_layout(work)
+```
+
+`get_video_metadata()` reads the size, frame count, duration, frame rate
+and codec of a video with ffprobe. Here `capture()` asks ffmpeg for a one
+second test video first:
+
+```{r video-metadata, eval = has_ffmpeg}
+video <- file.path(work, "test.mp4")
+out <- capture(c("ffmpeg", "-y", "-v", "error", "-f", "lavfi",
+                 "-i", "testsrc=duration=1:size=320x240:rate=15", "-pix_fmt", "yuv420p", video))
+out$returncode
+str(get_video_metadata(video))
+```
+
+## Checking mobject methods
+
+`assert_is_mobject_method()` checks that a function is a method of a
+mobject, such as `sq$shift`. Use it in your own functions that take a
+method as an argument, to fail early with a clear message.
+
+```{r assert-method}
+sq <- Square()
+invisible(assert_is_mobject_method(sq$shift)) # fine
+tryCatch(assert_is_mobject_method(mean), error = conditionMessage)
+```
+
+## Plugins
+
+Upstream finds plugins through Python entry points. A manimR plugin is an
+ordinary installed R package whose `DESCRIPTION` contains the line
+
+```
+Config/manimR/plugin: true
+```
+
+`list_plugins()` prints the plugins found and `get_plugins()` loads them and
+returns their namespaces, named by package, so a scene can call
+`get_plugins()$myplugin$MyMobject()`.
+
+```{r plugins}
+list_plugins()
+names(get_plugins())
+```
+
+With no plugin installed both are empty. A plugin package simply exports
+mobjects, animations or scenes built on manimR's classes, for example an
+`R6::R6Class(inherit = manimR::VMobjectClass)` generator and a constructor
+function.
