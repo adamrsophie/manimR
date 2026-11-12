@@ -1,0 +1,24 @@
+Name: Render scene at cursor
+Description: Render the manimR scene defined at or above the cursor and play it in the Viewer.
+Binding: addin_render_scene
+Interactive: false
+
+Name: Render all scenes in file
+Description: Render every manimR scene defined in the active file.
+Binding: addin_render_all
+Interactive: false
+
+Name: Preview last frame
+Description: Render only the final frame of the scene at the cursor, for a quick look.
+Binding: addin_last_frame
+Interactive: false
+
+Name: Insert scene template
+Description: Insert a manimR scene template at the cursor.
+Binding: addin_insert_template
+Interactive: false
+
+Name: Render with options
+Description: Choose scene, quality, format and transparency in a dialog, then render.
+Binding: manim_gadget
+Interactive: true

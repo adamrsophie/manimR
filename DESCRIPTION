@@ -1,0 +1,48 @@
+Package: manimR
+Title: Mathematical Animation Engine, a Native R Port of 'Manim'
+Version: 0.1.0
+Authors@R: c(
+    person("Adam R", "Sophie", , "adamrsophie@gmail.com", role = c("aut", "cre")))
+Description: Create precise programmatic animations for explanatory math videos,
+    in the style of 'Manim Community' <https://www.manim.community/>, written in
+    pure R. Scenes are built from vectorized mobjects made of cubic Bezier curves,
+    animated with transforms, creations, fades, and updaters, and rendered to
+    video, GIF, or PNG through 'ffmpeg'. Includes text rendered from system fonts,
+    LaTeX via 'dvisvgm', SVG import, graphing tools, a 3D camera, and 'RStudio'
+    addins. The design and algorithms follow the Python 'manim' library by the
+    Manim Community developers, whose work is gratefully acknowledged.
+License: GPL (>= 3)
+Copyright: See the file inst/COPYRIGHTS for the copyright holders of
+    Manim Community, NetworkX and earcut.hpp, whose code this package ports.
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE, r6 = FALSE)
+Depends:
+    R (>= 4.4.0)
+Imports:
+    R6,
+    grid,
+    grDevices,
+    ragg,
+    systemfonts (>= 1.2.0),
+    textshaping,
+    xml2,
+    png,
+    digest,
+    utils,
+    stats
+Suggests:
+    testthat (>= 3.0.0),
+    rstudioapi,
+    shiny,
+    miniUI,
+    knitr,
+    rmarkdown,
+    jsonlite,
+    polyclip
+SystemRequirements: ffmpeg (for video output), LaTeX and dvisvgm (for Tex and
+    MathTex), typst (for Typst and MathTypst)
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+URL: https://github.com/adamrsophie/manimR
+BugReports: https://github.com/adamrsophie/manimR/issues
+Config/roxygen2/version: 8.1.1

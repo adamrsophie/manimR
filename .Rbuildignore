@@ -1,0 +1,6 @@
+^data-raw$
+^documentation$
+^media$
+^CLAUDE\.local\.md$
+^\.Rproj\.user$
+^LICENSE$

@@ -1,0 +1,9 @@
+documentation/
+media/
+.Rproj.user/
+.Rhistory
+.RData
+*.Rcheck/
+manimR_*.tar.gz
+.DS_Store
+CLAUDE.local.md

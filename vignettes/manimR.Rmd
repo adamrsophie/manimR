@@ -1,0 +1,70 @@
+---
+title: "Getting started with manimR"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started with manimR}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 3.94)
+library(manimR)
+```
+
+manimR ports [Manim Community](https://www.manim.community/) to R. This
+vignette shows the main ideas: mobjects, scenes, animations and rendering.
+
+## Mobjects
+
+A mobject is anything that can be drawn. Constructors mirror Manim, and every
+method that changes a mobject returns it, so calls chain with `$`:
+
+```{r mobjects}
+circle <- Circle(radius = 1.5, color = BLUE)$set_fill(BLUE, opacity = 0.3)
+square <- Square(side_length = 2, color = YELLOW)$next_to(circle, RIGHT, buff = 0.5)
+label <- Text("shapes", font_size = 36)$next_to(VGroup(circle, square), DOWN)
+plot(VGroup(circle, square, label))
+```
+
+Points live in `mob$points`, an n x 3 matrix of cubic Bezier control points
+(four rows per curve), exactly as in Manim.
+
+## Scenes and animations
+
+A scene is an R6 class that inherits from `Scene` and defines `construct()`.
+Inside, `self$play()` runs animations and `self$wait()` pauses.
+
+```{r scene, eval = FALSE}
+Pythagoras <- R6::R6Class("Pythagoras", inherit = Scene,
+  public = list(construct = function() {
+    eq <- MathTex("a^2", "+", "b^2", "=", "c^2")
+    self$play(Write(eq))
+    self$play(eq[5]$animate$set_color(YELLOW))
+    tracker <- ValueTracker(0)
+    number <- DecimalNumber(0)$next_to(eq, DOWN)
+    number$add_updater(function(m) m$set_value(tracker$get_value()))
+    self$add(number)
+    self$play(tracker$animate$set_value(25), run_time = 2)
+    self$wait()
+  })
+)
+render(Pythagoras, quality = "l", preview = TRUE)
+```
+
+The `$animate` builder turns any sequence of method calls into an animation,
+and updaters (`add_updater()`) run every frame.
+
+## Rendering
+
+`render()` writes `media/videos/<module>/<quality>/<Scene>.mp4`. Use
+`quality = "l"` while drafting and `"h"` or `"k"` for final output.
+`format = "gif"` produces an animated GIF and `save_last_frame = TRUE` also
+writes the final frame as a PNG. `render_file()` renders scenes defined in a
+script, and the RStudio addins do the same for the active editor.
+
+## Checking against Manim
+
+The test suite compares manimR's geometry, alignment, transforms, rate
+functions and LaTeX output with values dumped from Python manim, so scenes
+look the same in both.
