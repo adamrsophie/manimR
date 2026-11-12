@@ -9,6 +9,16 @@ and `inherits(x, "OpenGLCircle")` is `TRUE`. Code written for the OpenGL
 renderer runs unchanged; the GPU pipeline itself (shaders, the OpenGL
 camera and window) is not part of manimR.
 
+## Usage
+
+``` r
+get_mobject_class()
+
+get_vectorized_mobject_class()
+
+get_point_mobject_class()
+```
+
 ## Arguments
 
 - uv_surface:
