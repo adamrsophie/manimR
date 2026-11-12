@@ -94,6 +94,29 @@ follows the OpenGL class:
   `n_components` quadratic pieces (8 by default), as upstream, stored as
   cubic curves.
 
+- `add_tip(at_start, ...)` of OpenGL lines and arcs adds an
+  `OpenGLArrowTip()` made from the `tip_config` of the line and the
+  arguments given (white unless they say otherwise).
+  `OpenGLCurvedArrow()` and `OpenGLCurvedDoubleArrow()` are
+  `OpenGLArcBetweenPoints` with such tips, not
+  [`CurvedArrow()`](https://adamrsophie.github.io/manimR/reference/geometry.md)s.
+
+- `OpenGLDashedVMobject(vmobject, num_dashes, dashed_ratio, color)`
+  spaces its dashes by the curve's parameter rather than by arc length.
+
+- `OpenGLSurface(uv_func, u_range, v_range, resolution, axes, color, colorscale, colorscale_axis, opacity, gloss, shadow, ...)`
+  takes upstream's arguments: `resolution` counts grid points, one more
+  than the faces along `u` and `v`, and the surface is one `color`
+  (grey) without outlines, and `colorscale` with `axes` colors it by
+  value along `colorscale_axis` (0 for x, as upstream). The default
+  `resolution` is 33 points (32 faces, as
+  [`Surface()`](https://adamrsophie.github.io/manimR/reference/three_dimensions.md))
+  rather than upstream's 101: manimR draws each face with grid, not on a
+  GPU.
+
+- `OpenGLImageMobject(filename_or_array, width, height, ...)` is 4 units
+  high unless `width` or `height` is given.
+
 Three classes have no Cairo counterpart:
 
 - `OpenGLSurfaceGroup(...)` is a surface without faces of its own that
@@ -119,7 +142,7 @@ c1 <- OpenGLCircle(radius = 2)
 inherits(c1, "Circle")
 #> [1] TRUE
 s <- OpenGLSurface(function(u, v) c(u, v, u * v), u_range = c(-1, 1), v_range = c(-1, 1),
-                   resolution = 8)
+                   resolution = 9)
 mesh <- OpenGLSurfaceMesh(s, resolution = c(5, 5))
 length(mesh$submobjects)
 #> [1] 10

@@ -73,10 +73,15 @@
   [`OpenGLArrow()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
   is a filled shape,
   [`OpenGLLine()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
-  applies `buff` twice, arcs are made of quadratic pieces, and
+  applies `buff` twice, arcs are made of quadratic pieces, `add_tip()`
+  adds an
+  [`OpenGLArrowTip()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md),
+  [`OpenGLSurface()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
+  counts `resolution` in grid points, and
   [`OpenGLArc()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md),
   [`OpenGLCircle()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md),
-  [`OpenGLRectangle()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
+  [`OpenGLRectangle()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md),
+  [`OpenGLImageMobject()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
   and others take upstream’s arguments in upstream’s order.
 - Images are drawn through the homography of their corners with Pillow’s
   nearest, bilinear and bicubic filters, and an image seen edge on is

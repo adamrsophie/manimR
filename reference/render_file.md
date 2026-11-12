@@ -52,7 +52,7 @@ writeLines(c(
 # The last frame as a PNG file in the session's temporary directory.
 render_file(file, "SquareToCircle", quality = "l", format = "png", media_dir = tempdir())
 #> Rendering SquareToCircle ...
-#> INFO File ready at '/tmp/RtmpbmPeSr/images/file23fe2413467d/SquareToCircle_manimR_v0.1.0.png'
+#> INFO File ready at '/tmp/RtmpLrovjv/images/file23f62e1f8eae/SquareToCircle_manimR_v0.1.0.png'
 #> INFO Rendered SquareToCircle
 #> Played 1 animations
 if (FALSE) { # \dontrun{

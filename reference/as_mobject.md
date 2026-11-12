@@ -58,6 +58,7 @@ scene units.
 ## Examples
 
 ``` r
+# R's svg() device needs the Cairo library (on macOS, XQuartz).
 # \donttest{
 p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) + ggplot2::geom_point()
 chart <- as_mobject(p)

@@ -159,6 +159,22 @@ upstream's arguments in upstream's order.</p></li>
 <li><p>Arcs, circles, dots, ellipses, sectors and annuli are made of
 <code>n_components</code> quadratic pieces (8 by default), as upstream, stored as
 cubic curves.</p></li>
+<li><p><code>add_tip(at_start, ...)</code> of OpenGL lines and arcs adds an
+<code>OpenGLArrowTip()</code> made from the <code>tip_config</code> of the line and the
+arguments given (white unless they say otherwise).
+<code>OpenGLCurvedArrow()</code> and <code>OpenGLCurvedDoubleArrow()</code> are
+<code>OpenGLArcBetweenPoints</code> with such tips, not <code><a href="geometry.html">CurvedArrow()</a></code>s.</p></li>
+<li><p><code>OpenGLDashedVMobject(vmobject, num_dashes, dashed_ratio, color)</code> spaces
+its dashes by the curve's parameter rather than by arc length.</p></li>
+<li><p><code>OpenGLSurface(uv_func, u_range, v_range, resolution, axes, color, colorscale, colorscale_axis, opacity, gloss, shadow, ...)</code> takes
+upstream's arguments: <code>resolution</code> counts grid points, one more than
+the faces along <code>u</code> and <code>v</code>, and the surface is one <code>color</code>
+(grey) without outlines, and <code>colorscale</code> with <code>axes</code> colors it by value
+along <code>colorscale_axis</code> (0 for x, as upstream). The default
+<code>resolution</code> is 33 points (32 faces, as <code><a href="three_dimensions.html">Surface()</a></code>) rather than
+upstream's 101: manimR draws each face with grid, not on a GPU.</p></li>
+<li><p><code>OpenGLImageMobject(filename_or_array, width, height, ...)</code> is 4 units
+high unless <code>width</code> or <code>height</code> is given.</p></li>
 </ul><p>Three classes have no Cairo counterpart:</p><ul><li><p><code>OpenGLSurfaceGroup(...)</code> is a surface without faces of its own that
 holds the surfaces it is given.</p></li>
 <li><p><code>OpenGLSurfaceMesh(uv_surface)</code> is a <code><a href="VGroupClass.html">VGroup()</a></code> of curves along the
@@ -179,7 +195,7 @@ it in <code>dark_image</code> but draws the light image on both sides.</p></li>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">inherits</a></span><span class="op">(</span><span class="va">c1</span>, <span class="st">"Circle"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] TRUE</span>
 <span class="r-in"><span><span class="va">s</span> <span class="op">&lt;-</span> <span class="fu">OpenGLSurface</span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="va">u</span>, <span class="va">v</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">u</span>, <span class="va">v</span>, <span class="va">u</span> <span class="op">*</span> <span class="va">v</span><span class="op">)</span>, u_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span>, v_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>                   resolution <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span></span>
+<span class="r-in"><span>                   resolution <span class="op">=</span> <span class="fl">9</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">mesh</span> <span class="op">&lt;-</span> <span class="fu">OpenGLSurfaceMesh</span><span class="op">(</span><span class="va">s</span>, resolution <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">5</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">mesh</span><span class="op">$</span><span class="va">submobjects</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 10</span>
