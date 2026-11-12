@@ -21,8 +21,8 @@ the lines to \code{A} and \code{C}.
 through \code{point} parallel or perpendicular to \code{line}.
 \item \code{ChangeSpeedClass$add_updater(mobject, update_function, index, call_updater)}: an updater that follows speed changes (the same as
 \code{\link[=change_speed_add_updater]{change_speed_add_updater()}}).
-\item \code{MobjectClass$set_default(...)} and \code{AnimationClass$set_default(...)}:
-\code{\link[=set_default]{set_default()}} for those base classes.
+\item \code{MobjectClass$set_default(...)}, \code{OpenGLMobjectClass$set_default(...)} and
+\code{AnimationClass$set_default(...)}: \code{\link[=set_default]{set_default()}} for those base classes.
 \item \code{MobjectClass$add_animation_override(animation_class, override_func, mobject_class = MobjectClass)}: registers an override, as
 \code{\link[=override_animation]{override_animation()}} does, and errors if the class already has one.
 \item \code{TextClass$font_list()} and \code{MarkupTextClass$font_list()}: the font

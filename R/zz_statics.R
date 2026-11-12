@@ -16,8 +16,8 @@
 #' * `ChangeSpeedClass$add_updater(mobject, update_function, index,
 #'   call_updater)`: an updater that follows speed changes (the same as
 #'   [change_speed_add_updater()]).
-#' * `MobjectClass$set_default(...)` and `AnimationClass$set_default(...)`:
-#'   [set_default()] for those base classes.
+#' * `MobjectClass$set_default(...)`, `OpenGLMobjectClass$set_default(...)` and
+#'   `AnimationClass$set_default(...)`: [set_default()] for those base classes.
 #' * `MobjectClass$add_animation_override(animation_class, override_func,
 #'   mobject_class = MobjectClass)`: registers an override, as
 #'   [override_animation()] does, and errors if the class already has one.
@@ -78,6 +78,7 @@ ChangeSpeedClass$add_updater <- function(mobject, update_function, index = NULL,
 }
 
 MobjectClass$set_default <- function(...) set_default(MobjectClass, ...)
+OpenGLMobjectClass$set_default <- function(...) set_default(OpenGLMobjectClass, ...)
 AnimationClass$set_default <- function(...) set_default(AnimationClass, ...)
 
 MobjectClass$add_animation_override <- function(animation_class, override_func, mobject_class = MobjectClass) {

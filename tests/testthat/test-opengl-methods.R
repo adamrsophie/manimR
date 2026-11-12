@@ -199,6 +199,15 @@ test_that("OpenGL classes have upstream's own methods", {
   expect_equal(p$shader_folder, "true_dot")
 })
 
+test_that("set_default works on a class that inherits its initializer", {
+  OpenGLMobjectClass$set_default(name = "held")
+  on.exit(OpenGLMobjectClass$set_default(), add = TRUE)
+  expect_equal(OpenGLMobject()$name, "held")
+  expect_equal(OpenGLMobject(name = "own")$name, "own")
+  OpenGLMobjectClass$set_default()
+  expect_false(identical(OpenGLMobject()$name, "held"))
+})
+
 test_that("the Cairo background stroke and upstream's stroke behind the fill stay apart", {
   sq <- Square()
   sq$set_stroke(RED, 7, background = TRUE)

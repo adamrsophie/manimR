@@ -21,22 +21,29 @@ set_default <- function(cls, ...) {
   if (is.null(.manim$default_backup)) .manim$default_backup <- new.env(parent = emptyenv())
   key <- gen$classname
   if (is.null(.manim$default_backup[[key]])) {
-    assign(key, list(formals = formals(gen$public_methods$initialize), new = gen$new), envir = .manim$default_backup)
+    # A class that inherits its initializer (the OpenGL classes) gets its
+    # defaults through `new` alone.
+    init0 <- gen$public_methods$initialize
+    assign(key, list(formals = if (is.function(init0)) formals(init0), new = gen$new), envir = .manim$default_backup)
   }
   backup <- .manim$default_backup[[key]]
   new <- list(...)
   init <- gen$public_methods$initialize
   if (length(new) == 0) {
-    formals(init) <- backup$formals
-    gen$public_methods$initialize <- init
+    if (is.function(init)) {
+      formals(init) <- backup$formals
+      gen$public_methods$initialize <- init
+    }
     gen$new <- backup$new
     return(invisible(gen))
   }
   f <- backup$formals
   direct <- intersect(names(new), names(f))
-  for (nm in direct) f[nm] <- list(new[[nm]])
-  formals(init) <- f
-  gen$public_methods$initialize <- init
+  if (is.function(init)) {
+    for (nm in direct) f[nm] <- list(new[[nm]])
+    formals(init) <- f
+    gen$public_methods$initialize <- init
+  }
   # Arguments that reach the initializer through `...` (for example run_time
   # of an animation) are injected when the object is created.
   extra <- new[setdiff(names(new), direct)]
