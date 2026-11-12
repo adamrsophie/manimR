@@ -103,22 +103,29 @@ and on to the camera, for example <code>should_apply_shading = FALSE</code>.
     </div>
 
 
+    <div class="section level2">
+    <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
+    <p>R6 class generators. A scene class inherits from one of them, and
+<code>$new()</code> creates a scene.</p>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span><span class="va">Spin</span> <span class="op">&lt;-</span> <span class="fu">R6</span><span class="fu">::</span><span class="kw"><a href="https://r6.r-lib.org/reference/R6Class.html" class="external-link">R6Class</a></span><span class="op">(</span><span class="st">"Spin"</span>, inherit <span class="op">=</span> <span class="va">ThreeDScene</span>, public <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">Spin</span> <span class="op">&lt;-</span> <span class="fu">R6</span><span class="fu">::</span><span class="kw"><a href="https://r6.r-lib.org/reference/R6Class.html" class="external-link">R6Class</a></span><span class="op">(</span><span class="st">"Spin"</span>, inherit <span class="op">=</span> <span class="va">ThreeDScene</span>, public <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  construct <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span>    <span class="va">self</span><span class="op">$</span><span class="fu">set_camera_orientation</span><span class="op">(</span>phi <span class="op">=</span> <span class="fl">75</span> <span class="op">*</span> <span class="va">DEGREES</span>, theta <span class="op">=</span> <span class="fl">30</span> <span class="op">*</span> <span class="va">DEGREES</span><span class="op">)</span></span></span>
 <span class="r-in"><span>    <span class="va">self</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span><span class="fu"><a href="three_dimensions.html">Sphere</a></span><span class="op">(</span>radius <span class="op">=</span> <span class="fl">1.5</span><span class="op">)</span><span class="op">$</span><span class="fu">shift</span><span class="op">(</span><span class="va">LEFT</span> <span class="op">*</span> <span class="fl">2</span><span class="op">)</span>, <span class="fu"><a href="three_dimensions.html">Cube</a></span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">shift</span><span class="op">(</span><span class="va">RIGHT</span> <span class="op">*</span> <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span>    <span class="va">self</span><span class="op">$</span><span class="fu">begin_ambient_camera_rotation</span><span class="op">(</span>rate <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span></span></span>
 <span class="r-in"><span>    <span class="va">self</span><span class="op">$</span><span class="fu">wait</span><span class="op">(</span><span class="fl">2</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="op">}</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
+<span class="r-in"><span><span class="co"># A video in the folder media of the working directory; this needs ffmpeg.</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="render.html">render</a></span><span class="op">(</span><span class="va">Spin</span>, quality <span class="op">=</span> <span class="st">"l"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 </code></pre></div>
     </div>
-  </main></div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">

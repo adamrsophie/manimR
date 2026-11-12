@@ -7,7 +7,9 @@ edges in $graph, a Graph(): graph[i] (or graph$vertices[[i]]) is
 vertex i, a Dot3D(). Moving a vertex moves the faces with it
 (through an updater).
 Tetrahedron(), Octahedron(), Icosahedron() and Dodecahedron() are
-the platonic solids; ConvexHull3D() is the convex hull of points."><meta property="og:description" content="Polyhedron(vertex_coords, faces_list) builds a polyhedron
+the platonic solids; ConvexHull3D() is the convex hull of points, with
+triangular faces (as upstream's QuickHull: a flat face through more
+than three points is made of several triangles)."><meta property="og:description" content="Polyhedron(vertex_coords, faces_list) builds a polyhedron
 from vertex coordinates (a matrix or list of points) and faces given as
 vectors of 1 based vertex indices, like the OFF file format. The faces
 are in $faces (a VGroup() of Polygon()s) and the vertices and
@@ -15,7 +17,9 @@ edges in $graph, a Graph(): graph[i] (or graph$vertices[[i]]) is
 vertex i, a Dot3D(). Moving a vertex moves the faces with it
 (through an updater).
 Tetrahedron(), Octahedron(), Icosahedron() and Dodecahedron() are
-the platonic solids; ConvexHull3D() is the convex hull of points."><meta property="og:image" content="https://adamrsophie.github.io/manimR/logo.svg"></head><body>
+the platonic solids; ConvexHull3D() is the convex hull of points, with
+triangular faces (as upstream's QuickHull: a flat face through more
+than three points is made of several triangles)."><meta property="og:image" content="https://adamrsophie.github.io/manimR/logo.svg"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -84,7 +88,9 @@ edges in <code>$graph</code>, a <code><a href="GenericGraphClass.html">Graph()</
 vertex <code>i</code>, a <code><a href="three_dimensions.html">Dot3D()</a></code>. Moving a vertex moves the faces with it
 (through an updater).</p>
 <p><code>Tetrahedron()</code>, <code>Octahedron()</code>, <code>Icosahedron()</code> and <code>Dodecahedron()</code> are
-the platonic solids; <code>ConvexHull3D()</code> is the convex hull of points.</p>
+the platonic solids; <code>ConvexHull3D()</code> is the convex hull of points, with
+triangular faces (as upstream's QuickHull: a flat face through more
+than three points is made of several triangles).</p>
     </div>
 
     <div class="section level2">
@@ -140,9 +146,16 @@ default is <code>fill_opacity = 0.5, shade_in_3d = TRUE</code>.</p></dd>
 
 
 <dt id="arg-tolerance">tolerance<a class="anchor" aria-label="anchor" href="#arg-tolerance"></a></dt>
-<dd><p>Coplanarity tolerance of the hull.</p></dd>
+<dd><p>A point closer than this to a face of the hull is not
+one of its vertices.</p></dd>
 
 </dl></div>
+    <div class="section level2">
+    <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
+    <p>A mobject: an R6 object of the class named by the function called.
+The objects whose names end in <code>Class</code> are the R6 class generators that
+these functions call.</p>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>

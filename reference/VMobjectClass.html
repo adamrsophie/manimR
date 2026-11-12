@@ -72,7 +72,6 @@ handle, handle, anchor).</p>
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">VMobject</span><span class="op">(</span></span>
-<span>  color <span class="op">=</span> <span class="st">"#FFFFFF"</span>,</span>
 <span>  fill_color <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  fill_opacity <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  stroke_color <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -82,12 +81,17 @@ handle, handle, anchor).</p>
 <span>  background_stroke_opacity <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  background_stroke_width <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  sheen_factor <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  sheen_direction <span class="op">=</span> <span class="va">UL</span>,</span>
 <span>  joint_type <span class="op">=</span> <span class="st">"auto"</span>,</span>
-<span>  cap_style <span class="op">=</span> <span class="st">"auto"</span>,</span>
+<span>  sheen_direction <span class="op">=</span> <span class="va">UL</span>,</span>
 <span>  close_new_points <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  pre_function_handle_to_anchor_scale_factor <span class="op">=</span> <span class="fl">0.01</span>,</span>
 <span>  make_smooth_after_applying_functions <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  background_image <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  shade_in_3d <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  tolerance_for_point_equality <span class="op">=</span> <span class="fl">1e-06</span>,</span>
+<span>  n_points_per_cubic_curve <span class="op">=</span> <span class="fl">4</span>,</span>
+<span>  cap_style <span class="op">=</span> <span class="st">"auto"</span>,</span>
+<span>  color <span class="op">=</span> <span class="st">"#FFFFFF"</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -96,11 +100,7 @@ handle, handle, anchor).</p>
     <h2 id="arguments">Arguments<a class="anchor" aria-label="anchor" href="#arguments"></a></h2>
 
 
-<dl><dt id="arg-color">color<a class="anchor" aria-label="anchor" href="#arg-color"></a></dt>
-<dd><p>Color used for fill and stroke when they are not given.</p></dd>
-
-
-<dt id="arg-fill-color-fill-opacity">fill_color, fill_opacity<a class="anchor" aria-label="anchor" href="#arg-fill-color-fill-opacity"></a></dt>
+<dl><dt id="arg-fill-color-fill-opacity">fill_color, fill_opacity<a class="anchor" aria-label="anchor" href="#arg-fill-color-fill-opacity"></a></dt>
 <dd><p>Fill color and opacity.</p></dd>
 
 
@@ -123,13 +123,13 @@ gradient across the fill.</p></dd>
 <code>"bevel"</code> or <code>"miter"</code>.</p></dd>
 
 
-<dt id="arg-cap-style">cap_style<a class="anchor" aria-label="anchor" href="#arg-cap-style"></a></dt>
-<dd><p>Shape of the stroke ends: <code>"auto"</code>, <code>"round"</code>, <code>"butt"</code>
-or <code>"square"</code>.</p></dd>
-
-
 <dt id="arg-close-new-points">close_new_points<a class="anchor" aria-label="anchor" href="#arg-close-new-points"></a></dt>
 <dd><p>Close the path when new points are added.</p></dd>
+
+
+<dt id="arg-pre-function-handle-to-anchor-scale-factor">pre_function_handle_to_anchor_scale_factor<a class="anchor" aria-label="anchor" href="#arg-pre-function-handle-to-anchor-scale-factor"></a></dt>
+<dd><p>How far the handles are
+pulled toward their anchors before <code>apply_function()</code>.</p></dd>
 
 
 <dt id="arg-make-smooth-after-applying-functions">make_smooth_after_applying_functions<a class="anchor" aria-label="anchor" href="#arg-make-smooth-after-applying-functions"></a></dt>
@@ -137,14 +137,43 @@ or <code>"square"</code>.</p></dd>
 <code>apply_function()</code>.</p></dd>
 
 
+<dt id="arg-background-image">background_image<a class="anchor" aria-label="anchor" href="#arg-background-image"></a></dt>
+<dd><p>An image whose colors fill the mobject (see
+<code>$color_using_background_image()</code>).</p></dd>
+
+
 <dt id="arg-shade-in-d">shade_in_3d<a class="anchor" aria-label="anchor" href="#arg-shade-in-d"></a></dt>
 <dd><p>Shade the mobject by its orientation in a 3D scene.</p></dd>
+
+
+<dt id="arg-tolerance-for-point-equality">tolerance_for_point_equality<a class="anchor" aria-label="anchor" href="#arg-tolerance-for-point-equality"></a></dt>
+<dd><p>Distance below which two points count
+as the same.</p></dd>
+
+
+<dt id="arg-n-points-per-cubic-curve">n_points_per_cubic_curve<a class="anchor" aria-label="anchor" href="#arg-n-points-per-cubic-curve"></a></dt>
+<dd><p>Points per Bezier curve, 4.</p></dd>
+
+
+<dt id="arg-cap-style">cap_style<a class="anchor" aria-label="anchor" href="#arg-cap-style"></a></dt>
+<dd><p>Shape of the stroke ends: <code>"auto"</code>, <code>"round"</code>, <code>"butt"</code>
+or <code>"square"</code>.</p></dd>
+
+
+<dt id="arg-color">color<a class="anchor" aria-label="anchor" href="#arg-color"></a></dt>
+<dd><p>Color used for fill and stroke when they are not given.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Passed to <a href="MobjectClass.html">MobjectClass</a>, for example <code>z_index</code> or <code>name</code>.</p></dd>
 
 </dl></div>
+    <div class="section level2">
+    <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
+    <p>A mobject: an R6 object of the class named by the function called.
+The objects whose names end in <code>Class</code> are the R6 class generators that
+these functions call.</p>
+    </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>

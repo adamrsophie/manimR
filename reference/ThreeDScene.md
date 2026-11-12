@@ -22,10 +22,14 @@ to the camera, for example `should_apply_shading = FALSE`.
 `sphere_config`, `default_angled_camera_position` and
 `low_quality_config` (used when rendering at low quality).
 
+## Value
+
+R6 class generators. A scene class inherits from one of them, and
+`$new()` creates a scene.
+
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
 Spin <- R6::R6Class("Spin", inherit = ThreeDScene, public = list(
   construct = function() {
     self$set_camera_orientation(phi = 75 * DEGREES, theta = 30 * DEGREES)
@@ -33,6 +37,8 @@ Spin <- R6::R6Class("Spin", inherit = ThreeDScene, public = list(
     self$begin_ambient_camera_rotation(rate = 0.5)
     self$wait(2)
   }))
+if (FALSE) { # \dontrun{
+# A video in the folder media of the working directory; this needs ffmpeg.
 render(Spin, quality = "l")
 } # }
 ```

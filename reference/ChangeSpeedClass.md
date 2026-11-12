@@ -53,10 +53,15 @@ ChangeSpeed(
   Passed to
   [`Animation()`](https://adamrsophie.github.io/manimR/reference/AnimationClass.md).
 
+## Value
+
+An animation: an R6 object of the class named by the function called, to
+pass to a scene's `play()`. The objects whose names end in `Class` are
+the R6 class generators that these functions call.
+
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
 SpeedModifierExample <- manim_scene(function(self) {
   a <- Dot()$shift(LEFT * 4)
   b <- Dot()$shift(RIGHT * 4)
@@ -67,5 +72,4 @@ SpeedModifierExample <- manim_scene(function(self) {
     speedinfo = c("0.3" = 1, "0.4" = 0.1, "0.6" = 0.1, "1" = 1),
     rate_func = linear))
 })
-} # }
 ```

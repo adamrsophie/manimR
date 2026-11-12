@@ -20,6 +20,11 @@ color
 
 Named lists of functions and values.
 
+## Value
+
+Named lists: `rate_functions` of the rate functions, and `color` of the
+colors, the palettes and the color functions.
+
 ## Details
 
 Upstream's third module, `unit`, is not provided as an object, since

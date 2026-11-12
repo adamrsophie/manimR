@@ -11,6 +11,11 @@ creates an object of `MathTableClass`, so `inherits(x, "MathTable")` is
 [`set_default()`](https://adamrsophie.github.io/manimR/reference/set_default.md)
 changes the defaults of that class alone.
 
+## Value
+
+R6 class generators. `FooClass$new()` takes the arguments of the
+constructor `Foo()` and returns the same object.
+
 ## Examples
 
 ``` r

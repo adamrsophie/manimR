@@ -160,3 +160,9 @@ Blink(
 - time_on, time_off, blinks, hide_at_end:
 
   Blink settings.
+
+## Value
+
+An animation: an R6 object of the class named by the function called, to
+pass to a scene's `play()`. The objects whose names end in `Class` are
+the R6 class generators that these functions call.

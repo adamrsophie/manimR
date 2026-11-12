@@ -35,6 +35,12 @@ mid(start, end)
 
   Ranges for `match_interpolate()`.
 
+## Value
+
+A number, or a numeric vector or matrix when the arguments are.
+`integer_interpolate()` returns a list with the integer `index` and the
+`residue`.
+
 ## Details
 
 `integer_interpolate()` returns `list(index, residue)`: the integer part

@@ -20,6 +20,10 @@ manim_cli(args = commandArgs(trailingOnly = TRUE))
   Character vector of arguments; defaults to the trailing command line
   arguments.
 
+## Value
+
+The result of the subcommand, invisibly.
+
 ## Details
 
 It takes upstream's options: `-c`/`--config_file`, `--disable_caching`,

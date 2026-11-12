@@ -75,3 +75,9 @@ MoveAlongPath(mobject, path, suspend_mobject_updating = FALSE, ...)
 - path:
 
   A VMobject path to move along.
+
+## Value
+
+An animation: an R6 object of the class named by the function called, to
+pass to a scene's `play()`. The objects whose names end in `Class` are
+the R6 class generators that these functions call.

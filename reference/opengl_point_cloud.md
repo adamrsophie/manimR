@@ -45,6 +45,12 @@ TrueDot(center = ORIGIN, stroke_width = 2, ...)
 
   Rings and dots per frame unit.
 
+## Value
+
+A mobject: an R6 object of the class named by the function called. The
+objects whose names end in `Class` are the R6 class generators that
+these functions call.
+
 ## Details
 
 - `OpenGLPMobject()` is an empty cloud; add points with `$add_points()`.

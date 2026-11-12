@@ -74,6 +74,7 @@ Annulus(
   fill_opacity = 1,
   stroke_width = 0,
   color = "#FFFFFF",
+  mark_paths_closed = FALSE,
   ...
 )
 
@@ -313,6 +314,10 @@ StealthTip(
 
   Radii.
 
+- mark_paths_closed, close_new_points:
+
+  Treat the outline as a closed path.
+
 - start_anchor, start_handle, end_handle, end_anchor:
 
   Bezier control points.
@@ -398,10 +403,6 @@ StealthTip(
   Spacing of optional grid lines drawn inside the rectangle; `NULL`
   draws none.
 
-- mark_paths_closed, close_new_points:
-
-  Treat the outline as a closed path.
-
 - side_length:
 
   Side length of the square.
@@ -416,8 +417,8 @@ StealthTip(
 
 - tolerance:
 
-  Tolerance for nearly collinear points; accepted for compatibility with
-  Manim.
+  For `ConvexHull()`: a point closer than this to an edge of the hull is
+  not one of its vertices.
 
 - mobject:
 

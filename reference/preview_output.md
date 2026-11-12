@@ -14,3 +14,7 @@ preview_output(path)
 - path:
 
   Path to a rendered file.
+
+## Value
+
+`path`, invisibly.

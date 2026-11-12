@@ -49,6 +49,12 @@ random_bright_color()
   Amount to blend toward white (`lighter_color`) or black
   (`darker_color`).
 
+## Value
+
+A color: a hex string, of class `ManimColor` where the function computes
+it from other colors. `color_gradient()` returns a character vector of
+`length_of_output` colors.
+
 ## Examples
 
 ``` r

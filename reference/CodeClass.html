@@ -182,14 +182,19 @@ option such as <code>weight</code> or <code>slant</code>. <code>color</code> is 
 from the style. <code>alignment</code>, <code>width</code> and <code>height</code> are ignored.</p></dd>
 
 </dl></div>
+    <div class="section level2">
+    <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
+    <p>A mobject: an R6 object of the class named by the function called.
+The objects whose names end in <code>Class</code> are the R6 class generators that
+these functions call.</p>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span><span class="va">code</span> <span class="op">&lt;-</span> <span class="st">"f &lt;- function(x) {\n  # square it\n  x^2 + 1\n}"</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">code</span> <span class="op">&lt;-</span> <span class="st">"f &lt;- function(x) {\n  # square it\n  x^2 + 1\n}"</span></span></span>
 <span class="r-in"><span><span class="fu">Code</span><span class="op">(</span>code_string <span class="op">=</span> <span class="va">code</span>, language <span class="op">=</span> <span class="st">"r"</span>, background <span class="op">=</span> <span class="st">"window"</span>,</span></span>
 <span class="r-in"><span>     background_config <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>stroke_color <span class="op">=</span> <span class="st">"maroon"</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;Code&gt; 0 points, 3 submobjects</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

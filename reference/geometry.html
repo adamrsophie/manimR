@@ -139,6 +139,7 @@ Arguments mirror Manim; unlisted arguments in <code>...</code> are passed on to
 <span>  fill_opacity <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  stroke_width <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  color <span class="op">=</span> <span class="st">"#FFFFFF"</span>,</span>
+<span>  mark_paths_closed <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -379,6 +380,11 @@ fill opacity and stroke opacity of the shape.</p></dd>
 <dd><p>Radii.</p></dd>
 
 
+<dt id="arg-mark-paths-closed-close-new-points">mark_paths_closed, close_new_points<a class="anchor" aria-label="anchor" href="#arg-mark-paths-closed-close-new-points"></a></dt>
+<dd><p>Treat the outline as a closed
+path.</p></dd>
+
+
 <dt id="arg-start-anchor-start-handle-end-handle-end-anchor">start_anchor, start_handle, end_handle, end_anchor<a class="anchor" aria-label="anchor" href="#arg-start-anchor-start-handle-end-handle-end-anchor"></a></dt>
 <dd><p>Bezier control points.</p></dd>
 
@@ -466,11 +472,6 @@ of the radius, and its color.</p></dd>
 the rectangle; <code>NULL</code> draws none.</p></dd>
 
 
-<dt id="arg-mark-paths-closed-close-new-points">mark_paths_closed, close_new_points<a class="anchor" aria-label="anchor" href="#arg-mark-paths-closed-close-new-points"></a></dt>
-<dd><p>Treat the outline as a closed
-path.</p></dd>
-
-
 <dt id="arg-side-length">side_length<a class="anchor" aria-label="anchor" href="#arg-side-length"></a></dt>
 <dd><p>Side length of the square.</p></dd>
 
@@ -484,8 +485,8 @@ path.</p></dd>
 
 
 <dt id="arg-tolerance">tolerance<a class="anchor" aria-label="anchor" href="#arg-tolerance"></a></dt>
-<dd><p>Tolerance for nearly collinear points; accepted for
-compatibility with Manim.</p></dd>
+<dd><p>For <code>ConvexHull()</code>: a point closer than this to an edge
+of the hull is not one of its vertices.</p></dd>
 
 
 <dt id="arg-mobject">mobject<a class="anchor" aria-label="anchor" href="#arg-mobject"></a></dt>

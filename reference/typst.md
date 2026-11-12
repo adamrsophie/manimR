@@ -74,6 +74,12 @@ MathTypst(math_expression, typst_preamble = "", font_paths = NULL, ...)
 
   Typst math without the `$` delimiters; may contain `{{ ... }}` groups.
 
+## Value
+
+A mobject: an R6 object of the class named by the function called. The
+objects whose names end in `Class` are the R6 class generators that
+these functions call.
+
 ## Details
 
 Typst renders in black; black parts take `color` while explicitly
@@ -101,6 +107,7 @@ per unit).
 
 ``` r
 if (FALSE) { # \dontrun{
+# Needs the typst compiler.
 Typst("*Hello* from _Typst!_", font_size = 72)
 eq <- MathTypst("{{ a^2 + b^2 : lhs }} = {{ c^2 }}")
 eq$select("lhs")$set_color(BLUE)

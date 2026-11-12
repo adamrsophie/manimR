@@ -20,6 +20,11 @@ AS2700
 BS381
 ```
 
+## Value
+
+Named lists of colors (hex strings), one entry for each color name of
+the palette.
+
 ## Examples
 
 ``` r

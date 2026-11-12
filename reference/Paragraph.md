@@ -25,6 +25,10 @@ Paragraph(..., line_spacing = -1, alignment = NULL)
 
   `"left"`, `"center"` or `"right"`.
 
+## Value
+
+A `Paragraph`, an R6 mobject.
+
 ## Examples
 
 ``` r

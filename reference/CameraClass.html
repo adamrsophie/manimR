@@ -72,17 +72,21 @@ standard 2D view; <a href="MovingCameraClass.html">MovingCameraClass</a> adds a 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">Camera</span><span class="op">(</span></span>
-<span>  pixel_width <span class="op">=</span> <span class="fu">cfg</span><span class="op">(</span><span class="st">"pixel_width"</span><span class="op">)</span>,</span>
+<span>  background_image <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  frame_center <span class="op">=</span> <span class="va">ORIGIN</span>,</span>
+<span>  image_mode <span class="op">=</span> <span class="st">"RGBA"</span>,</span>
+<span>  n_channels <span class="op">=</span> <span class="fl">4</span>,</span>
+<span>  pixel_array_dtype <span class="op">=</span> <span class="st">"uint8"</span>,</span>
+<span>  cairo_line_width_multiple <span class="op">=</span> <span class="fl">0.01</span>,</span>
+<span>  use_z_index <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  background <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  pixel_height <span class="op">=</span> <span class="fu">cfg</span><span class="op">(</span><span class="st">"pixel_height"</span><span class="op">)</span>,</span>
+<span>  pixel_width <span class="op">=</span> <span class="fu">cfg</span><span class="op">(</span><span class="st">"pixel_width"</span><span class="op">)</span>,</span>
 <span>  frame_height <span class="op">=</span> <span class="fu">cfg</span><span class="op">(</span><span class="st">"frame_height"</span><span class="op">)</span>,</span>
 <span>  frame_width <span class="op">=</span> <span class="fu">cfg</span><span class="op">(</span><span class="st">"frame_width"</span><span class="op">)</span>,</span>
-<span>  frame_center <span class="op">=</span> <span class="va">ORIGIN</span>,</span>
 <span>  frame_rate <span class="op">=</span> <span class="fu">cfg</span><span class="op">(</span><span class="st">"frame_rate"</span><span class="op">)</span>,</span>
 <span>  background_color <span class="op">=</span> <span class="fu">cfg</span><span class="op">(</span><span class="st">"background_color"</span><span class="op">)</span>,</span>
 <span>  background_opacity <span class="op">=</span> <span class="fu">cfg</span><span class="op">(</span><span class="st">"background_opacity"</span><span class="op">)</span>,</span>
-<span>  use_z_index <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  background_image <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  cairo_line_width_multiple <span class="op">=</span> <span class="fl">0.01</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -91,7 +95,36 @@ standard 2D view; <a href="MovingCameraClass.html">MovingCameraClass</a> adds a 
     <h2 id="arguments">Arguments<a class="anchor" aria-label="anchor" href="#arguments"></a></h2>
 
 
-<dl><dt id="arg-pixel-width-pixel-height">pixel_width, pixel_height<a class="anchor" aria-label="anchor" href="#arg-pixel-width-pixel-height"></a></dt>
+<dl><dt id="arg-background-image">background_image<a class="anchor" aria-label="anchor" href="#arg-background-image"></a></dt>
+<dd><p>Path of an image (found with
+<code><a href="path_helpers.html">get_full_raster_image_path()</a></code>) drawn as the background.</p></dd>
+
+
+<dt id="arg-frame-center">frame_center<a class="anchor" aria-label="anchor" href="#arg-frame-center"></a></dt>
+<dd><p>Point at the center of the frame.</p></dd>
+
+
+<dt id="arg-image-mode-n-channels-pixel-array-dtype">image_mode, n_channels, pixel_array_dtype<a class="anchor" aria-label="anchor" href="#arg-image-mode-n-channels-pixel-array-dtype"></a></dt>
+<dd><p>Layout of the pixel array
+(see <code>$get_pixel_array()</code>): <code>"RGBA"</code>, 4 channels and <code>"uint8"</code> values, as
+upstream. <code>pixel_array_dtype</code> sets the largest channel value
+(<code>rgb_max_val</code>).</p></dd>
+
+
+<dt id="arg-cairo-line-width-multiple">cairo_line_width_multiple<a class="anchor" aria-label="anchor" href="#arg-cairo-line-width-multiple"></a></dt>
+<dd><p>Scale of stroke widths, as upstream's.</p></dd>
+
+
+<dt id="arg-use-z-index">use_z_index<a class="anchor" aria-label="anchor" href="#arg-use-z-index"></a></dt>
+<dd><p>Draw mobjects in order of their <code>z_index</code>.</p></dd>
+
+
+<dt id="arg-background">background<a class="anchor" aria-label="anchor" href="#arg-background"></a></dt>
+<dd><p>Accepted as upstream, where the background built from
+<code>background_image</code> or <code>background_color</code> replaces it.</p></dd>
+
+
+<dt id="arg-pixel-width-pixel-height">pixel_width, pixel_height<a class="anchor" aria-label="anchor" href="#arg-pixel-width-pixel-height"></a></dt>
 <dd><p>Size of the frame in pixels.</p></dd>
 
 
@@ -99,10 +132,6 @@ standard 2D view; <a href="MovingCameraClass.html">MovingCameraClass</a> adds a 
 <dd><p>Size of the frame in scene units; as
 upstream, the camera keeps the frame width and derives its height from
 the pixel aspect ratio.</p></dd>
-
-
-<dt id="arg-frame-center">frame_center<a class="anchor" aria-label="anchor" href="#arg-frame-center"></a></dt>
-<dd><p>Point at the center of the frame.</p></dd>
 
 
 <dt id="arg-frame-rate">frame_rate<a class="anchor" aria-label="anchor" href="#arg-frame-rate"></a></dt>
@@ -114,23 +143,14 @@ the pixel aspect ratio.</p></dd>
 background.</p></dd>
 
 
-<dt id="arg-use-z-index">use_z_index<a class="anchor" aria-label="anchor" href="#arg-use-z-index"></a></dt>
-<dd><p>Draw mobjects in order of their <code>z_index</code>.</p></dd>
-
-
-<dt id="arg-background-image">background_image<a class="anchor" aria-label="anchor" href="#arg-background-image"></a></dt>
-<dd><p>Path of an image (found with
-<code><a href="path_helpers.html">get_full_raster_image_path()</a></code>) drawn as the background.</p></dd>
-
-
-<dt id="arg-cairo-line-width-multiple">cairo_line_width_multiple<a class="anchor" aria-label="anchor" href="#arg-cairo-line-width-multiple"></a></dt>
-<dd><p>Scale of stroke widths, as upstream's.</p></dd>
-
-
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Ignored.</p></dd>
 
 </dl></div>
+    <div class="section level2">
+    <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
+    <p>A <code>Camera</code>, an R6 object. <code>CameraClass</code> is its R6 class generator.</p>
+    </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>

@@ -133,6 +133,12 @@ ease_in_out_bounce(t, ...)
 
   Interval to squish the rate function into.
 
+## Value
+
+A rate function returns a number: the progress of an animation at the
+proportion `t` of its run time. The functions that take a rate function
+return a new rate function.
+
 ## Examples
 
 ``` r

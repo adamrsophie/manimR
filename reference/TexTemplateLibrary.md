@@ -156,6 +156,7 @@ tpl <- TexFontTemplates()$french_cursive
 tpl$description
 #> [1] "French Cursive (Euler Greek)"
 if (FALSE) { # \dontrun{
+# Needs LaTeX and dvisvgm.
 MathTex("x^2 + y^2 = 1", tex_template = TexFontTemplates()$latin_modern_tw)
 } # }
 ```

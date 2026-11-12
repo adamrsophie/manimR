@@ -113,6 +113,12 @@ animations, for example <code>path_arc</code> or <code>run_time</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">
+    <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
+    <p>An animation: an R6 object of the class named by the function
+called, to pass to a scene's <code>play()</code>. The objects whose names end in
+<code>Class</code> are the R6 class generators that these functions call.</p>
+    </div>
+    <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>Unless <code>transform_mismatches</code> or <code>fade_transform_mismatches</code> is <code>TRUE</code>,
 unmatched parts of the source fade out toward the unmatched target parts,
@@ -121,8 +127,7 @@ and unmatched target parts fade in from there.</p>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span><span class="va">Anagram</span> <span class="op">&lt;-</span> <span class="fu"><a href="manim_scene.html">manim_scene</a></span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="va">self</span><span class="op">)</span> <span class="op">{</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">Anagram</span> <span class="op">&lt;-</span> <span class="fu"><a href="manim_scene.html">manim_scene</a></span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="va">self</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span>  <span class="va">src</span> <span class="op">&lt;-</span> <span class="fu"><a href="TextClass.html">Text</a></span><span class="op">(</span><span class="st">"the morse code"</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="va">tar</span> <span class="op">&lt;-</span> <span class="fu"><a href="TextClass.html">Text</a></span><span class="op">(</span><span class="st">"here come dots"</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="va">self</span><span class="op">$</span><span class="fu">play</span><span class="op">(</span><span class="fu"><a href="creation.html">Write</a></span><span class="op">(</span><span class="va">src</span><span class="op">)</span><span class="op">)</span></span></span>
@@ -130,7 +135,6 @@ and unmatched target parts fade in from there.</p>
 <span class="r-in"><span>  <span class="va">self</span><span class="op">$</span><span class="fu">play</span><span class="op">(</span><span class="fu">TransformMatchingShapes</span><span class="op">(</span><span class="va">src</span>, <span class="va">tar</span>, path_arc <span class="op">=</span> <span class="va">PI</span> <span class="op">/</span> <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="va">self</span><span class="op">$</span><span class="fu">wait</span><span class="op">(</span><span class="fl">0.5</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

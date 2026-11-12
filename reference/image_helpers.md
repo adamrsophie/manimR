@@ -29,6 +29,12 @@ drag_pixels(frames)
 
   A list of image arrays of equal size.
 
+## Value
+
+`change_to_rgba_array()` returns an array of height by width by 4
+channels, `invert_image()` the image array with its colors inverted, and
+`drag_pixels()` a list of frames.
+
 ## Details
 
 - `change_to_rgba_array(image, dtype)` adds channels so the array is

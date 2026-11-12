@@ -44,3 +44,8 @@ CapStyleType
 ## Format
 
 Character strings, or named lists of character strings.
+
+## Value
+
+Character strings that name font slants and weights. `LineJointType` and
+`CapStyleType` are named lists of stroke styles.

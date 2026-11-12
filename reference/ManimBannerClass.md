@@ -19,10 +19,15 @@ ManimBanner(dark_theme = TRUE)
   Light letters for dark backgrounds (default) or dark letters for light
   ones.
 
+## Value
+
+A mobject: an R6 object of the class named by the function called. The
+objects whose names end in `Class` are the R6 class generators that
+these functions call.
+
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
 DarkThemeBanner <- manim_scene(function(self) {
   banner <- ManimBanner()
   self$play(banner$create())
@@ -30,5 +35,4 @@ DarkThemeBanner <- manim_scene(function(self) {
   self$wait()
   self$play(Unwrite(banner))
 })
-} # }
 ```

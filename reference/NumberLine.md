@@ -157,8 +157,11 @@ returns a vector.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-l <- NumberLine(x_range = c(-5, 5, 1), length = 10, include_numbers = TRUE)
+l <- NumberLine(x_range = c(-5, 5, 1), length = 10)
 l$n2p(2)
+#> [1] 2 0 0
+if (FALSE) { # \dontrun{
+# The numbers are typeset with LaTeX.
+NumberLine(x_range = c(-5, 5, 1), length = 10, include_numbers = TRUE)
 } # }
 ```

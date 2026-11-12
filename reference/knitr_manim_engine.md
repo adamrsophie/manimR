@@ -20,6 +20,11 @@ knitr_manim_engine(options)
 
   knitr chunk options.
 
+## Value
+
+A character string for knitr: the chunk output with the rendered video
+or image embedded.
+
 ## Details
 
     ```{manim, scene = "SquareToCircle", quality = "l"}

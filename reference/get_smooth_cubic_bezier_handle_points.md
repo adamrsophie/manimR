@@ -10,6 +10,10 @@ is smoothed across its start point too.
 
 ``` r
 get_smooth_cubic_bezier_handle_points(anchors)
+
+get_smooth_closed_cubic_bezier_handle_points(anchors)
+
+get_smooth_open_cubic_bezier_handle_points(anchors)
 ```
 
 ## Arguments
@@ -22,6 +26,13 @@ get_smooth_cubic_bezier_handle_points(anchors)
 
 `list(h1, h2)`: two `(n - 1) x 3` matrices with the first and second
 handles of each curve (upstream returns a tuple).
+
+## Details
+
+`get_smooth_closed_cubic_bezier_handle_points()` and
+`get_smooth_open_cubic_bezier_handle_points()` are the two cases it
+chooses between, for at least three anchors: a closed curve (whose last
+anchor repeats the first) and an open one.
 
 ## Examples
 

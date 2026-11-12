@@ -23,6 +23,11 @@ RandomColorGenerator(seed = NULL, sample_colors = NULL)
 
   Colors to choose from.
 
+## Value
+
+A `RandomColorGenerator`, an R6 object. `RandomColorGeneratorClass` is
+its R6 class generator.
+
 ## Examples
 
 ``` r

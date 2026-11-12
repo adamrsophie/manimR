@@ -24,6 +24,12 @@ Y_COLOR
 Z_COLOR
 ```
 
+## Value
+
+`VectorScene` and `LinearTransformationScene` are R6 class generators: a
+scene class inherits from one of them, and `$new()` creates a scene.
+`X_COLOR`, `Y_COLOR` and `Z_COLOR` are colors.
+
 ## Details
 
 `VectorScene$new()` and `LinearTransformationScene$new()` take

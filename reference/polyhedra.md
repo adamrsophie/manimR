@@ -14,7 +14,9 @@ and the vertices and edges in `$graph`, a
 Moving a vertex moves the faces with it (through an updater).
 
 `Tetrahedron()`, `Octahedron()`, `Icosahedron()` and `Dodecahedron()`
-are the platonic solids; `ConvexHull3D()` is the convex hull of points.
+are the platonic solids; `ConvexHull3D()` is the convex hull of points,
+with triangular faces (as upstream's QuickHull: a flat face through more
+than three points is made of several triangles).
 
 ## Usage
 
@@ -73,7 +75,14 @@ ConvexHull3D(..., tolerance = 1e-05)
 
 - tolerance:
 
-  Coplanarity tolerance of the hull.
+  A point closer than this to a face of the hull is not one of its
+  vertices.
+
+## Value
+
+A mobject: an R6 object of the class named by the function called. The
+objects whose names end in `Class` are the R6 class generators that
+these functions call.
 
 ## Examples
 

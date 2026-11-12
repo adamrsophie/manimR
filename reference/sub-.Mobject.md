@@ -41,6 +41,15 @@ x[[i, ...]]
   A mobject to store under key `i` of a
   [VDict](https://adamrsophie.github.io/manimR/reference/VDictClass.md).
 
+## Value
+
+`[` returns a submobject, or a group of them for a vector index. `[[`
+returns a submobject, a field or an entry.
+[`length()`](https://rdrr.io/r/base/length.html) returns the number of
+submobjects, plus one when the mobject has points of its own. The
+assignment forms return the changed mobject; `mob[[i]] <- value` with a
+position does what `mob[i] <- value` does.
+
 ## Details
 
 A character key looks up an entry of a

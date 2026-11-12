@@ -10,12 +10,12 @@ Change the default with `manim_config(tex_template = TexTemplate(...))`.
 ``` r
 TexTemplate(
   tex_compiler = "latex",
+  description = "",
   output_format = ".dvi",
   documentclass = "\\documentclass[preview]{standalone}",
   preamble = DEFAULT_TEX_PREAMBLE,
   placeholder_text = "YourTextHere",
-  post_doc_commands = "",
-  description = ""
+  post_doc_commands = ""
 )
 ```
 
@@ -24,6 +24,10 @@ TexTemplate(
 - tex_compiler:
 
   Compiler, `"latex"` by default (or `"xelatex"`, `"lualatex"`).
+
+- description:
+
+  A description.
 
 - output_format:
 
@@ -45,9 +49,10 @@ TexTemplate(
 
   Commands right after `\begin{document}`.
 
-- description:
+## Value
 
-  A description.
+A `TexTemplate`, an R6 object. `TexTemplateClass` is its R6 class
+generator.
 
 ## Examples
 

@@ -144,6 +144,12 @@ Typst markup; <code>MathTypst()</code> wraps its input in display math
 
 </dl></div>
     <div class="section level2">
+    <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
+    <p>A mobject: an R6 object of the class named by the function called.
+The objects whose names end in <code>Class</code> are the R6 class generators that
+these functions call.</p>
+    </div>
+    <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>Typst renders in black; black parts take <code>color</code> while explicitly
 colored parts keep their color. Stroked parts drawn by Typst (fraction
@@ -167,6 +173,7 @@ per unit).</p>
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
+<span class="r-in"><span><span class="co"># Needs the typst compiler.</span></span></span>
 <span class="r-in"><span><span class="fu">Typst</span><span class="op">(</span><span class="st">"*Hello* from _Typst!_"</span>, font_size <span class="op">=</span> <span class="fl">72</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">eq</span> <span class="op">&lt;-</span> <span class="fu">MathTypst</span><span class="op">(</span><span class="st">"{{ a^2 + b^2 : lhs }} = {{ c^2 }}"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">eq</span><span class="op">$</span><span class="fu">select</span><span class="op">(</span><span class="st">"lhs"</span><span class="op">)</span><span class="op">$</span><span class="fu">set_color</span><span class="op">(</span><span class="va">BLUE</span><span class="op">)</span></span></span>

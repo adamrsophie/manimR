@@ -23,3 +23,7 @@ plot(x, background_color = cfg("background_color"), ...)
 - ...:
 
   Ignored.
+
+## Value
+
+`x`, invisibly.

@@ -27,13 +27,13 @@ Text(
   t2w = NULL,
   gradient = NULL,
   tab_width = 4,
+  warn_missing_font = TRUE,
   height = NULL,
   width = NULL,
   should_center = TRUE,
   disable_ligatures = FALSE,
-  markup = FALSE,
-  warn_missing_font = TRUE,
   use_svg_cache = FALSE,
+  markup = FALSE,
   justify = FALSE,
   ...
 )
@@ -87,6 +87,12 @@ Text(
 
   Spaces per tab.
 
+- warn_missing_font:
+
+  Warn when `font` is not installed (or registered with
+  [`register_font()`](https://adamrsophie.github.io/manimR/reference/register_font.md)),
+  as upstream does.
+
 - height, width:
 
   Optional target size.
@@ -100,22 +106,16 @@ Text(
   Keep one submobject per character, with an invisible point for each
   space, as upstream (default `FALSE`).
 
+- use_svg_cache:
+
+  Accepted for upstream's signature; glyphs are read from the fonts
+  directly, so there is no SVG to cache.
+
 - markup:
 
   Parse `text` as Pango style markup, as
   [`MarkupText()`](https://adamrsophie.github.io/manimR/reference/MarkupText.md)
   does.
-
-- warn_missing_font:
-
-  Warn when `font` is not installed (or registered with
-  [`register_font()`](https://adamrsophie.github.io/manimR/reference/register_font.md)),
-  as upstream does.
-
-- use_svg_cache:
-
-  Accepted for upstream's signature; glyphs are read from the fonts
-  directly, so there is no SVG to cache.
 
 - justify:
 
@@ -128,6 +128,12 @@ Text(
 
   Passed to
   [`VMobject()`](https://adamrsophie.github.io/manimR/reference/VMobjectClass.md).
+
+## Value
+
+A mobject: an R6 object of the class named by the function called. The
+objects whose names end in `Class` are the R6 class generators that
+these functions call.
 
 ## Examples
 

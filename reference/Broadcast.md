@@ -57,3 +57,7 @@ Broadcast(
 
   Passed to
   [`LaggedStart()`](https://adamrsophie.github.io/manimR/reference/composition.md).
+
+## Value
+
+A `Broadcast` animation, an R6 object to pass to a scene's `play()`.

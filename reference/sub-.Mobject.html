@@ -105,6 +105,14 @@ group of the selected submobjects.</p>
 
 </dl></div>
     <div class="section level2">
+    <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
+    <p><code>[</code> returns a submobject, or a group of them for a vector index.
+<code>[[</code> returns a submobject, a field or an entry. <code><a href="https://rdrr.io/r/base/length.html" class="external-link">length()</a></code> returns the
+number of submobjects, plus one when the mobject has points of its own.
+The assignment forms return the changed mobject; <code>mob[[i]] &lt;- value</code> with
+a position does what <code>mob[i] &lt;- value</code> does.</p>
+    </div>
+    <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>A character key looks up an entry of a <a href="VDictClass.html">VDict</a> (<code>vd["square"]</code>, or several
 entries as a group with <code>vd[c("a", "b")]</code>) or a vertex of a <a href="GenericGraphClass.html">Graph</a>

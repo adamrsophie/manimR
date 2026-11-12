@@ -70,12 +70,12 @@ Change the default with <code>manim_config(tex_template = TexTemplate(...))</cod
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">TexTemplate</span><span class="op">(</span></span>
 <span>  tex_compiler <span class="op">=</span> <span class="st">"latex"</span>,</span>
+<span>  description <span class="op">=</span> <span class="st">""</span>,</span>
 <span>  output_format <span class="op">=</span> <span class="st">".dvi"</span>,</span>
 <span>  documentclass <span class="op">=</span> <span class="st">"\\documentclass[preview]{standalone}"</span>,</span>
 <span>  preamble <span class="op">=</span> <span class="va">DEFAULT_TEX_PREAMBLE</span>,</span>
 <span>  placeholder_text <span class="op">=</span> <span class="st">"YourTextHere"</span>,</span>
-<span>  post_doc_commands <span class="op">=</span> <span class="st">""</span>,</span>
-<span>  description <span class="op">=</span> <span class="st">""</span></span>
+<span>  post_doc_commands <span class="op">=</span> <span class="st">""</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -85,6 +85,10 @@ Change the default with <code>manim_config(tex_template = TexTemplate(...))</cod
 
 <dl><dt id="arg-tex-compiler">tex_compiler<a class="anchor" aria-label="anchor" href="#arg-tex-compiler"></a></dt>
 <dd><p>Compiler, <code>"latex"</code> by default (or <code>"xelatex"</code>, <code>"lualatex"</code>).</p></dd>
+
+
+<dt id="arg-description">description<a class="anchor" aria-label="anchor" href="#arg-description"></a></dt>
+<dd><p>A description.</p></dd>
 
 
 <dt id="arg-output-format">output_format<a class="anchor" aria-label="anchor" href="#arg-output-format"></a></dt>
@@ -106,11 +110,12 @@ Change the default with <code>manim_config(tex_template = TexTemplate(...))</cod
 <dt id="arg-post-doc-commands">post_doc_commands<a class="anchor" aria-label="anchor" href="#arg-post-doc-commands"></a></dt>
 <dd><p>Commands right after <code>\begin{document}</code>.</p></dd>
 
-
-<dt id="arg-description">description<a class="anchor" aria-label="anchor" href="#arg-description"></a></dt>
-<dd><p>A description.</p></dd>
-
 </dl></div>
+    <div class="section level2">
+    <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
+    <p>A <code>TexTemplate</code>, an R6 object. <code>TexTemplateClass</code> is its R6 class
+generator.</p>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>

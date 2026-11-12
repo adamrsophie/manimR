@@ -24,6 +24,12 @@ Munits
 
   `X_AXIS` or `Y_AXIS`.
 
+## Value
+
+`Pixels`, `Degrees` and `Munits` are units to multiply a number by, and
+`Percent()` returns such a unit for an axis; the product is a length in
+scene units or an angle in radians.
+
 ## Examples
 
 ``` r

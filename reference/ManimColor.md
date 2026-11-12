@@ -87,6 +87,14 @@ format(x, ...)
 
   Ignored.
 
+## Value
+
+`ManimColor()`, `RGBA()` and `HSV()` return a color object: a hex string
+of class `ManimColor` (and `HSV` for `HSV()`). Its methods return
+colors, numeric vectors or character strings, as described above.
+`ManimColorClass` and `HSVClass` are the R6 class generators behind the
+class methods.
+
 ## Details
 
 A mobject stores its colors as plain hex strings, so wrap one to use the

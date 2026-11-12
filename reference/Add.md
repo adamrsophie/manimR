@@ -25,3 +25,7 @@ Add(..., run_time = 0, use_override = TRUE)
   `FALSE` ignores an override of `Add` set with
   [`override_animation()`](https://adamrsophie.github.io/manimR/reference/override_animation.md)
   on the first mobject's class.
+
+## Value
+
+An `Add` animation, an R6 object to pass to a scene's `play()`.

@@ -17,6 +17,11 @@ BackgroundColoredVMobjectDisplayer(camera)
 
   The camera that draws the mobjects.
 
+## Value
+
+A `BackgroundColoredVMobjectDisplayer`, an R6 object.
+`BackgroundColoredVMobjectDisplayerClass` is its R6 class generator.
+
 ## Details
 
 - `$display(...)` draws the given mobjects in black and white and

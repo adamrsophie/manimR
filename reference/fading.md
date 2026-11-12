@@ -19,3 +19,9 @@ FadeOut(...)
   fading; `target_position`, a point or mobject to fade toward or from;
   `scale`, the scale factor of the faded state; and any argument of
   [`Transform()`](https://adamrsophie.github.io/manimR/reference/transform.md).
+
+## Value
+
+An animation: an R6 object of the class named by the function called, to
+pass to a scene's `play()`. The objects whose names end in `Class` are
+the R6 class generators that these functions call.

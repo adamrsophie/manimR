@@ -72,7 +72,7 @@ with or without alpha, and any color R understands.</p>
 <span></span>
 <span><span class="fu">color_to_rgb</span><span class="op">(</span><span class="va">color</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">color_to_rgba</span><span class="op">(</span><span class="va">color</span>, alpha <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+<span><span class="fu">color_to_rgba</span><span class="op">(</span><span class="va">color</span>, alpha <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">rgb_to_color</span><span class="op">(</span><span class="va">rgb</span><span class="op">)</span></span>
 <span></span>
@@ -88,7 +88,8 @@ with or without alpha, and any color R understands.</p>
 
 
 <dt id="arg-alpha">alpha<a class="anchor" aria-label="anchor" href="#arg-alpha"></a></dt>
-<dd><p>Opacity.</p></dd>
+<dd><p>Opacity of the result, 1 by default as upstream; <code>NULL</code> keeps
+the opacity the color carries.</p></dd>
 
 
 <dt id="arg-rgb-rgba">rgb, rgba<a class="anchor" aria-label="anchor" href="#arg-rgb-rgba"></a></dt>

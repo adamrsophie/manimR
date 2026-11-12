@@ -13,3 +13,7 @@ draws them as `"bilinear"`.
 ``` r
 RESAMPLING_ALGORITHMS
 ```
+
+## Value
+
+A named character vector of resampling algorithm names.

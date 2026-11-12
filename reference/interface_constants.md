@@ -36,3 +36,9 @@ RendererType
 ## Format
 
 Strings, numbers, or named lists.
+
+## Value
+
+Character strings and numbers used by the command line and the
+interactive window. `CONTEXT_SETTINGS` and `RendererType` are named
+lists.

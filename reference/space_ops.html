@@ -70,11 +70,21 @@ numeric vectors; point sets are n x 3 matrices.</p>
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">get_norm</span><span class="op">(</span><span class="va">v</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">normalize</span><span class="op">(</span><span class="va">v</span>, fall_back <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+<span><span class="fu">normalize</span><span class="op">(</span><span class="va">vect</span>, fall_back <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">cross</span><span class="op">(</span><span class="va">v1</span>, <span class="va">v2</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">rotation_matrix</span><span class="op">(</span><span class="va">angle</span>, axis <span class="op">=</span> <span class="va">OUT</span><span class="op">)</span></span>
+<span><span class="fu">rotation_matrix</span><span class="op">(</span><span class="va">angle</span>, axis <span class="op">=</span> <span class="va">OUT</span>, homogeneous <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">rotation_matrix_transpose</span><span class="op">(</span><span class="va">angle</span>, <span class="va">axis</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">rotation_matrix_transpose_from_quaternion</span><span class="op">(</span><span class="va">quat</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">rotation_matrix_from_quaternion</span><span class="op">(</span><span class="va">quat</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">norm_squared</span><span class="op">(</span><span class="va">v</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">normalize_along_axis</span><span class="op">(</span><span class="va">array</span>, <span class="va">axis</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">rotation_about_z</span><span class="op">(</span><span class="va">angle</span><span class="op">)</span></span>
 <span></span>
@@ -90,11 +100,11 @@ numeric vectors; point sets are n x 3 matrices.</p>
 <span></span>
 <span><span class="fu">regular_vertices</span><span class="op">(</span><span class="va">n</span>, radius <span class="op">=</span> <span class="fl">1</span>, start_angle <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">complex_to_R3</span><span class="op">(</span><span class="va">z</span><span class="op">)</span></span>
+<span><span class="fu">complex_to_R3</span><span class="op">(</span><span class="va">complex_num</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">R3_to_complex</span><span class="op">(</span><span class="va">point</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">midpoint</span><span class="op">(</span><span class="va">p1</span>, <span class="va">p2</span><span class="op">)</span></span>
+<span><span class="fu">midpoint</span><span class="op">(</span><span class="va">point1</span>, <span class="va">point2</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">line_intersection</span><span class="op">(</span><span class="va">line1</span>, <span class="va">line2</span><span class="op">)</span></span>
 <span></span>
@@ -127,7 +137,7 @@ numeric vectors; point sets are n x 3 matrices.</p>
     <h2 id="arguments">Arguments<a class="anchor" aria-label="anchor" href="#arguments"></a></h2>
 
 
-<dl><dt id="arg-v-v-v-vector">v, v1, v2, vector<a class="anchor" aria-label="anchor" href="#arg-v-v-v-vector"></a></dt>
+<dl><dt id="arg-v-v-v-vector-vect">v, v1, v2, vector, vect<a class="anchor" aria-label="anchor" href="#arg-v-v-v-vector-vect"></a></dt>
 <dd><p>Numeric vectors. In <code>find_intersection()</code>, <code>v1</code> is
 the direction of the second line.</p></dd>
 
@@ -141,7 +151,20 @@ the direction of the second line.</p></dd>
 
 
 <dt id="arg-axis">axis<a class="anchor" aria-label="anchor" href="#arg-axis"></a></dt>
-<dd><p>Rotation axis.</p></dd>
+<dd><p>Rotation axis. In <code>normalize_along_axis()</code>, the dimension to
+take norms along (1 or 2).</p></dd>
+
+
+<dt id="arg-homogeneous">homogeneous<a class="anchor" aria-label="anchor" href="#arg-homogeneous"></a></dt>
+<dd><p><code>TRUE</code> returns a 4 x 4 homogeneous matrix.</p></dd>
+
+
+<dt id="arg-quat">quat<a class="anchor" aria-label="anchor" href="#arg-quat"></a></dt>
+<dd><p>A quaternion <code>c(w, x, y, z)</code>.</p></dd>
+
+
+<dt id="arg-array">array<a class="anchor" aria-label="anchor" href="#arg-array"></a></dt>
+<dd><p>A numeric matrix.</p></dd>
 
 
 <dt id="arg-n">n<a class="anchor" aria-label="anchor" href="#arg-n"></a></dt>
@@ -162,7 +185,7 @@ the direction of the second line.</p></dd>
 and <code>TAU / 4</code> for odd <code>n</code>.</p></dd>
 
 
-<dt id="arg-z">z<a class="anchor" aria-label="anchor" href="#arg-z"></a></dt>
+<dt id="arg-complex-num">complex_num<a class="anchor" aria-label="anchor" href="#arg-complex-num"></a></dt>
 <dd><p>A complex number.</p></dd>
 
 
@@ -170,9 +193,8 @@ and <code>TAU / 4</code> for odd <code>n</code>.</p></dd>
 <dd><p>A point.</p></dd>
 
 
-<dt id="arg-p-p-">p1, p2<a class="anchor" aria-label="anchor" href="#arg-p-p-"></a></dt>
-<dd><p>Points. In <code>find_intersection()</code>, <code>p1</code> is a point of the
-second line.</p></dd>
+<dt id="arg-point-point-">point1, point2<a class="anchor" aria-label="anchor" href="#arg-point-point-"></a></dt>
+<dd><p>Points.</p></dd>
 
 
 <dt id="arg-line-line-">line1, line2<a class="anchor" aria-label="anchor" href="#arg-line-line-"></a></dt>
@@ -247,7 +269,16 @@ included.</p></dd>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p><code>z_to_vector()</code> returns a 3 x 3 rotation matrix taking the z
+    <p><code>rotation_matrix_transpose()</code> is the transpose of
+<code>rotation_matrix()</code>. <code>rotation_matrix_transpose_from_quaternion()</code> returns
+a list of the three rows of that transpose for the rotation a quaternion
+describes, and <code>rotation_matrix_from_quaternion()</code> the rotation matrix
+itself.</p>
+<p><code>norm_squared()</code> is the squared length of a vector.
+<code>normalize_along_axis()</code> divides a matrix by the norms taken along
+<code>axis</code> (1 sums over rows, 2 over columns, so <code>axis = 2</code> gives every row
+length 1); zero norms are left alone.</p>
+<p><code>z_to_vector()</code> returns a 3 x 3 rotation matrix taking the z
 axis to the direction of <code>vector</code>.</p>
 <p><code>regular_vertices()</code> returns <code>list(vertices, start_angle)</code>, an
 n x 3 matrix of regularly spaced vertices on a circle centered at the

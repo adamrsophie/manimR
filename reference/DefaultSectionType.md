@@ -15,3 +15,7 @@ DefaultSectionType
 ## Format
 
 A named list of strings.
+
+## Value
+
+A named list of section type names.

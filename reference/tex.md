@@ -89,10 +89,17 @@ Tex(..., arg_separator = "", tex_environment = "center")
 
   Named list mapping substrings to colors.
 
+## Value
+
+A mobject: an R6 object of the class named by the function called. The
+objects whose names end in `Class` are the R6 class generators that
+these functions call.
+
 ## Examples
 
 ``` r
 if (FALSE) { # \dontrun{
+# Needs LaTeX and dvisvgm.
 MathTex("e^{i\\pi} + 1 = 0")
 Tex("Hello \\LaTeX", color = BLUE)
 } # }

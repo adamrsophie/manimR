@@ -841,15 +841,15 @@ writeLines(c(
   '</svg>'), svg_file)
 house <- SVGMobject(svg_file, height = 4)
 print_family(house)
-#>  SVGMobject 3eac2af5adb91685a0-523
-#>   Rectangle 3eac2af5adb91685a0-528
-#>   Polygon 3eac2af5adb91685a0-531
-#>   Rectangle 3eac2af5adb91685a0-533
-#>   Circle 3eac2af5adb91685a0-536
-#>   Circle 3eac2af5adb91685a0-538
-#>   Line 3eac2af5adb91685a0-540
-#>   VMobject 3eac2af5adb91685a0-542
-#>   VMobjectFromSVGPath 3eac2af5adb91685a0-545
+#>  SVGMobject 3cff2af5d13115d1f0-523
+#>   Rectangle 3cff2af5d13115d1f0-528
+#>   Polygon 3cff2af5d13115d1f0-531
+#>   Rectangle 3cff2af5d13115d1f0-533
+#>   Circle 3cff2af5d13115d1f0-536
+#>   Circle 3cff2af5d13115d1f0-538
+#>   Line 3cff2af5d13115d1f0-540
+#>   VMobject 3cff2af5d13115d1f0-542
+#>   VMobjectFromSVGPath 3cff2af5d13115d1f0-545
 ```
 
 By default the result is centered and scaled to `height = 2`; pass
@@ -921,7 +921,7 @@ does this for you):
 heart_path <- "M 10,30 A 20,20 0,0,1 50,30 A 20,20 0,0,1 90,30 Q 90,60 50,90 Q 10,60 10,30 z"
 raw <- VMobjectFromSVGPath(heart_path, color = RED, fill_opacity = 1)
 c(raw$width, raw$height)
-#> [1] 80 80
+#> [1] 80.30938 80.52252
 upright <- raw$copy()$flip(RIGHT)
 hearts <- VGroup(raw, upright)
 hearts$height <- 3

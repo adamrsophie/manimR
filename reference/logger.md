@@ -28,6 +28,11 @@ cli_ctx_settings
 
 Lists of functions; `cli_ctx_settings` is a named list.
 
+## Value
+
+`logger`, `console` and `error_console` are lists of functions that
+print messages; `cli_ctx_settings` is a named list of settings.
+
 ## Details
 
 `console$print()` writes to standard output and `error_console$print()`

@@ -42,10 +42,10 @@ installed, and no video being written).
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
+if (FALSE) { # interactive()
 sc <- ThreeDScene$new()
 sc$add(Cube())
 sc$set_key_function("c", function() sc$add(Sphere(radius = 0.5)))
 sc$interactive_embed()
-} # }
+}
 ```

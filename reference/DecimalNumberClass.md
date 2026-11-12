@@ -109,10 +109,17 @@ Variable(var, label, var_type = "decimal", num_decimal_places = 2, ...)
   `"decimal"` or `"integer"` (or the constructors `DecimalNumber` /
   `Integer`).
 
+## Value
+
+A mobject: an R6 object of the class named by the function called. The
+objects whose names end in `Class` are the R6 class generators that
+these functions call.
+
 ## Examples
 
 ``` r
 if (FALSE) { # \dontrun{
+# Needs LaTeX and dvisvgm.
 d <- DecimalNumber(3.14159, num_decimal_places = 3)
 d$set_value(2.71828)
 } # }

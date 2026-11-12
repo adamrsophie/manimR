@@ -54,9 +54,18 @@ camera and window) is not part of manimR.
   or
   [`Surface()`](https://adamrsophie.github.io/manimR/reference/three_dimensions.md).
 
+## Value
+
+A mobject: an R6 object of the class named by the function called. The
+objects whose names end in `Class` are the R6 class generators that
+these functions call.
+
 ## Details
 
-Two classes have no Cairo counterpart:
+Three classes have no Cairo counterpart:
+
+- `OpenGLSurfaceGroup(...)` is a surface without faces of its own that
+  holds the surfaces it is given.
 
 - `OpenGLSurfaceMesh(uv_surface)` is a
   [`VGroup()`](https://adamrsophie.github.io/manimR/reference/VGroupClass.md)

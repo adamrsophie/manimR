@@ -8,6 +8,11 @@ its display, then move `self$zoomed_camera$frame`. The display is drawn
 as vector graphics clipped to the display rectangle rather than as a
 pixel copy of the zoomed camera.
 
+## Value
+
+An R6 class generator. A scene class inherits from it, and `$new()`
+creates a scene.
+
 ## Details
 
 Initializer arguments (override `initialize()` in a subclass to change
@@ -23,7 +28,6 @@ size over display size, 0.15), `image_frame_stroke_width` and
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
 UseZoomedScene <- R6::R6Class("UseZoomedScene", inherit = ZoomedScene, public = list(
   construct = function() {
     dot <- Dot()$set_color(GREEN)
@@ -33,6 +37,13 @@ UseZoomedScene <- R6::R6Class("UseZoomedScene", inherit = ZoomedScene, public = 
     self$wait(1)
     self$play(dot$animate$shift(LEFT))
   }))
+# The last frame as a PNG file in the session's temporary directory.
+render(UseZoomedScene, quality = "l", format = "png", media_dir = tempdir())
+#> INFO File ready at '/tmp/RtmptTjpVh/images/manimR/UseZoomedScene_manimR_v0.1.0.png'
+#> INFO Rendered UseZoomedScene
+#> Played 3 animations
+if (FALSE) { # \dontrun{
+# A video in the folder media of the working directory; this needs ffmpeg.
 render(UseZoomedScene, quality = "l")
 } # }
 ```

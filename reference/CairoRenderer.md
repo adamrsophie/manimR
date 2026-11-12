@@ -44,3 +44,10 @@ CairoRenderer(
 - ...:
 
   Arguments passed to the camera.
+
+## Value
+
+`CairoRenderer()` returns a renderer and `SceneFileWriter()` a file
+writer, both R6 objects that a scene creates for itself. The objects
+whose names end in `Class` are the R6 class generators that these
+functions call.

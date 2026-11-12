@@ -185,6 +185,10 @@ LOGO_RED
 LOGO_BLACK
 ```
 
+## Value
+
+Colors as hex strings such as `"#FC6255"`.
+
 ## Examples
 
 ``` r

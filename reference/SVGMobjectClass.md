@@ -4,6 +4,10 @@ Import an SVG file as vectorized mobjects. Paths, rectangles, circles,
 ellipses, lines, polylines, polygons, groups, `<use>` references,
 transforms, CSS and fill/stroke styles are supported; text elements are
 skipped with a warning, as upstream does (convert them to paths first).
+Styles are read as upstream's parser reads them: a shape with no stroke
+keeps the stroke color of its class with a width of 0, a `fill-opacity`
+or `stroke-opacity` replaces the alpha of its color, and the `opacity`
+property is not read.
 
 The import follows upstream's steps, each a method: `get_file_path()`
 finds the file (also in the `assets_dir` setting, with `.svg` added);
@@ -96,10 +100,21 @@ VMobjectFromSVGPath(
   Upstream's options for the OpenGL renderer's triangulation; kept for
   compatibility.
 
+## Value
+
+A mobject: an R6 object of the class named by the function called. The
+objects whose names end in `Class` are the R6 class generators that
+these functions call.
+
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-SVGMobject("logo.svg")
-} # }
+file <- tempfile(fileext = ".svg")
+writeLines(c(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">',
+  '<circle cx="5" cy="5" r="4" fill="#58C4DD"/>',
+  '<path d="M 2 5 L 8 5" stroke="#FFFFFF"/>',
+  '</svg>'), file)
+SVGMobject(file)
+#> <SVGMobject> 0 points, 2 submobjects
 ```

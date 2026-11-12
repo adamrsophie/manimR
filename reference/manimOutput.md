@@ -52,7 +52,7 @@ renderManim(expr, env = parent.frame(), quoted = FALSE, ...)
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
+if (FALSE) { # interactive() && requireNamespace("shiny", quietly = TRUE)
 ui <- shiny::fluidPage(
   shiny::sliderInput("n", "Sides", 3, 10, 5),
   manimOutput("scene")
@@ -64,5 +64,5 @@ server <- function(input, output) {
   })
 }
 shiny::shinyApp(ui, server)
-} # }
+}
 ```

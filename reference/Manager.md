@@ -20,6 +20,11 @@ Manager(scene)
 
   The scene to manage.
 
+## Value
+
+A `Manager`, an R6 object that renders a scene. `ManagerClass` is its R6
+class generator.
+
 ## Details
 
 A scene creates its manager when it is first rendered or played; one can

@@ -82,7 +82,10 @@ ImplicitFunction(
 
 - min_depth, max_quads:
 
-  Resolution of the implicit curve sampling grid.
+  The implicit curve is traced on a grid of cells that are split
+  `min_depth` times everywhere and then further where the function
+  changes sign, up to `max_quads` cells (the adaptive method of the
+  `isosurfaces` Python package, as upstream).
 
 ## Value
 
@@ -96,9 +99,10 @@ calls it `function`, a reserved word in R); `get_function()` returns it.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
 ParametricFunction(function(t) c(sin(2 * t), sin(3 * t), 0), t_range = c(0, TAU))
+#> <ParametricFunction> 2516 points, 0 submobjects
 FunctionGraph(cos, color = RED)
+#> <FunctionGraph> 5692 points, 0 submobjects
 ImplicitFunction(function(x, y) x^2 + y^2 - 4)
-} # }
+#> <ImplicitFunction> 2784 points, 0 submobjects
 ```

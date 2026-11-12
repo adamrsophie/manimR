@@ -33,3 +33,9 @@ MultiCamera(
 
   Passed to
   [MovingCameraClass](https://adamrsophie.github.io/manimR/reference/MovingCameraClass.md).
+
+## Value
+
+A camera: an R6 object of the class named by the function called. The
+objects whose names end in `Class` are the R6 class generators that
+these functions call.

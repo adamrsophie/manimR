@@ -859,8 +859,8 @@ plot(Text("Hello", font_size = 96, t2c = list("[1:3]" = YELLOW)))
 
 [Getting
 started](https://adamrsophie.github.io/manimR/articles/manimR.md)
-introduces manimR from the beginning. The other vignettes cover each
-area in depth: [Mobjects and
+introduces manimR from the beginning. The other articles cover each area
+in depth: [Mobjects and
 geometry](https://adamrsophie.github.io/manimR/articles/mobjects.md),
 [Animations](https://adamrsophie.github.io/manimR/articles/animations.md),
 [Updaters and value

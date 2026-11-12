@@ -8,11 +8,21 @@ numeric vectors; point sets are n x 3 matrices.
 ``` r
 get_norm(v)
 
-normalize(v, fall_back = NULL)
+normalize(vect, fall_back = NULL)
 
 cross(v1, v2)
 
-rotation_matrix(angle, axis = OUT)
+rotation_matrix(angle, axis = OUT, homogeneous = FALSE)
+
+rotation_matrix_transpose(angle, axis)
+
+rotation_matrix_transpose_from_quaternion(quat)
+
+rotation_matrix_from_quaternion(quat)
+
+norm_squared(v)
+
+normalize_along_axis(array, axis)
 
 rotation_about_z(angle)
 
@@ -28,11 +38,11 @@ compass_directions(n = 4, start_vect = RIGHT)
 
 regular_vertices(n, radius = 1, start_angle = NULL)
 
-complex_to_R3(z)
+complex_to_R3(complex_num)
 
 R3_to_complex(point)
 
-midpoint(p1, p2)
+midpoint(point1, point2)
 
 line_intersection(line1, line2)
 
@@ -63,7 +73,7 @@ thick_diagonal(dim, thickness = 2)
 
 ## Arguments
 
-- v, v1, v2, vector:
+- v, v1, v2, vector, vect:
 
   Numeric vectors. In `find_intersection()`, `v1` is the direction of
   the second line.
@@ -78,7 +88,20 @@ thick_diagonal(dim, thickness = 2)
 
 - axis:
 
-  Rotation axis.
+  Rotation axis. In `normalize_along_axis()`, the dimension to take
+  norms along (1 or 2).
+
+- homogeneous:
+
+  `TRUE` returns a 4 x 4 homogeneous matrix.
+
+- quat:
+
+  A quaternion `c(w, x, y, z)`.
+
+- array:
+
+  A numeric matrix.
 
 - n:
 
@@ -98,7 +121,7 @@ thick_diagonal(dim, thickness = 2)
   Angle of the first vertex; by default 0 for even `n` and `TAU / 4` for
   odd `n`.
 
-- z:
+- complex_num:
 
   A complex number.
 
@@ -106,9 +129,9 @@ thick_diagonal(dim, thickness = 2)
 
   A point.
 
-- p1, p2:
+- point1, point2:
 
-  Points. In `find_intersection()`, `p1` is a point of the second line.
+  Points.
 
 - line1, line2:
 
@@ -177,6 +200,16 @@ thick_diagonal(dim, thickness = 2)
 See Details for functions whose result is not a plain vector.
 
 ## Details
+
+`rotation_matrix_transpose()` is the transpose of `rotation_matrix()`.
+`rotation_matrix_transpose_from_quaternion()` returns a list of the
+three rows of that transpose for the rotation a quaternion describes,
+and `rotation_matrix_from_quaternion()` the rotation matrix itself.
+
+`norm_squared()` is the squared length of a vector.
+`normalize_along_axis()` divides a matrix by the norms taken along
+`axis` (1 sums over rows, 2 over columns, so `axis = 2` gives every row
+length 1); zero norms are left alone.
 
 `z_to_vector()` returns a 3 x 3 rotation matrix taking the z axis to the
 direction of `vector`.

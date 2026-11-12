@@ -11,7 +11,7 @@ an offscreen ragg device.
 The API follows Python manim closely, so the large body of manim
 examples and tutorials translates almost line by line. If you already
 know Python manim, read [Coming from Python
-manim](https://adamrsophie.github.io/manimR/articles/coming-from-python.md)
+manim](https://adamrsophie.github.io/manimR/articles/coming-from-python.html)
 next. If you do not, this vignette is the place to start.
 
 ## Installation
@@ -216,7 +216,7 @@ defaults to one second too.
 
 This vignette shows scenes with a knitr engine (see [RStudio, knitr,
 Quarto and
-Shiny](https://adamrsophie.github.io/manimR/articles/rstudio-knitr-shiny.md));
+Shiny](https://adamrsophie.github.io/manimR/articles/rstudio-knitr-shiny.html));
 in a script you render them yourself, as shown in
 [Rendering](#rendering) below.
 
@@ -321,7 +321,7 @@ Tracker <- R6::R6Class("Tracker", inherit = Scene,
 ```
 
 [Updaters and value
-trackers](https://adamrsophie.github.io/manimR/articles/updaters.md)
+trackers](https://adamrsophie.github.io/manimR/articles/updaters.html)
 covers updaters in depth.
 
 ## Text and math
@@ -345,7 +345,7 @@ plot(VGroup(words, eq))
 Note that LaTeX backslashes must be doubled in ordinary R strings
 (`"\\frac{a}{b}"`), or written in a raw string (`r"(\frac{a}{b})"`).
 [Text, math and
-tables](https://adamrsophie.github.io/manimR/articles/text-and-math.md)
+tables](https://adamrsophie.github.io/manimR/articles/text-and-math.html)
 has the details.
 
 ## Rendering
@@ -424,28 +424,28 @@ renders them all, and
 [`manim_cli()`](https://adamrsophie.github.io/manimR/reference/manim_cli.md)
 does the same from a terminal, like the `manim` command. [Rendering,
 configuration and
-output](https://adamrsophie.github.io/manimR/articles/rendering.md)
+output](https://adamrsophie.github.io/manimR/articles/rendering.html)
 covers every option, the media folder layout, sections, sound and
 caching.
 
-## A tour of the other vignettes
+## A tour of the articles on the website
 
 - [Coming from Python
-  manim](https://adamrsophie.github.io/manimR/articles/coming-from-python.md):
+  manim](https://adamrsophie.github.io/manimR/articles/coming-from-python.html):
   a translation guide from Python manim code to manimR, with every
   renamed name and index difference.
 - [Mobjects and
-  geometry](https://adamrsophie.github.io/manimR/articles/mobjects.md):
+  geometry](https://adamrsophie.github.io/manimR/articles/mobjects.html):
   shapes, lines, arrows, polygons, groups, positioning and styling.
-- [Animations](https://adamrsophie.github.io/manimR/articles/animations.md):
+- [Animations](https://adamrsophie.github.io/manimR/articles/animations.html):
   creating, transforming, fading, moving and indicating mobjects,
   composing animations and rate functions.
 - [Updaters and value
-  trackers](https://adamrsophie.github.io/manimR/articles/updaters.md):
+  trackers](https://adamrsophie.github.io/manimR/articles/updaters.html):
   functions that run every frame, `ValueTracker` and
   [`always_redraw()`](https://adamrsophie.github.io/manimR/reference/updater_helpers.md).
 - [Text, math and
-  tables](https://adamrsophie.github.io/manimR/articles/text-and-math.md):
+  tables](https://adamrsophie.github.io/manimR/articles/text-and-math.html):
   [`Text()`](https://adamrsophie.github.io/manimR/reference/TextClass.md),
   [`MarkupText()`](https://adamrsophie.github.io/manimR/reference/MarkupText.md),
   LaTeX with
@@ -453,27 +453,27 @@ caching.
   [`MathTex()`](https://adamrsophie.github.io/manimR/reference/tex.md),
   Typst, code listings, numbers, matrices and tables.
 - [Graphs, plots and coordinate
-  systems](https://adamrsophie.github.io/manimR/articles/graphing.md):
+  systems](https://adamrsophie.github.io/manimR/articles/graphing.html):
   number lines, axes, function plots, areas, network graphs, vector
   fields and charts.
 - [Cameras and 3D
-  scenes](https://adamrsophie.github.io/manimR/articles/cameras-and-3d.md):
+  scenes](https://adamrsophie.github.io/manimR/articles/cameras-and-3d.html):
   moving and zooming cameras, 3D axes, surfaces, solids and camera
   orientation.
 - [Colors, images, SVG and point
-  clouds](https://adamrsophie.github.io/manimR/articles/colors-images.md):
+  clouds](https://adamrsophie.github.io/manimR/articles/colors-images.html):
   the color constants and palettes, `ManimColor`, images, SVG files and
   point clouds.
 - [Rendering, configuration and
-  output](https://adamrsophie.github.io/manimR/articles/rendering.md):
+  output](https://adamrsophie.github.io/manimR/articles/rendering.html):
   [`render()`](https://adamrsophie.github.io/manimR/reference/render.md),
   qualities, formats, configuration, sections, sound, subcaptions,
   caching and the command line.
 - [RStudio, knitr, Quarto and
-  Shiny](https://adamrsophie.github.io/manimR/articles/rstudio-knitr-shiny.md):
+  Shiny](https://adamrsophie.github.io/manimR/articles/rstudio-knitr-shiny.html):
   RStudio addins, the `manim` knitr engine and interactive scenes.
 - [Math and utility
-  functions](https://adamrsophie.github.io/manimR/articles/utilities.md):
+  functions](https://adamrsophie.github.io/manimR/articles/utilities.html):
   Bezier curves, space operations, interpolation and the other helper
   functions.
 
@@ -488,4 +488,4 @@ manimR mirrors Python manim, the [Manim Community
 documentation](https://docs.manim.community/) and its example gallery
 are useful too: most examples run in R after the small changes described
 in [Coming from Python
-manim](https://adamrsophie.github.io/manimR/articles/coming-from-python.md).
+manim](https://adamrsophie.github.io/manimR/articles/coming-from-python.html).

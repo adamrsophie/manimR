@@ -10,7 +10,7 @@ manim_color(color)
 
 color_to_rgb(color)
 
-color_to_rgba(color, alpha = NULL)
+color_to_rgba(color, alpha = 1)
 
 rgb_to_color(rgb)
 
@@ -25,7 +25,8 @@ rgba_to_color(rgba)
 
 - alpha:
 
-  Opacity.
+  Opacity of the result, 1 by default as upstream; `NULL` keeps the
+  opacity the color carries.
 
 - rgb, rgba:
 

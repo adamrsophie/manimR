@@ -97,6 +97,7 @@
 <url><loc>https://adamrsophie.github.io/manimR/reference/get_det_text.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/get_dir.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/get_plugins.html</loc></url>
+<url><loc>https://adamrsophie.github.io/manimR/reference/get_quadratic_approximation_of_cubic.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/get_shaded_rgb.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/get_smooth_cubic_bezier_handle_points.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/graph_scale.html</loc></url>
@@ -124,6 +125,7 @@
 <url><loc>https://adamrsophie.github.io/manimR/reference/matrix_to_tex_string.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/movement.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/number_animations.html</loc></url>
+<url><loc>https://adamrsophie.github.io/manimR/reference/opengl_matrices.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/opengl_mobjects.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/opengl_point_cloud.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/override_animation.html</loc></url>
@@ -142,6 +144,7 @@
 <url><loc>https://adamrsophie.github.io/manimR/reference/quaternion_mult.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/rate_funcs.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/register_font.html</loc></url>
+<url><loc>https://adamrsophie.github.io/manimR/reference/remove_invisible_chars.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/render.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/render_file.html</loc></url>
 <url><loc>https://adamrsophie.github.io/manimR/reference/rotation.html</loc></url>

@@ -88,13 +88,13 @@ glyph is a submobject, so <code>text[1]</code> is the first visible character an
 <span>  t2w <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  gradient <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  tab_width <span class="op">=</span> <span class="fl">4</span>,</span>
+<span>  warn_missing_font <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  height <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  width <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  should_center <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  disable_ligatures <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  markup <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  warn_missing_font <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  use_svg_cache <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  markup <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  justify <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -150,6 +150,11 @@ gradients.</p></dd>
 <dd><p>Spaces per tab.</p></dd>
 
 
+<dt id="arg-warn-missing-font">warn_missing_font<a class="anchor" aria-label="anchor" href="#arg-warn-missing-font"></a></dt>
+<dd><p>Warn when <code>font</code> is not installed (or registered
+with <code><a href="register_font.html">register_font()</a></code>), as upstream does.</p></dd>
+
+
 <dt id="arg-height-width">height, width<a class="anchor" aria-label="anchor" href="#arg-height-width"></a></dt>
 <dd><p>Optional target size.</p></dd>
 
@@ -163,18 +168,13 @@ gradients.</p></dd>
 invisible point for each space, as upstream (default <code>FALSE</code>).</p></dd>
 
 
-<dt id="arg-markup">markup<a class="anchor" aria-label="anchor" href="#arg-markup"></a></dt>
-<dd><p>Parse <code>text</code> as Pango style markup, as <code><a href="MarkupText.html">MarkupText()</a></code> does.</p></dd>
-
-
-<dt id="arg-warn-missing-font">warn_missing_font<a class="anchor" aria-label="anchor" href="#arg-warn-missing-font"></a></dt>
-<dd><p>Warn when <code>font</code> is not installed (or registered
-with <code><a href="register_font.html">register_font()</a></code>), as upstream does.</p></dd>
-
-
 <dt id="arg-use-svg-cache">use_svg_cache<a class="anchor" aria-label="anchor" href="#arg-use-svg-cache"></a></dt>
 <dd><p>Accepted for upstream's signature; glyphs are read
 from the fonts directly, so there is no SVG to cache.</p></dd>
+
+
+<dt id="arg-markup">markup<a class="anchor" aria-label="anchor" href="#arg-markup"></a></dt>
+<dd><p>Parse <code>text</code> as Pango style markup, as <code><a href="MarkupText.html">MarkupText()</a></code> does.</p></dd>
 
 
 <dt id="arg-justify">justify<a class="anchor" aria-label="anchor" href="#arg-justify"></a></dt>
@@ -187,6 +187,12 @@ that full width.</p></dd>
 <dd><p>Passed to <code><a href="VMobjectClass.html">VMobject()</a></code>.</p></dd>
 
 </dl></div>
+    <div class="section level2">
+    <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
+    <p>A mobject: an R6 object of the class named by the function called.
+The objects whose names end in <code>Class</code> are the R6 class generators that
+these functions call.</p>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>

@@ -74,7 +74,11 @@ start point too.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">get_smooth_cubic_bezier_handle_points</span><span class="op">(</span><span class="va">anchors</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">get_smooth_cubic_bezier_handle_points</span><span class="op">(</span><span class="va">anchors</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">get_smooth_closed_cubic_bezier_handle_points</span><span class="op">(</span><span class="va">anchors</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">get_smooth_open_cubic_bezier_handle_points</span><span class="op">(</span><span class="va">anchors</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -89,6 +93,13 @@ start point too.</p>
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p><code>list(h1, h2)</code>: two <code>(n - 1) x 3</code> matrices with the first and
 second handles of each curve (upstream returns a tuple).</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p><code>get_smooth_closed_cubic_bezier_handle_points()</code> and
+<code>get_smooth_open_cubic_bezier_handle_points()</code> are the two cases it
+chooses between, for at least three anchors: a closed curve (whose last
+anchor repeats the first) and an open one.</p>
     </div>
 
     <div class="section level2">

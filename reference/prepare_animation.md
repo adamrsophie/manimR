@@ -13,3 +13,7 @@ prepare_animation(anim)
 - anim:
 
   An animation or animation builder.
+
+## Value
+
+An animation, an R6 object.

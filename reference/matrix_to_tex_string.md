@@ -19,6 +19,11 @@ matrix_to_mobject(matrix)
 
   A matrix or vector.
 
+## Value
+
+`matrix_to_tex_string()` returns a LaTeX string, and
+`matrix_to_mobject()` a `MathTex` mobject of it.
+
 ## Examples
 
 ``` r

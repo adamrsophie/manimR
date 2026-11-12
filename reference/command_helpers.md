@@ -34,6 +34,14 @@ get_video_metadata(path_to_video)
 
   A video file.
 
+## Value
+
+`capture()` returns a list with the output `out`, the error output `err`
+and the exit status `returncode`. `get_dir_layout()` returns a character
+vector of the paths below `dirpath`. `get_video_metadata()` returns a
+list with `width`, `height`, `nb_frames`, `duration`, `avg_frame_rate`,
+`codec_name` and `pix_fmt`.
+
 ## Details
 
 - `capture(command, cwd, command_input)` runs a command (a character

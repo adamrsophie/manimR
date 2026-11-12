@@ -94,12 +94,17 @@ Code(
   option such as `weight` or `slant`. `color` is ignored; colors come
   from the style. `alignment`, `width` and `height` are ignored.
 
+## Value
+
+A mobject: an R6 object of the class named by the function called. The
+objects whose names end in `Class` are the R6 class generators that
+these functions call.
+
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
 code <- "f <- function(x) {\n  # square it\n  x^2 + 1\n}"
 Code(code_string = code, language = "r", background = "window",
      background_config = list(stroke_color = "maroon"))
-} # }
+#> <Code> 0 points, 3 submobjects
 ```

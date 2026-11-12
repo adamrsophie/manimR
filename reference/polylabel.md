@@ -22,7 +22,8 @@ polylabel(rings, precision = 0.01)
 
 ## Value
 
-A list with `c` (the 2D pole) and `d` (its distance to the edges).
+A list with `c` (the 2D pole), `d` (its distance to the edges) and `h`
+(half the size of the cell it was found in).
 
 ## Examples
 
@@ -33,5 +34,8 @@ polylabel(list(rbind(c(0, 0), c(4, 0), c(4, 2), c(0, 2), c(0, 0))))
 #> 
 #> $d
 #> [1] 1
+#> 
+#> $h
+#> [1] 0
 #> 
 ```

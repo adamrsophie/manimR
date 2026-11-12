@@ -43,7 +43,6 @@ The mobject, invisibly.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
 SpeedModifierUpdaterExample <- manim_scene(function(self) {
   a <- Dot()$shift(LEFT * 4)
   self$add(a)
@@ -51,5 +50,4 @@ SpeedModifierUpdaterExample <- manim_scene(function(self) {
   self$play(ChangeSpeed(Wait(2), speedinfo = c("0.4" = 1, "0.5" = 0.2, "0.8" = 0.2, "1" = 1),
                         affects_speed_updaters = TRUE))
 })
-} # }
 ```

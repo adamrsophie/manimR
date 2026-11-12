@@ -27,7 +27,7 @@ always_shift(mobject, direction = RIGHT, rate = 0.1)
 
 always_rotate(mobject, rate = 20 * DEGREES, ...)
 
-turn_animation_into_updater(animation, cycle = FALSE, delay = 0)
+turn_animation_into_updater(animation, cycle = FALSE, delay = 0, ...)
 
 cycle_animation(animation, ...)
 ```

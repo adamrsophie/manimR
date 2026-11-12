@@ -104,8 +104,8 @@ video, a GIF or a set of images. There is no Python involved; the
 drawing is done with grid on an offscreen ragg device.</p>
 <p>The API follows Python manim closely, so the large body of manim
 examples and tutorials translates almost line by line. If you already
-know Python manim, read <a href="coming-from-python.html">Coming from
-Python manim</a> next. If you do not, this vignette is the place to
+know Python manim, read <a href="https://adamrsophie.github.io/manimR/articles/coming-from-python.html">Coming
+from Python manim</a> next. If you do not, this vignette is the place to
 start.</p>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
@@ -321,8 +321,9 @@ second.</li>
 <p>Each <code>play()</code> lasts one second unless you pass
 <code>run_time</code>, and <code>wait()</code> defaults to one second
 too.</p>
-<p>This vignette shows scenes with a knitr engine (see <a href="rstudio-knitr-shiny.html">RStudio, knitr, Quarto and Shiny</a>);
-in a script you render them yourself, as shown in <a href="#rendering">Rendering</a> below.</p>
+<p>This vignette shows scenes with a knitr engine (see <a href="https://adamrsophie.github.io/manimR/articles/rstudio-knitr-shiny.html">RStudio,
+knitr, Quarto and Shiny</a>); in a script you render them yourself, as
+shown in <a href="#rendering">Rendering</a> below.</p>
 </div>
 <div class="section level2">
 <h2 id="a-shorter-way-manim_scene">A shorter way: <code>manim_scene()</code><a class="anchor" aria-label="anchor" href="#a-shorter-way-manim_scene"></a>
@@ -407,8 +408,8 @@ a number line, and its label is rebuilt every frame with
 <span>    <span class="va">self</span><span class="op">$</span><span class="fu">wait</span><span class="op">(</span><span class="fl">0.5</span><span class="op">)</span></span>
 <span>  <span class="op">}</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<video src="manimR_files/figure-html/first-updater-Tracker.mp4" controls autoplay muted loop playsinline style="width:100%"></video><p><a href="updaters.html">Updaters and value trackers</a> covers
-updaters in depth.</p>
+<video src="manimR_files/figure-html/first-updater-Tracker.mp4" controls autoplay muted loop playsinline style="width:100%"></video><p><a href="https://adamrsophie.github.io/manimR/articles/updaters.html">Updaters
+and value trackers</a> covers updaters in depth.</p>
 </div>
 <div class="section level2">
 <h2 id="text-and-math">Text and math<a class="anchor" aria-label="anchor" href="#text-and-math"></a>
@@ -424,8 +425,8 @@ becomes one part you can color or animate separately:</p>
 <p><img src="manimR_files/figure-html/text-math-1.png" class="r-plt" alt="" width="100%"></p>
 <p>Note that LaTeX backslashes must be doubled in ordinary R strings
 (<code>"\\frac{a}{b}"</code>), or written in a raw string
-(<code>r"(\frac{a}{b})"</code>). <a href="text-and-math.html">Text, math
-and tables</a> has the details.</p>
+(<code>r"(\frac{a}{b})"</code>). <a href="https://adamrsophie.github.io/manimR/articles/text-and-math.html">Text,
+math and tables</a> has the details.</p>
 </div>
 <div class="section level2">
 <h2 id="rendering">Rendering<a class="anchor" aria-label="anchor" href="#rendering"></a>
@@ -528,57 +529,60 @@ Viewer pane, or opens it with your system’s viewer elsewhere.
 <p>For scripts that define several scenes,
 <code>render_file("scenes.R")</code> renders them all, and
 <code><a href="../reference/manim_cli.html">manim_cli()</a></code> does the same from a terminal, like the
-<code>manim</code> command. <a href="rendering.html">Rendering,
+<code>manim</code> command. <a href="https://adamrsophie.github.io/manimR/articles/rendering.html">Rendering,
 configuration and output</a> covers every option, the media folder
 layout, sections, sound and caching.</p>
 </div>
 <div class="section level2">
-<h2 id="a-tour-of-the-other-vignettes">A tour of the other vignettes<a class="anchor" aria-label="anchor" href="#a-tour-of-the-other-vignettes"></a>
+<h2 id="a-tour-of-the-articles-on-the-website">A tour of the articles on the website<a class="anchor" aria-label="anchor" href="#a-tour-of-the-articles-on-the-website"></a>
 </h2>
 <ul>
 <li>
-<a href="coming-from-python.html">Coming from Python manim</a>: a
-translation guide from Python manim code to manimR, with every renamed
-name and index difference.</li>
+<a href="https://adamrsophie.github.io/manimR/articles/coming-from-python.html">Coming
+from Python manim</a>: a translation guide from Python manim code to
+manimR, with every renamed name and index difference.</li>
 <li>
-<a href="mobjects.html">Mobjects and geometry</a>: shapes, lines,
-arrows, polygons, groups, positioning and styling.</li>
+<a href="https://adamrsophie.github.io/manimR/articles/mobjects.html">Mobjects
+and geometry</a>: shapes, lines, arrows, polygons, groups, positioning
+and styling.</li>
 <li>
-<a href="animations.html">Animations</a>: creating, transforming,
-fading, moving and indicating mobjects, composing animations and rate
-functions.</li>
+<a href="https://adamrsophie.github.io/manimR/articles/animations.html">Animations</a>:
+creating, transforming, fading, moving and indicating mobjects,
+composing animations and rate functions.</li>
 <li>
-<a href="updaters.html">Updaters and value trackers</a>: functions
-that run every frame, <code>ValueTracker</code> and
-<code><a href="../reference/updater_helpers.html">always_redraw()</a></code>.</li>
+<a href="https://adamrsophie.github.io/manimR/articles/updaters.html">Updaters
+and value trackers</a>: functions that run every frame,
+<code>ValueTracker</code> and <code><a href="../reference/updater_helpers.html">always_redraw()</a></code>.</li>
 <li>
-<a href="text-and-math.html">Text, math and tables</a>:
-<code><a href="../reference/TextClass.html">Text()</a></code>, <code><a href="../reference/MarkupText.html">MarkupText()</a></code>, LaTeX with
-<code><a href="../reference/tex.html">Tex()</a></code> and <code><a href="../reference/tex.html">MathTex()</a></code>, Typst, code listings,
-numbers, matrices and tables.</li>
+<a href="https://adamrsophie.github.io/manimR/articles/text-and-math.html">Text,
+math and tables</a>: <code><a href="../reference/TextClass.html">Text()</a></code>, <code><a href="../reference/MarkupText.html">MarkupText()</a></code>,
+LaTeX with <code><a href="../reference/tex.html">Tex()</a></code> and <code><a href="../reference/tex.html">MathTex()</a></code>, Typst, code
+listings, numbers, matrices and tables.</li>
 <li>
-<a href="graphing.html">Graphs, plots and coordinate systems</a>:
-number lines, axes, function plots, areas, network graphs, vector fields
-and charts.</li>
+<a href="https://adamrsophie.github.io/manimR/articles/graphing.html">Graphs,
+plots and coordinate systems</a>: number lines, axes, function plots,
+areas, network graphs, vector fields and charts.</li>
 <li>
-<a href="cameras-and-3d.html">Cameras and 3D scenes</a>: moving and
-zooming cameras, 3D axes, surfaces, solids and camera orientation.</li>
+<a href="https://adamrsophie.github.io/manimR/articles/cameras-and-3d.html">Cameras
+and 3D scenes</a>: moving and zooming cameras, 3D axes, surfaces, solids
+and camera orientation.</li>
 <li>
-<a href="colors-images.html">Colors, images, SVG and point
-clouds</a>: the color constants and palettes, <code>ManimColor</code>,
-images, SVG files and point clouds.</li>
+<a href="https://adamrsophie.github.io/manimR/articles/colors-images.html">Colors,
+images, SVG and point clouds</a>: the color constants and palettes,
+<code>ManimColor</code>, images, SVG files and point clouds.</li>
 <li>
-<a href="rendering.html">Rendering, configuration and output</a>:
-<code><a href="../reference/render.html">render()</a></code>, qualities, formats, configuration, sections,
-sound, subcaptions, caching and the command line.</li>
+<a href="https://adamrsophie.github.io/manimR/articles/rendering.html">Rendering,
+configuration and output</a>: <code><a href="../reference/render.html">render()</a></code>, qualities, formats,
+configuration, sections, sound, subcaptions, caching and the command
+line.</li>
 <li>
-<a href="rstudio-knitr-shiny.html">RStudio, knitr, Quarto and
-Shiny</a>: RStudio addins, the <code>manim</code> knitr engine and
-interactive scenes.</li>
+<a href="https://adamrsophie.github.io/manimR/articles/rstudio-knitr-shiny.html">RStudio,
+knitr, Quarto and Shiny</a>: RStudio addins, the <code>manim</code>
+knitr engine and interactive scenes.</li>
 <li>
-<a href="utilities.html">Math and utility functions</a>: Bezier
-curves, space operations, interpolation and the other helper
-functions.</li>
+<a href="https://adamrsophie.github.io/manimR/articles/utilities.html">Math
+and utility functions</a>: Bezier curves, space operations,
+interpolation and the other helper functions.</li>
 </ul>
 </div>
 <div class="section level2">
@@ -589,7 +593,8 @@ functions.</li>
 the website groups them by topic. Because manimR mirrors Python manim,
 the <a href="https://docs.manim.community/" class="external-link">Manim Community
 documentation</a> and its example gallery are useful too: most examples
-run in R after the small changes described in <a href="coming-from-python.html">Coming from Python manim</a>.</p>
+run in R after the small changes described in <a href="https://adamrsophie.github.io/manimR/articles/coming-from-python.html">Coming
+from Python manim</a>.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

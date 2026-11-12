@@ -19,6 +19,12 @@ CurvesAsSubmobjects(vmobject, ...)
   Passed to
   [`VGroup()`](https://adamrsophie.github.io/manimR/reference/VGroupClass.md).
 
+## Value
+
+A mobject: an R6 object of the class named by the function called. The
+objects whose names end in `Class` are the R6 class generators that
+these functions call.
+
 ## Details
 
 `$point_from_proportion(alpha)` measures `alpha` along the total arc

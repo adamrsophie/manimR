@@ -71,7 +71,26 @@ foreground/color, font/font_family, weight, style, fgalpha."><meta property="og:
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">MarkupText</span><span class="op">(</span><span class="va">text</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">MarkupText</span><span class="op">(</span></span>
+<span>  <span class="va">text</span>,</span>
+<span>  fill_opacity <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  stroke_width <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  color <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  font_size <span class="op">=</span> <span class="va">DEFAULT_FONT_SIZE</span>,</span>
+<span>  line_spacing <span class="op">=</span> <span class="op">-</span><span class="fl">1</span>,</span>
+<span>  font <span class="op">=</span> <span class="st">""</span>,</span>
+<span>  slant <span class="op">=</span> <span class="st">"NORMAL"</span>,</span>
+<span>  weight <span class="op">=</span> <span class="st">"NORMAL"</span>,</span>
+<span>  justify <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  gradient <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  tab_width <span class="op">=</span> <span class="fl">4</span>,</span>
+<span>  height <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  width <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  should_center <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  disable_ligatures <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  warn_missing_font <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  <span class="va">...</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -82,10 +101,20 @@ foreground/color, font/font_family, weight, style, fgalpha."><meta property="og:
 <dd><p>Markup string.</p></dd>
 
 
+<dt id="arg-fill-opacity-stroke-width-color-font-size-line-spacing-font-slant-weight-justify-gradient-tab-width-height-width-should-center-disable-ligatures-warn-missing-font">fill_opacity, stroke_width, color, font_size, line_spacing, font, slant, weight, justify, gradient, tab_width, height, width, should_center, disable_ligatures, warn_missing_font<a class="anchor" aria-label="anchor" href="#arg-fill-opacity-stroke-width-color-font-size-line-spacing-font-slant-weight-justify-gradient-tab-width-height-width-should-center-disable-ligatures-warn-missing-font"></a></dt>
+<dd><p>As for <code><a href="TextClass.html">Text()</a></code>, in upstream's order for <code>MarkupText</code>.</p></dd>
+
+
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Passed to <code><a href="TextClass.html">Text()</a></code>.</p></dd>
 
 </dl></div>
+    <div class="section level2">
+    <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
+    <p>A mobject: an R6 object of the class named by the function called.
+The objects whose names end in <code>Class</code> are the R6 class generators that
+these functions call.</p>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>

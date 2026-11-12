@@ -43,7 +43,20 @@ Output paths, invisibly.
 ## Examples
 
 ``` r
+file <- tempfile(fileext = ".R")
+writeLines(c(
+  "library(manimR)",
+  "SquareToCircle <- manim_scene(function(self) {",
+  "  self$play(Transform(Square(), Circle()))",
+  "})"), file)
+# The last frame as a PNG file in the session's temporary directory.
+render_file(file, "SquareToCircle", quality = "l", format = "png", media_dir = tempdir())
+#> Rendering SquareToCircle ...
+#> INFO File ready at '/tmp/RtmptTjpVh/images/file244c4d491cd7/SquareToCircle_manimR_v0.1.0.png'
+#> INFO Rendered SquareToCircle
+#> Played 1 animations
 if (FALSE) { # \dontrun{
-render_file("scenes.R", "SquareToCircle", quality = "l", preview = TRUE)
+# A video in the folder media of the working directory; this needs ffmpeg.
+render_file(file, "SquareToCircle", quality = "l", preview = TRUE)
 } # }
 ```

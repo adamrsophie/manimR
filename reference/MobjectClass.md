@@ -34,6 +34,12 @@ Mobject(color = "#FFFFFF", name = NULL, z_index = 0, ...)
   [`set_default()`](https://adamrsophie.github.io/manimR/reference/set_default.md)
   gives; any other name is an error.
 
+## Value
+
+A mobject: an R6 object of the class named by the function called. The
+objects whose names end in `Class` are the R6 class generators that
+these functions call.
+
 ## Details
 
 Fields: `points` (n x 3 matrix), `submobjects` (list), `z_index`,

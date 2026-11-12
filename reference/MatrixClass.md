@@ -102,10 +102,17 @@ MobjectMatrix(matrix, element_to_mobject = function(m) m, ...)
   Passed to
   [`VMobject()`](https://adamrsophie.github.io/manimR/reference/VMobjectClass.md).
 
+## Value
+
+A mobject: an R6 object of the class named by the function called. The
+objects whose names end in `Class` are the R6 class generators that
+these functions call.
+
 ## Examples
 
 ``` r
 if (FALSE) { # \dontrun{
+# Needs LaTeX and dvisvgm.
 Matrix(list(list(2, "\\pi"), list(-1, 1)))
 IntegerMatrix(rbind(c(3.7, 2), c(42.2, 12)), left_bracket = "(", right_bracket = ")")
 } # }

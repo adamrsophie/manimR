@@ -26,6 +26,12 @@ DictAsObject(dictin)
 
   A named list.
 
+## Value
+
+`merge_dicts_recursively()` and `update_dict_recursively()` return the
+merged list. `DictAsObject()` returns an environment that holds the
+entries of the list.
+
 ## Details
 
 - `merge_dicts_recursively(...)` merges named lists from left to right;

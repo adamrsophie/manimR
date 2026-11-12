@@ -2,6 +2,11 @@
 
 Upstream's class and static methods live on the class generators:
 
+## Value
+
+The methods return what upstream's class methods of the same names
+return, as the list above describes.
+
 ## Details
 
 - `CircleClass$from_three_points(p1, p2, p3, ...)`: the circle through

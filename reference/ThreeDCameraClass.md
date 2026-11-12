@@ -75,6 +75,12 @@ ThreeDCamera(
   Passed to
   [CameraClass](https://adamrsophie.github.io/manimR/reference/CameraClass.md).
 
+## Value
+
+A camera: an R6 object of the class named by the function called. The
+objects whose names end in `Class` are the R6 class generators that
+these functions call.
+
 ## Details
 
 Shaded strokes are drawn in the mean of their two shaded colors rather

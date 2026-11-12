@@ -32,12 +32,16 @@ Exclusion(subject, clip, ...)
 
   The VMobjects to subtract or exclude.
 
+## Value
+
+A mobject: an R6 object of the class named by the function called. The
+objects whose names end in `Class` are the R6 class generators that
+these functions call.
+
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
 sq <- Square(color = RED, fill_opacity = 1)$move_to(c(-2, 0, 0))
 cr <- Circle(color = BLUE, fill_opacity = 1)$move_to(c(-1.3, 0.7, 0))
 un <- Union(sq, cr, color = GREEN, fill_opacity = 1)$move_to(c(1.5, 0.3, 0))
-} # }
 ```

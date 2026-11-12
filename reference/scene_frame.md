@@ -58,8 +58,6 @@ and fails when it changes.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
 f <- scene_frame(function(self) self$play(Create(Circle()), run_time = 2), t = 1)
 plot(f)
-} # }
 ```

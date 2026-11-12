@@ -250,6 +250,15 @@ defaults to half of the y step.</p></dd>
 
 </dl></div>
     <div class="section level2">
+    <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
+    <p>The constructors return mobjects: R6 objects of the class named by
+the function called. <code>vector_field_shift_func()</code> and
+<code>vector_field_scale_func()</code> return functions, and
+<code>DEFAULT_SCALAR_FIELD_COLORS</code> is a character vector of colors. The objects
+whose names end in <code>Class</code> are the R6 class generators that these functions
+call.</p>
+    </div>
+    <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>As upstream, stream lines in the plane are colored through a
 background image of the field's colors (<code>get_colored_background_image()</code>,
@@ -259,11 +268,14 @@ get a stroke gradient from the colors at their anchors.</p>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span><span class="va">func</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">pos</span><span class="op">)</span> <span class="op">(</span><span class="op">(</span><span class="va">pos</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">*</span> <span class="va">UR</span> <span class="op">+</span> <span class="va">pos</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">*</span> <span class="va">LEFT</span><span class="op">)</span> <span class="op">-</span> <span class="va">pos</span><span class="op">)</span> <span class="op">/</span> <span class="fl">3</span></span></span>
-<span class="r-in"><span><span class="fu">ArrowVectorField</span><span class="op">(</span><span class="va">func</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu">StreamLines</span><span class="op">(</span><span class="va">func</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">func</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">pos</span><span class="op">)</span> <span class="op">(</span><span class="op">(</span><span class="va">pos</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">*</span> <span class="va">UR</span> <span class="op">+</span> <span class="va">pos</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">*</span> <span class="va">LEFT</span><span class="op">)</span> <span class="op">-</span> <span class="va">pos</span><span class="op">)</span> <span class="op">/</span> <span class="fl">3</span></span></span>
+<span class="r-in"><span><span class="fu">ArrowVectorField</span><span class="op">(</span><span class="va">func</span>, x_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">1</span><span class="op">)</span>, y_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">2</span>, <span class="fl">2</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ArrowVectorField&gt; 0 points, 35 submobjects</span>
+<span class="r-in"><span><span class="co"># \donttest{</span></span></span>
+<span class="r-in"><span><span class="co"># Tracing stream lines takes a few seconds.</span></span></span>
+<span class="r-in"><span><span class="fu">StreamLines</span><span class="op">(</span><span class="va">func</span>, x_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">1</span><span class="op">)</span>, y_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">2</span>, <span class="fl">2</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;StreamLines&gt; 0 points, 35 submobjects</span>
+<span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

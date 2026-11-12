@@ -46,3 +46,7 @@ DashedVMobject(
 
   Passed to
   [`VMobject()`](https://adamrsophie.github.io/manimR/reference/VMobjectClass.md).
+
+## Value
+
+A `DashedVMobject`, an R6 mobject.

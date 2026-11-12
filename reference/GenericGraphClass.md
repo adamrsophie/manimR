@@ -136,11 +136,15 @@ DiGraph(
   edges. For `DiGraph()`, a `tip_config` entry (globally or per edge)
   styles the tips.
 
+## Value
+
+A mobject: an R6 object of the class named by the function called. The
+objects whose names end in `Class` are the R6 class generators that
+these functions call.
+
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
 g <- Graph(1:4, list(c(1, 2), c(2, 3), c(3, 4), c(1, 3), c(1, 4)), layout = "circular")
 g$get(1)$move_to(c(1, 1, 0))
-} # }
 ```

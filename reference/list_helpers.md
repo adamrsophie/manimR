@@ -7,6 +7,12 @@ other environments by identity, everything else by value.
 ## Usage
 
 ``` r
+extract_mobject_family_members(
+  mobject_list,
+  use_z_index = FALSE,
+  only_those_with_points = FALSE
+)
+
 stretch_array_to_length(nparray, length)
 
 adjacent_n_tuples(objects, n)
@@ -32,9 +38,37 @@ make_even_by_cycling(iterable_1, iterable_2)
 remove_list_redundancies(lst)
 
 remove_nones(sequence)
+
+resize_array(nparray, length)
+
+resize_preserving_order(nparray, length)
+
+resize_with_interpolation(nparray, length)
+
+batch_by_property(items, property_func)
+
+uniq_chain(...)
+
+flatten_iterable_parameters(args)
+
+restructure_list_to_exclude_certain_family_members(mobject_list, to_remove)
+
+hash_obj(obj)
 ```
 
 ## Arguments
+
+- mobject_list, to_remove:
+
+  Lists of mobjects.
+
+- use_z_index:
+
+  Sort the result by `z_index`.
+
+- only_those_with_points:
+
+  Keep only mobjects that have points.
 
 - nparray:
 
@@ -44,7 +78,8 @@ remove_nones(sequence)
 
   Length of the result.
 
-- objects, iterable, iterable_1, iterable_2, lst, sequence, l1, l2, obj:
+- objects, iterable, iterable_1, iterable_2, lst, sequence, l1, l2, obj,
+  items:
 
   A vector or list.
 
@@ -63,6 +98,20 @@ remove_nones(sequence)
 - key:
 
   `NULL`, or a function giving the value elements compare by.
+
+- property_func:
+
+  Function giving the property of an item.
+
+- args:
+
+  A list.
+
+## Value
+
+A list or a vector, as described above for each function.
+`all_elements_are_instances()` returns `TRUE` or `FALSE`, and
+`hash_obj()` returns a hash string.
 
 ## Details
 
@@ -97,6 +146,33 @@ remove_nones(sequence)
 - `stretch_array_to_length(nparray, length)`: a vector, or a matrix by
   rows, stretched to `length` entries by repeating them in place; it is
   an error to shrink.
+
+- `resize_array(nparray, length)`: a vector, or a matrix by rows, cut or
+  cyclically repeated to `length` entries (as `numpy.resize`).
+  `resize_preserving_order()` repeats or drops entries in place instead,
+  and `resize_with_interpolation()` interpolates linearly between
+  neighboring entries.
+
+- `batch_by_property(items, property_func)`: consecutive items with the
+  same `property_func(item)` grouped; a list of `list(batch, property)`
+  pairs.
+
+- `uniq_chain(...)`: the elements of all arguments in order, without
+  repeats.
+
+- `hash_obj(obj)`: a hash (a string) of a nested list that does not
+  depend on the order of the entries of named lists.
+
+- `flatten_iterable_parameters(args)`: the elements of `args`, with
+  those that are themselves lists or vectors of several elements spliced
+  in (one level).
+
+- `extract_mobject_family_members(mobject_list, use_z_index, only_those_with_points)`:
+  every member of the families of the mobjects, once each, optionally
+  sorted by `z_index` and without the members that have no points.
+  `restructure_list_to_exclude_certain_family_members(mobject_list, to_remove)`
+  drops `to_remove` and their family from the list; a group that holds
+  one of them is replaced by its remaining members.
 
 ## Examples
 

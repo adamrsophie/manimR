@@ -279,6 +279,8 @@ The base classes, groups and indexing.
   : BulletedList and Title
 - [`register_font()`](https://adamrsophie.github.io/manimR/reference/register_font.md)
   : Use a font file with Text
+- [`remove_invisible_chars()`](https://adamrsophie.github.io/manimR/reference/remove_invisible_chars.md)
+  : Remove the invisible characters of a text mobject
 - [`NORMAL`](https://adamrsophie.github.io/manimR/reference/font_constants.md)
   [`ITALIC`](https://adamrsophie.github.io/manimR/reference/font_constants.md)
   [`OBLIQUE`](https://adamrsophie.github.io/manimR/reference/font_constants.md)
@@ -462,6 +464,14 @@ The base classes, groups and indexing.
   [`OpenGLSurface`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
   [`OpenGLSurfaceMesh`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
   [`OpenGLTexturedSurface`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
+  [`OpenGLSurfaceGroup`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
+  [`OpenGLRectangle`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
+  [`OpenGLSquare`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
+  [`OpenGLRoundedRectangle`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
+  [`OpenGLRectangleClass`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
+  [`OpenGLSquareClass`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
+  [`OpenGLRoundedRectangleClass`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
+  [`OpenGLSurfaceGroupClass`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
   [`OpenGLMobjectClass`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
   [`OpenGLGroupClass`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
   [`OpenGLPointClass`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
@@ -902,6 +912,11 @@ The base classes, groups and indexing.
   [`normalize()`](https://adamrsophie.github.io/manimR/reference/space_ops.md)
   [`cross()`](https://adamrsophie.github.io/manimR/reference/space_ops.md)
   [`rotation_matrix()`](https://adamrsophie.github.io/manimR/reference/space_ops.md)
+  [`rotation_matrix_transpose()`](https://adamrsophie.github.io/manimR/reference/space_ops.md)
+  [`rotation_matrix_transpose_from_quaternion()`](https://adamrsophie.github.io/manimR/reference/space_ops.md)
+  [`rotation_matrix_from_quaternion()`](https://adamrsophie.github.io/manimR/reference/space_ops.md)
+  [`norm_squared()`](https://adamrsophie.github.io/manimR/reference/space_ops.md)
+  [`normalize_along_axis()`](https://adamrsophie.github.io/manimR/reference/space_ops.md)
   [`rotation_about_z()`](https://adamrsophie.github.io/manimR/reference/space_ops.md)
   [`rotate_vector()`](https://adamrsophie.github.io/manimR/reference/space_ops.md)
   [`angle_of_vector()`](https://adamrsophie.github.io/manimR/reference/space_ops.md)
@@ -937,7 +952,23 @@ The base classes, groups and indexing.
   [`point_lies_on_bezier()`](https://adamrsophie.github.io/manimR/reference/proportions_along_bezier_curve_for_point.md)
   : Does a point lie on a Bezier curve?
 - [`get_smooth_cubic_bezier_handle_points()`](https://adamrsophie.github.io/manimR/reference/get_smooth_cubic_bezier_handle_points.md)
+  [`get_smooth_closed_cubic_bezier_handle_points()`](https://adamrsophie.github.io/manimR/reference/get_smooth_cubic_bezier_handle_points.md)
+  [`get_smooth_open_cubic_bezier_handle_points()`](https://adamrsophie.github.io/manimR/reference/get_smooth_cubic_bezier_handle_points.md)
   : Smooth cubic Bezier handles
+- [`get_quadratic_approximation_of_cubic()`](https://adamrsophie.github.io/manimR/reference/get_quadratic_approximation_of_cubic.md)
+  : Quadratic approximation of cubic Bezier curves
+- [`matrix_to_shader_input()`](https://adamrsophie.github.io/manimR/reference/opengl_matrices.md)
+  [`orthographic_projection_matrix()`](https://adamrsophie.github.io/manimR/reference/opengl_matrices.md)
+  [`perspective_projection_matrix()`](https://adamrsophie.github.io/manimR/reference/opengl_matrices.md)
+  [`translation_matrix()`](https://adamrsophie.github.io/manimR/reference/opengl_matrices.md)
+  [`x_rotation_matrix()`](https://adamrsophie.github.io/manimR/reference/opengl_matrices.md)
+  [`y_rotation_matrix()`](https://adamrsophie.github.io/manimR/reference/opengl_matrices.md)
+  [`z_rotation_matrix()`](https://adamrsophie.github.io/manimR/reference/opengl_matrices.md)
+  [`opengl_rotation_matrix()`](https://adamrsophie.github.io/manimR/reference/opengl_matrices.md)
+  [`rotate_in_place_matrix()`](https://adamrsophie.github.io/manimR/reference/opengl_matrices.md)
+  [`scale_matrix()`](https://adamrsophie.github.io/manimR/reference/opengl_matrices.md)
+  [`view_matrix()`](https://adamrsophie.github.io/manimR/reference/opengl_matrices.md)
+  : Projection, view and transformation matrices
 - [`is_closed()`](https://adamrsophie.github.io/manimR/reference/is_closed.md)
   : Is a spline closed?
 - [`interpolate()`](https://adamrsophie.github.io/manimR/reference/interpolate.md)
@@ -963,7 +994,8 @@ The base classes, groups and indexing.
 
 ## Programming utilities
 
-- [`stretch_array_to_length()`](https://adamrsophie.github.io/manimR/reference/list_helpers.md)
+- [`extract_mobject_family_members()`](https://adamrsophie.github.io/manimR/reference/list_helpers.md)
+  [`stretch_array_to_length()`](https://adamrsophie.github.io/manimR/reference/list_helpers.md)
   [`adjacent_n_tuples()`](https://adamrsophie.github.io/manimR/reference/list_helpers.md)
   [`adjacent_pairs()`](https://adamrsophie.github.io/manimR/reference/list_helpers.md)
   [`all_elements_are_instances()`](https://adamrsophie.github.io/manimR/reference/list_helpers.md)
@@ -976,6 +1008,14 @@ The base classes, groups and indexing.
   [`make_even_by_cycling()`](https://adamrsophie.github.io/manimR/reference/list_helpers.md)
   [`remove_list_redundancies()`](https://adamrsophie.github.io/manimR/reference/list_helpers.md)
   [`remove_nones()`](https://adamrsophie.github.io/manimR/reference/list_helpers.md)
+  [`resize_array()`](https://adamrsophie.github.io/manimR/reference/list_helpers.md)
+  [`resize_preserving_order()`](https://adamrsophie.github.io/manimR/reference/list_helpers.md)
+  [`resize_with_interpolation()`](https://adamrsophie.github.io/manimR/reference/list_helpers.md)
+  [`batch_by_property()`](https://adamrsophie.github.io/manimR/reference/list_helpers.md)
+  [`uniq_chain()`](https://adamrsophie.github.io/manimR/reference/list_helpers.md)
+  [`flatten_iterable_parameters()`](https://adamrsophie.github.io/manimR/reference/list_helpers.md)
+  [`restructure_list_to_exclude_certain_family_members()`](https://adamrsophie.github.io/manimR/reference/list_helpers.md)
+  [`hash_obj()`](https://adamrsophie.github.io/manimR/reference/list_helpers.md)
   : List helpers
 - [`merge_dicts_recursively()`](https://adamrsophie.github.io/manimR/reference/dict_helpers.md)
   [`update_dict_recursively()`](https://adamrsophie.github.io/manimR/reference/dict_helpers.md)
@@ -986,6 +1026,9 @@ The base classes, groups and indexing.
   [`guarantee_empty_existence()`](https://adamrsophie.github.io/manimR/reference/path_helpers.md)
   [`seek_full_path_from_defaults()`](https://adamrsophie.github.io/manimR/reference/path_helpers.md)
   [`get_full_raster_image_path()`](https://adamrsophie.github.io/manimR/reference/path_helpers.md)
+  [`get_full_vector_image_path()`](https://adamrsophie.github.io/manimR/reference/path_helpers.md)
+  [`add_version_before_extension()`](https://adamrsophie.github.io/manimR/reference/path_helpers.md)
+  [`convert_audio()`](https://adamrsophie.github.io/manimR/reference/path_helpers.md)
   [`get_full_sound_file_path()`](https://adamrsophie.github.io/manimR/reference/path_helpers.md)
   [`modify_atime()`](https://adamrsophie.github.io/manimR/reference/path_helpers.md)
   [`open_file()`](https://adamrsophie.github.io/manimR/reference/path_helpers.md)

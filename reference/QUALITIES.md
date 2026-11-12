@@ -20,3 +20,8 @@ DEFAULT_QUALITY
 `QUALITIES` is a named list of presets, each a list with `flag`,
 `pixel_height`, `pixel_width` and `frame_rate`. `DEFAULT_QUALITY` is the
 name of the default preset.
+
+## Value
+
+`QUALITIES` is a named list of render settings, one entry for each
+quality. `DEFAULT_QUALITY` is the name of the default quality.

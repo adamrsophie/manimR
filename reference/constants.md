@@ -75,6 +75,11 @@ DEFAULT_POINT_DENSITY_1D
 DEFAULT_POINT_DENSITY_2D
 ```
 
+## Value
+
+Numeric vectors of length 3 for the origin and the directions, and
+single numbers for the other constants.
+
 ## Examples
 
 ``` r

@@ -18,3 +18,7 @@ with_manim_config(settings, code)
 - code:
 
   Code to evaluate.
+
+## Value
+
+The value of `code`.

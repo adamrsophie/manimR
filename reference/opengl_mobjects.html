@@ -122,8 +122,16 @@ shaders, kept but not used.</p></dd>
 
 </dl></div>
     <div class="section level2">
+    <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
+    <p>A mobject: an R6 object of the class named by the function called.
+The objects whose names end in <code>Class</code> are the R6 class generators that
+these functions call.</p>
+    </div>
+    <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>Two classes have no Cairo counterpart:</p><ul><li><p><code>OpenGLSurfaceMesh(uv_surface)</code> is a <code><a href="VGroupClass.html">VGroup()</a></code> of curves along the
+    <p>Three classes have no Cairo counterpart:</p><ul><li><p><code>OpenGLSurfaceGroup(...)</code> is a surface without faces of its own that
+holds the surfaces it is given.</p></li>
+<li><p><code>OpenGLSurfaceMesh(uv_surface)</code> is a <code><a href="VGroupClass.html">VGroup()</a></code> of curves along the
 grid lines of a surface (<code>resolution</code> lines in each direction, 21 by
 default), lifted <code>normal_nudge</code> along the surface normal so they show
 on top of it.</p></li>

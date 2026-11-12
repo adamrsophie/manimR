@@ -124,11 +124,15 @@ DecimalTable(
   Passed to
   [`VGroup()`](https://adamrsophie.github.io/manimR/reference/VGroupClass.md).
 
+## Value
+
+A mobject: an R6 object of the class named by the function called. The
+objects whose names end in `Class` are the R6 class generators that
+these functions call.
+
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
 t <- Table(list(c("This", "is a"), c("simple", "Table in \n Manim.")))
 t$add_highlighted_cell(c(2, 2), color = GREEN)
-} # }
 ```

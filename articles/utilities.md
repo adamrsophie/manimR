@@ -842,6 +842,9 @@ pole
 #> 
 #> $d
 #> [1] 1.046875
+#> 
+#> $h
+#> [1] 0.015625
 ```
 
 ``` r
@@ -1049,7 +1052,7 @@ moment. Each `*_path()` constructor returns such a function.
 straight_path()
 #> function (start, end, alpha) 
 #> (1 - alpha) * start + alpha * end
-#> <bytecode: 0x649a7894eb70>
+#> <bytecode: 0x5cb3b3a080e0>
 #> <environment: namespace:manimR>
 start <- rbind(LEFT)
 end <- rbind(RIGHT)

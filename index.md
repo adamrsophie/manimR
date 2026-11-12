@@ -37,8 +37,8 @@ videos:
   [Math and utility
   functions](https://adamrsophie.github.io/manimR/articles/utilities.html)
 
-The same articles are installed with the package; see
-`browseVignettes("manimR")`.
+The introduction is also installed with the package:
+[`vignette("manimR")`](https://adamrsophie.github.io/manimR/articles/manimR.md).
 
 ## Installation
 

@@ -45,6 +45,12 @@ TransformMatchingTex(mobject, target_mobject, ..., use_override = TRUE)
   [`override_animation()`](https://adamrsophie.github.io/manimR/reference/override_animation.md)
   on the class of `mobject`.
 
+## Value
+
+An animation: an R6 object of the class named by the function called, to
+pass to a scene's `play()`. The objects whose names end in `Class` are
+the R6 class generators that these functions call.
+
 ## Details
 
 Unless `transform_mismatches` or `fade_transform_mismatches` is `TRUE`,
@@ -54,7 +60,6 @@ parts, and unmatched target parts fade in from there.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
 Anagram <- manim_scene(function(self) {
   src <- Text("the morse code")
   tar <- Text("here come dots")
@@ -63,5 +68,4 @@ Anagram <- manim_scene(function(self) {
   self$play(TransformMatchingShapes(src, tar, path_arc = PI / 2))
   self$wait(0.5)
 })
-} # }
 ```

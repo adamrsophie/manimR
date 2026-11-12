@@ -16,3 +16,8 @@ The canvas on which animations play. Subclass it and define
 
 Or use the functional form
 [`manim_scene()`](https://adamrsophie.github.io/manimR/reference/manim_scene.md).
+
+## Value
+
+An R6 class generator. A scene class inherits from it, and `$new()`
+creates a scene.

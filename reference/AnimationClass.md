@@ -69,3 +69,8 @@ Animation(
 - ...:
 
   Ignored.
+
+## Value
+
+An `Animation`, an R6 object to pass to a scene's `play()`.
+`AnimationClass` is its R6 class generator.

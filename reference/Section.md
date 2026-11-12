@@ -33,6 +33,11 @@ Section(type_, video, name, skip_animations)
 
   Skip rendering the animations of this section.
 
+## Value
+
+A `Section`, an R6 object that describes one section of a scene's
+output. `SectionClass` is its R6 class generator.
+
 ## Details
 
 `$is_empty()` tells whether the section has no plays, `$get_dict()`
