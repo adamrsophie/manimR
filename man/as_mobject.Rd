@@ -41,7 +41,8 @@ The plot is drawn on a white or transparent background (\code{bg}), at
 scene units.
 }
 \examples{
-\dontshow{if (requireNamespace("ggplot2", quietly = TRUE) && isTRUE(capabilities("cairo"))) withAutoprint(\{ # examplesIf}
+\dontshow{if (requireNamespace("ggplot2", quietly = TRUE) && local({f <- tempfile(fileext = ".svg"); d <- grDevices::dev.cur(); suppressWarnings(try(grDevices::svg(f), silent = TRUE)); if (grDevices::dev.cur() != d) grDevices::dev.off(); file.exists(f)})) withAutoprint(\{ # examplesIf}
+# R's svg() device needs the Cairo library (on macOS, XQuartz).
 \donttest{
 p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) + ggplot2::geom_point()
 chart <- as_mobject(p)

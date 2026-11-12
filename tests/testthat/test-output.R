@@ -308,7 +308,7 @@ test_that("render output prints into knitr documents and Shiny apps", {
 })
 
 test_that("plots, single frames and igraph graphs become manimR objects", {
-  skip_if_not(isTRUE(capabilities("cairo")))
+  skip_if_not(svg_works(), "R's svg() device does not work")
   m <- as_mobject(function() plot(1:3), height_units = 4)
   expect_true(is_mobject(m))
   expect_equal(m$height, 4, tolerance = 1e-6)

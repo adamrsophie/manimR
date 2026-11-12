@@ -25,7 +25,8 @@
 #' @param ... Passed to [SVGMobject()].
 #' @return An [SVGMobject()].
 #' @export
-#' @examplesIf requireNamespace("ggplot2", quietly = TRUE) && isTRUE(capabilities("cairo"))
+#' @examplesIf requireNamespace("ggplot2", quietly = TRUE) && local({f <- tempfile(fileext = ".svg"); d <- grDevices::dev.cur(); suppressWarnings(try(grDevices::svg(f), silent = TRUE)); if (grDevices::dev.cur() != d) grDevices::dev.off(); file.exists(f)})
+#' # R's svg() device needs the Cairo library (on macOS, XQuartz).
 #' \donttest{
 #' p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) + ggplot2::geom_point()
 #' chart <- as_mobject(p)
@@ -56,6 +57,10 @@ as_mobject.default <- function(x, width = 7, height = 5, bg = "transparent", hei
     draw()
     ok <- TRUE
   }, finally = grDevices::dev.off())
+  # R's svg() only warns when it cannot load the Cairo library.
+  if (!file.exists(file)) {
+    stop("R's svg() device wrote no file: it needs the Cairo library (on macOS, XQuartz).", call. = FALSE)
+  }
   mob <- SVGMobject(file, height = height_units, ...)
   mob
 }

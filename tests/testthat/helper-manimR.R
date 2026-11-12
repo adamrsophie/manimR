@@ -26,3 +26,14 @@ latex_works <- local({
     ok
   }
 })
+
+# TRUE when R's svg() device writes files; on macOS it needs XQuartz's Cairo
+# library and only warns without it.
+svg_works <- function() {
+  f <- tempfile(fileext = ".svg")
+  on.exit(unlink(f), add = TRUE)
+  d <- grDevices::dev.cur()
+  suppressWarnings(try(grDevices::svg(f), silent = TRUE))
+  if (grDevices::dev.cur() != d) grDevices::dev.off()
+  file.exists(f)
+}
