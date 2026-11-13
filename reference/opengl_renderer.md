@@ -1,9 +1,10 @@
-# The CPU side of upstream's OpenGL renderer
+# Upstream's OpenGL renderer
 
 Upstream's OpenGL renderer keeps a camera mobject, a tree of 3D objects
 and meshes, and compiled shader programs, and draws them with moderngl.
-manimR draws with grid and has no OpenGL context, so these ports compute
-what upstream computes on the CPU and stop where upstream would draw:
+manimR computes what upstream computes on the CPU and draws the result
+in software, with a context whose framebuffers are off screen graphics
+devices:
 
 ## Usage
 
@@ -50,6 +51,29 @@ triangulate_mobject(mob)
 affects_shader_info_id(func)
 
 triggers_refreshed_triangulation(func)
+
+OpenGLSoftwareContext(...)
+
+render_opengl_vectorized_mobject_fill(renderer, mobject)
+
+render_mobject_fills_with_matrix(renderer, model_matrix, mobjects)
+
+render_opengl_vectorized_mobject_stroke(renderer, mobject)
+
+render_mobject_strokes_with_matrix(renderer, model_matrix, mobjects)
+
+OpenGLRenderer(
+  file_writer_class = SceneFileWriterClass,
+  skip_animations = FALSE
+)
+
+Window(
+  renderer,
+  window_size = cfg("window_size"),
+  monitor = NULL,
+  open = TRUE,
+  ...
+)
 ```
 
 ## Arguments
@@ -120,7 +144,7 @@ triggers_refreshed_triangulation(func)
 
 - context:
 
-  An OpenGL context; manimR has none and keeps what is given.
+  A context, as `OpenGLSoftwareContext()`, kept with the shader.
 
 - name:
 
@@ -147,13 +171,46 @@ triggers_refreshed_triangulation(func)
 
   A method, a function of `self` and further arguments.
 
+- renderer:
+
+  An `OpenGLRenderer`.
+
+- mobject:
+
+  An OpenGL VMobject.
+
+- mobjects:
+
+  A list of OpenGL VMobjects.
+
+- file_writer_class:
+
+  Class of the scene's file writer.
+
+- skip_animations:
+
+  Whether animations are skipped.
+
+- window_size:
+
+  `"default"`, `"width,height"` or two integers.
+
+- monitor:
+
+  List of `x`, `y`, `width` and `height` of the monitor.
+
+- open:
+
+  Whether to open the window's graphics device.
+
 ## Value
 
-`OpenGLCamera()`, `Object3D()`, `Mesh()`, `Shader()` and
-`FullScreenQuad()` return R6 objects; `filter_attributes()` and
-`triangulate_mobject()` shader data; `build_matrix_lists()` a list of
-mobject lists named by the 16 values of their matrix, row by row; the
-decorators a function.
+`OpenGLCamera()`, `Object3D()`, `Mesh()`, `Shader()`,
+`FullScreenQuad()`, `OpenGLRenderer()`, `OpenGLSoftwareContext()` and
+`Window()` return R6 objects; the `render_*` functions return `NULL`
+invisibly; `filter_attributes()` and `triangulate_mobject()` shader
+data; `build_matrix_lists()` a list of mobject lists named by the 16
+values of their matrix, row by row; the decorators a function.
 
 ## Details
 
@@ -183,9 +240,40 @@ decorators a function.
   `triggers_refreshed_triangulation(func)` are upstream's decorators as
   functions: they wrap a method `func(self, ...)`.
 
-The drawing functions of `vectorized_mobject_rendering`
-(`render_opengl_vectorized_mobject_fill()` and the rest),
-`OpenGLRenderer` and `Window` need an OpenGL context and are not ported.
+- `OpenGLRenderer()` renders scenes as upstream's renderer: it clears
+  its framebuffer to the background color, sets the perspective uniforms
+  from the camera (`refresh_perspective_uniforms()`) and draws each
+  mobject. The shader wrappers of a mobject are drawn by a grid camera
+  that places points as upstream's shaders do (rotated by
+  `camera_rotation`, scaled by `focal_distance / (focal_distance - z)`,
+  fixed in frame mobjects in the default frame) and lights them with
+  upstream's `add_light()`, once per mobject rather than per pixel.
+  `config$renderer = "opengl"` makes scenes use it. `get_frame()` gives
+  a `nativeRaster`; `get_raw_frame_buffer_object_data()` the pixels
+  bottom row first, as OpenGL reads them.
+
+- `render_opengl_vectorized_mobject_fill()`,
+  `render_opengl_vectorized_mobject_stroke()` and their `_with_matrix`
+  helpers build upstream's vertex buffers and uniforms and draw them as
+  upstream's projection shaders do (with
+  `config$use_projection_fill_shaders` and
+  `config$use_projection_stroke_shaders`): the fill keeps the part of
+  each triangle on the side of its curve given by its texture mode, and
+  the stroke the points within `0.004 * width` of its curve.
+
+- `OpenGLSoftwareContext()` stands for moderngl's context:
+  `framebuffer()`, `buffer()` and `simple_vertex_array()`, whose
+  [`render()`](https://adamrsophie.github.io/manimR/reference/render.md)
+  draws the `vectorized_mobject_fill` and `vectorized_mobject_stroke`
+  shaders. Other GLSL code, as a `Mesh`'s, is not run.
+
+- `Window(renderer)` is the window of a live preview: an R graphics
+  device (an interactive session is needed) that shows the renderer's
+  frame on `swap_buffers()` and passes mouse and key events to the
+  scene's handlers. Its size follows `config$window_size` and its
+  position `config$window_position` on the monitor, which is
+  `getOption("manimR.monitor")` (a list of `x`, `y`, `width` and
+  `height`) or 1920 by 1080 pixels at the origin.
 
 ## Examples
 
@@ -205,4 +293,13 @@ length(tri)
 s <- Shader(name = "surface")
 names(s$shader_program)
 #> [1] "fragment_shader" "vertex_shader"  
+# \donttest{
+r <- OpenGLRenderer()
+scene <- Scene$new(renderer = r)
+scene$add(OpenGLCircle()$set_fill(RED, 1))
+r$update_frame(scene)
+dim(r$get_raw_frame_buffer_object_data())
+#> [1] 1080 1920    4
+r$close_device()
+# }
 ```

@@ -558,7 +558,14 @@ The base classes, groups and indexing.
   [`triangulate_mobject()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)
   [`affects_shader_info_id()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)
   [`triggers_refreshed_triangulation()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)
-  : The CPU side of upstream's OpenGL renderer
+  [`OpenGLSoftwareContext()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)
+  [`render_opengl_vectorized_mobject_fill()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)
+  [`render_mobject_fills_with_matrix()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)
+  [`render_opengl_vectorized_mobject_stroke()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)
+  [`render_mobject_strokes_with_matrix()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)
+  [`OpenGLRenderer()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)
+  [`Window()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)
+  : Upstream's OpenGL renderer
 - [`get_mobject_class()`](https://adamrsophie.github.io/manimR/reference/get_mobject_class.md)
   [`get_vectorized_mobject_class()`](https://adamrsophie.github.io/manimR/reference/get_mobject_class.md)
   [`get_point_mobject_class()`](https://adamrsophie.github.io/manimR/reference/get_mobject_class.md)

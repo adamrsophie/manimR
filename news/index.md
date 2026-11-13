@@ -78,9 +78,19 @@
   [`triangulate_mobject()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)
   and
   [`build_matrix_lists()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md);
-  drawing a mesh needs an OpenGL context and stops with a message. Where
-  an OpenGL class differs from its Cairo counterpart, it follows
-  upstream’s OpenGL class:
+  drawing a mesh needs an OpenGL context and stops with a message.
+  [`OpenGLRenderer()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)
+  renders scenes (also with `manim_config(renderer = "opengl")`) through
+  a software context
+  ([`OpenGLSoftwareContext()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md))
+  whose framebuffers are ragg devices, the
+  [`render_opengl_vectorized_mobject_fill()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)
+  and `_stroke()` functions draw upstream’s projection shaders by their
+  GLSL rules, and
+  [`Window()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)
+  shows a live preview in an R graphics device. Where an OpenGL class
+  differs from its Cairo counterpart, it follows upstream’s OpenGL
+  class:
   [`OpenGLArrow()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
   is a filled shape,
   [`OpenGLLine()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)

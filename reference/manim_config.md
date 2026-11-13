@@ -86,9 +86,13 @@ The settings, with upstream's names and defaults:
   `tex_template_file`, `no_latex_cleanup` (keep .aux, .dvi and .log
   files in `tex_dir`).
 
-- Other: `seed` (random seed of every scene), `renderer` (`"cairo"`;
-  `"opengl"` is accepted and renders with the Cairo style renderer, the
-  only one ported), `plugins`, `write_all`, `scene_names`,
+- Other: `seed` (random seed of every scene), `renderer` (`"cairo"`, or
+  `"opengl"` for
+  [OpenGLRenderer()](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md),
+  upstream's OpenGL renderer drawn in software; scenes with their own
+  camera class, such as
+  [`ThreeDScene()`](https://adamrsophie.github.io/manimR/reference/ThreeDScene.md),
+  keep the Cairo style renderer), `plugins`, `write_all`, `scene_names`,
   `notify_outdated_version`, and the OpenGL window settings
   `enable_gui`, `live_preview`, `gui_location`, `fullscreen`,
   `window_position`, `window_size`, `window_monitor`,

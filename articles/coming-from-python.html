@@ -1234,10 +1234,12 @@ as upstream does.</p>
 <span><span class="co">#&gt; [1] 8</span></span>
 <span><span class="va">manim_frame</span><span class="op">$</span><span class="va">top</span></span>
 <span><span class="co">#&gt; [1] 0 4 0</span></span></code></pre></div>
-<p>The <code>renderer</code> setting accepts <code>"opengl"</code> for
-compatibility, but every scene renders with the Cairo style renderer,
-the only one ported. See <a href="rendering.html">Rendering,
-configuration and output</a> for every setting.</p>
+<p>With <code>renderer = "opengl"</code>, scenes render with
+<code><a href="../reference/opengl_renderer.html">OpenGLRenderer()</a></code>, a port of upstream’s OpenGL renderer that
+draws its shaders’ triangles in software instead of on the GPU. Scenes
+with their own camera, such as <code>ThreeDScene</code>, keep the Cairo
+style renderer. See <a href="rendering.html">Rendering, configuration
+and output</a> for every setting.</p>
 </div>
 <div class="section level2">
 <h2 id="the-command-line">The command line<a class="anchor" aria-label="anchor" href="#the-command-line"></a>

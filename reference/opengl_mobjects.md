@@ -140,8 +140,9 @@ Three classes have no Cairo counterpart:
   along the image from left to right and `v` from bottom to top, as
   upstream's texture coordinates. Upstream's shader shows
   `dark_image_file` on the side facing away from the light, which is at
-  (-10, 10, 10) in the camera's frame; each face is blended from its two
-  colors when the camera draws it, as upstream's shader does.
+  (-10, 10, 10) and turns with the view as upstream's light does; each
+  face is blended from its two colors when the camera draws it, as
+  upstream's shader does.
 
 ## Examples
 

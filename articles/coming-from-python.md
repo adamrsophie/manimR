@@ -641,9 +641,12 @@ manim_frame$top
 #> [1] 0 4 0
 ```
 
-The `renderer` setting accepts `"opengl"` for compatibility, but every
-scene renders with the Cairo style renderer, the only one ported. See
-[Rendering, configuration and
+With `renderer = "opengl"`, scenes render with
+[`OpenGLRenderer()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md),
+a port of upstream’s OpenGL renderer that draws its shaders’ triangles
+in software instead of on the GPU. Scenes with their own camera, such as
+`ThreeDScene`, keep the Cairo style renderer. See [Rendering,
+configuration and
 output](https://adamrsophie.github.io/manimR/articles/rendering.md) for
 every setting.
 

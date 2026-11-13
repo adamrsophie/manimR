@@ -138,9 +138,10 @@ encoding runs in the R process, one segment at a time.</p></li>
 <code>log_to_file</code> (write a log per scene to <code>log_dir</code>), <code>media_loglevel</code>.</p></li>
 <li><p>LaTeX: <code>tex_template</code> (a <code><a href="TexTemplateClass.html">TexTemplate()</a></code>), <code>tex_template_file</code>,
 <code>no_latex_cleanup</code> (keep .aux, .dvi and .log files in <code>tex_dir</code>).</p></li>
-<li><p>Other: <code>seed</code> (random seed of every scene), <code>renderer</code> (<code>"cairo"</code>;
-<code>"opengl"</code> is accepted and renders with the Cairo style renderer, the
-only one ported), <code>plugins</code>, <code>write_all</code>, <code>scene_names</code>,
+<li><p>Other: <code>seed</code> (random seed of every scene), <code>renderer</code> (<code>"cairo"</code>, or
+<code>"opengl"</code> for <a href="opengl_renderer.html">OpenGLRenderer()</a>, upstream's OpenGL renderer drawn in
+software; scenes with their own camera class, such as <code><a href="ThreeDScene.html">ThreeDScene()</a></code>,
+keep the Cairo style renderer), <code>plugins</code>, <code>write_all</code>, <code>scene_names</code>,
 <code>notify_outdated_version</code>, and the OpenGL window settings
 <code>enable_gui</code>, <code>live_preview</code>, <code>gui_location</code>, <code>fullscreen</code>,
 <code>window_position</code>, <code>window_size</code>, <code>window_monitor</code>,
