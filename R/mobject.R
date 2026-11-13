@@ -777,7 +777,15 @@ MobjectClass <- R6::R6Class("Mobject",
     add_n_more_submobjects = function(n) {
       if (n == 0) return(invisible(NULL))
       curr <- length(self$submobjects)
+      opengl <- identical(cfg("renderer"), "opengl")
       if (curr == 0) {
+        if (opengl) {
+          # Upstream's OpenGL mobject adds copies of itself shrunk to its center.
+          null_mob <- self$copy()
+          null_mob$set_points(matrix(self$get_center(), 1))
+          self$submobjects <- lapply(seq_len(n), function(k) null_mob$copy())
+          return(invisible(self))
+        }
         self$submobjects <- lapply(seq_len(n), function(k) self$get_point_mobject())
         return(invisible(NULL))
       }
@@ -789,7 +797,13 @@ MobjectClass <- R6::R6Class("Mobject",
         sm <- self$submobjects[[i]]
         new_sub[[length(new_sub) + 1]] <- sm
         if (split_factors[i] > 1) {
-          for (k in 2:split_factors[i]) new_sub[[length(new_sub) + 1]] <- sm$copy()$fade(1)
+          for (k in 2:split_factors[i]) {
+            # Upstream's OpenGL mobject keeps a copy visible unless the
+            # submobject is at all transparent.
+            cp <- sm$copy()
+            new_sub[[length(new_sub) + 1]] <- if (!opengl) cp$fade(1)
+              else if (opengl_submob_opacity(sm) < 1) cp$set_opacity(0) else cp
+          }
         }
       }
       self$submobjects <- new_sub
@@ -1204,4 +1218,14 @@ copy_private_nested <- function(old, new, memo) {
     }
   }
   invisible(NULL)
+}
+
+# Upstream's OpenGL get_opacity(): the fill opacity of a vmobject with fill,
+# else its stroke opacity; the first color's opacity for other mobjects.
+opengl_submob_opacity <- function(m) {
+  if (is_vmobject(m)) {
+    fo <- m$get_fill_opacities()
+    return(if (length(fo) && any(fo > 0)) fo[1] else m$get_stroke_opacity())
+  }
+  if (is.function(m$get_opacity)) m$get_opacity() else 1
 }

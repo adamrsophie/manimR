@@ -65,7 +65,10 @@
   an SVG path, `add_cubic_bezier_curve_to()` or `make_smooth()`) is two
   quadratics, `MathTex()` and `Typst()` split sharp curves and drop null
   ones, `ThreeDAxes()` adds no shaded pieces, group bounds use the
-  quadratic curves, and an empty group keeps track of its shifts.
+  quadratic curves, and an empty group keeps track of its shifts. Under
+  that renderer a partial curve keeps its number of curves, and copies
+  added to align groups in a transform stay visible when opaque, as in
+  upstream's OpenGL mobjects.
 * Images are drawn through the homography of their corners with Pillow's
   nearest, bilinear and bicubic filters, and an image seen edge on is
   skipped as upstream.

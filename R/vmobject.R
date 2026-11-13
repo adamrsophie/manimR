@@ -869,6 +869,9 @@ VMobjectClass <- R6::R6Class("VMobject", inherit = MobjectClass, lock_objects = 
         self$points <- partial_bezier_points(curve(lo$index), lo$residue, hi$residue)
       } else {
         mid <- if (hi$index - lo$index > 1) vp[(4 * (lo$index + 1) + 1):(4 * hi$index), , drop = FALSE] else NULL
+        # Upstream's OpenGL VMobject remaps the inner curves so the partial
+        # keeps the number of curves.
+        if (!is.null(mid) && isTRUE(vmobject$opengl_quadratic)) mid <- bezier_remap(mid, num_curves - 2)
         self$points <- rbind(partial_bezier_points(curve(lo$index), lo$residue, 1), mid,
                              partial_bezier_points(curve(hi$index), 0, hi$residue))
       }

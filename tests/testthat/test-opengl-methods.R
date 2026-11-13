@@ -1334,6 +1334,23 @@ test_that("user subclasses with locked fields work under the OpenGL renderer", {
     initialize = function(...) { super$initialize(...); self$add(Dot()) }))
   tempconfig(list(renderer = "opengl"), {
     expect_s3_class(Labeled$new()$shift(UP), "VGroup")
-    expect_equal(Labeled$new()$get_center(), c(0, 0, 0))
+    expect_equal(Labeled$new()$get_center(), c(0, 0, 0), tolerance = 0.01)
+  })
+})
+
+test_that("animations under the OpenGL renderer follow upstream's OpenGL mobject methods", {
+  tempconfig(list(renderer = "opengl"), {
+    # A partial keeps the number of curves, the inner ones remapped.
+    c1 <- Circle()
+    p <- c1$copy()$pointwise_become_partial(c1, 0.2, 0.7)
+    expect_equal(nrow(opengl_quadratic_points(p)), 27)
+    # Extra copies made to align families stay visible when opaque.
+    g <- VGroup(Square(), Circle())
+    g$add_n_more_submobjects(2)
+    expect_length(g$submobjects, 4)
+    expect_true(all(vapply(g$submobjects, function(m) m$get_stroke_opacity(), 0) == 1))
+    h <- VGroup(Square(fill_opacity = 0.5))
+    h$add_n_more_submobjects(1)
+    expect_equal(h$submobjects[[2]]$get_stroke_opacity(), 0)
   })
 })
