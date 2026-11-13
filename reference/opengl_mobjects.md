@@ -13,7 +13,9 @@ OpenGL mobjects, such as `fix_in_frame()`, `set_gloss()`,
 sends to the GPU (see
 [`ShaderWrapper()`](https://adamrsophie.github.io/manimR/reference/ShaderWrapper.md)),
 from manimR's cubic curves, which they split into upstream's quadratic
-ones. manimR draws with grid and has no OpenGL window or camera.
+ones. manimR draws with grid and has no OpenGL window; the CPU side of
+upstream's renderer (its camera, meshes and shaders) is in
+[opengl_renderer](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md).
 
 ## Arguments
 

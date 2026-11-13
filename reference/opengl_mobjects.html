@@ -8,7 +8,8 @@ mobjects, such as fix_in_frame(), set_gloss(), get_shader_data(),
 get_triangulation() and get_shader_wrapper_list(): they compute the
 data upstream's renderer sends to the GPU (see ShaderWrapper()), from
 manimR's cubic curves, which they split into upstream's quadratic ones.
-manimR draws with grid and has no OpenGL window or camera."><meta property="og:description" content="Upstream's OpenGL renderer has its own mobject classes, such as
+manimR draws with grid and has no OpenGL window; the CPU side of upstream's
+renderer (its camera, meshes and shaders) is in opengl_renderer."><meta property="og:description" content="Upstream's OpenGL renderer has its own mobject classes, such as
 OpenGLCircle or OpenGLVGroup. manimR draws every mobject with grid, so
 each of them is a subclass of its Cairo counterpart: OpenGLCircle() is
 a Circle() and inherits(x, &quot;OpenGLCircle&quot;) is TRUE. Code written for the OpenGL renderer runs
@@ -17,7 +18,8 @@ mobjects, such as fix_in_frame(), set_gloss(), get_shader_data(),
 get_triangulation() and get_shader_wrapper_list(): they compute the
 data upstream's renderer sends to the GPU (see ShaderWrapper()), from
 manimR's cubic curves, which they split into upstream's quadratic ones.
-manimR draws with grid and has no OpenGL window or camera."><meta property="og:image" content="https://adamrsophie.github.io/manimR/logo.svg"></head><body>
+manimR draws with grid and has no OpenGL window; the CPU side of upstream's
+renderer (its camera, meshes and shaders) is in opengl_renderer."><meta property="og:image" content="https://adamrsophie.github.io/manimR/logo.svg"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -87,7 +89,8 @@ mobjects, such as <code>fix_in_frame()</code>, <code>set_gloss()</code>, <code>g
 <code>get_triangulation()</code> and <code>get_shader_wrapper_list()</code>: they compute the
 data upstream's renderer sends to the GPU (see <code><a href="ShaderWrapper.html">ShaderWrapper()</a></code>), from
 manimR's cubic curves, which they split into upstream's quadratic ones.
-manimR draws with grid and has no OpenGL window or camera.</p>
+manimR draws with grid and has no OpenGL window; the CPU side of upstream's
+renderer (its camera, meshes and shaders) is in <a href="opengl_renderer.html">opengl_renderer</a>.</p>
     </div>
 
 

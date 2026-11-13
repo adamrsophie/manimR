@@ -284,8 +284,15 @@ is embedded the same way when it is printed.
   way. The OpenGL point clouds (`DotCloud`, `TrueDot`, `OpenGLPMobject`)
   are drawn as round dots like upstream’s shader draws them, and the
   other OpenGL mobject classes (`OpenGLCircle`, `OpenGLSurface`, …) are
-  subclasses of their Cairo counterparts. The GPU pipeline itself
-  (shaders, the OpenGL camera and window) is not ported.
+  subclasses of their Cairo counterparts. The CPU side of upstream’s
+  OpenGL renderer is ported
+  ([`OpenGLCamera()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md),
+  [`Mesh()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md),
+  [`Shader()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md),
+  [`triangulate_mobject()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)
+  and the rest), but nothing is drawn through OpenGL: `OpenGLRenderer`,
+  its window and its `render_*` functions need an OpenGL context and are
+  not ported.
 - Interactive mode (`scene$interactive_embed()`,
   [`embed()`](https://rdrr.io/r/stats/embed.html), `interact()`) opens a
   Shiny window instead of upstream’s OpenGL window: it shows the live

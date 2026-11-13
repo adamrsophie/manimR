@@ -2,9 +2,11 @@
 
 The CPU side of upstream's OpenGL draw calls: a `ShaderWrapper` holds
 the vertex data, vertex indices, uniforms and GLSL source of one draw
-call. manimR draws with grid and has no OpenGL renderer, so nothing
-sends these to a GPU; they describe what upstream's renderer would draw,
-and the GLSL files of upstream ship in the package (`get_shader_dir()`).
+call. manimR draws with grid and has no OpenGL context, so nothing sends
+these to a GPU; they describe what upstream's renderer would draw, and
+the GLSL files of upstream ship in the package (`get_shader_dir()`). The
+CPU side of the renderer itself is in
+[opengl_renderer](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md).
 
 ## Usage
 
