@@ -1111,6 +1111,7 @@ void main() {
     r$update_frame(s)
     r$get_raw_frame_buffer_object_data()
   })
+  # Face edges blend within 4 of 255 of the GPU's.
   expect_lte(max(abs(ball - oracle("vsphere"))), 4)
   # A rotated parent mesh with a child, a manim_coords mesh and a test
   # shader mesh, over a filled square with the camera turned.
@@ -1155,12 +1156,10 @@ void main() {
   # A VMobject holding a surface draws the surface with its own shader.
   plane <- surf(function(u, v) c(u, v, 0), c(-1, 1), c(-1, 1), c(4, 4), GREEN, 0, 0)
   expect_equal(frame(list(VGroup(plane$copy()))), frame(list(plane)))
-  # Near the sphere's front pole the vertex normals nearly cancel, and the
-  # GPU's single precision interpolation sets their direction.
+  # At the sphere's front pole the cross product of the nudged points
+  # underflows in single precision, so the GPU takes the fallback normal.
   sphere <- surf(function(u, v) 2 * c(cos(u) * sin(v), sin(u) * sin(v), -cos(v)), c(0, TAU), c(0, PI), c(33, 17), BLUE)
-  d <- apply(abs(frame(list(sphere)) - oracle("sphere")), 1:2, max)
-  expect_lte(sum(d > 2), 40)
-  expect_lte(max(d[-(40:50), ]), 1)
+  expect_lte(max(abs(frame(list(sphere)) - oracle("sphere"))), 1)
 })
 
 test_that("ThreeDScene fixes mobjects in frame through their shader uniforms under OpenGLRenderer", {

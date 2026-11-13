@@ -507,10 +507,20 @@ software_draw_surface <- function(fbo, mobject, uniforms) {
   xyz <- software_frame_points(P, u)
   a <- as_float32(get("du_point", envir = sd)) - P
   b <- as_float32(get("dv_point", envir = sd)) - P
-  cross <- function(x, y) cbind(x[, 2] * y[, 3] - x[, 3] * y[, 2], x[, 3] * y[, 1] - x[, 1] * y[, 3],
-                                x[, 1] * y[, 2] - x[, 2] * y[, 1])
+  # The shader's arithmetic is single precision with denormals flushed to
+  # zero: next to a pole the cross product's squared length underflows to 0,
+  # so the GPU takes the fallback normal there.
+  f <- function(x) {
+    y <- as_float32(x)
+    y[abs(y) < 2^-126] <- 0
+    y
+  }
+  cross <- function(x, y) cbind(f(f(x[, 2] * y[, 3]) - f(x[, 3] * y[, 2])), f(f(x[, 3] * y[, 1]) - f(x[, 1] * y[, 3])),
+                                f(f(x[, 1] * y[, 2]) - f(x[, 2] * y[, 1])))
+  a <- f(a)
+  b <- f(b)
   cp <- cross(a, b)
-  flat <- rowSums(cp * cp) == 0
+  flat <- f(f(f(cp[, 1]^2) + f(cp[, 2]^2)) + f(cp[, 3]^2)) == 0
   if (any(flat)) cp[flat, ] <- cross(cross(b[flat, , drop = FALSE], P[flat, , drop = FALSE]), b[flat, , drop = FALSE])
   normal <- if (isTRUE(as.logical(u$is_fixed_in_frame))) cp else cp %*% t(matrix(u$camera_rotation, 3, 3))
   normal <- normal / sqrt(rowSums(normal * normal))
