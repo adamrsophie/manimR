@@ -165,15 +165,6 @@ software_ndc <- function(points, uniforms) {
   cbind(clip[1, ] / clip[4, ], clip[2, ] / clip[4, ])
 }
 
-# Parameters along a quadratic curve that sample it at least once a pixel on
-# screen: its control polygon is at least as long as the curve.
-software_curve_t <- function(pts, uniforms, viewport) {
-  xy <- software_ndc(pts, uniforms)
-  len <- sum(sqrt(rowSums(diff(xy)^2))) * max(viewport[3:4]) / 2
-  n <- if (is.finite(len)) min(max(ceiling(len), 2L), 4096L) else 2L
-  seq(0, 1, length.out = n + 1)
-}
-
 software_push_ndc <- function() {
   grid::pushViewport(grid::viewport(xscale = c(-1, 1), yscale = c(-1, 1)))
 }
@@ -184,44 +175,110 @@ software_rgba <- function(m) {
                  pmin(pmax(m[, 4], 0), 1))
 }
 
+# The rasterizer of the software context, as a GPU without multisampling:
+# a triangle covers the pixels whose centers lie in it, and the vertex
+# attributes are interpolated there with perspective correction. The
+# fragments a shader keeps are blended over the framebuffer with
+# SRC_ALPHA, ONE_MINUS_SRC_ALPHA, in the order of the triangles.
+
+# Clip coordinates (4 x n) of model points.
+software_clip <- function(points, uniforms) {
+  mv <- matrix(uniforms$u_model_view_matrix, 4, 4)
+  p <- matrix(uniforms$u_projection_matrix, 4, 4)
+  p %*% mv %*% rbind(t(points), 1)
+}
+
+# Pixels covered by one triangle (clip coordinates c3, 4 x 3) in a W x H
+# viewport: their row (from the top) and column, and the perspective correct
+# weights of the three vertices there.
+software_raster_triangle <- function(c3, W, H) {
+  w <- c3[4, ]
+  if (any(!is.finite(w)) || any(w <= 0)) return(NULL)
+  sx <- (c3[1, ] / w + 1) / 2 * W
+  sy <- (1 - c3[2, ] / w) / 2 * H
+  area <- (sx[2] - sx[1]) * (sy[3] - sy[1]) - (sx[3] - sx[1]) * (sy[2] - sy[1])
+  if (!is.finite(area) || abs(area) < 1e-12) return(NULL)
+  c0 <- max(floor(min(sx)), 0); c1 <- min(ceiling(max(sx)), W)
+  r0 <- max(floor(min(sy)), 0); r1 <- min(ceiling(max(sy)), H)
+  if (c1 <= c0 || r1 <= r0) return(NULL)
+  cols <- (c0 + 1):c1
+  rows <- (r0 + 1):r1
+  px <- rep(cols - 0.5, each = length(rows))
+  py <- rep(rows - 0.5, times = length(cols))
+  e <- function(i, j) ((sx[j] - sx[i]) * (py - sy[i]) - (sy[j] - sy[i]) * (px - sx[i])) / area
+  l0 <- e(2, 3); l1 <- e(3, 1); l2 <- e(1, 2)
+  inside <- l0 >= 0 & l1 >= 0 & l2 >= 0
+  if (!any(inside)) return(NULL)
+  b <- cbind(l0[inside] / w[1], l1[inside] / w[2], l2[inside] / w[3])
+  b <- b / rowSums(b)
+  list(row = rep(rows, times = length(cols))[inside], col = rep(cols, each = length(rows))[inside], b = b)
+}
+
+# Collects the fragments of one draw call and blends them over the
+# framebuffer as one pixel aligned raster.
+software_layer <- function(W, H) {
+  frags <- list()
+  list(
+    add = function(row, col, rgba) {
+      keep <- rgba[, 4] > 0
+      if (any(keep)) frags[[length(frags) + 1]] <<- list(row = row[keep], col = col[keep], rgba = rgba[keep, , drop = FALSE])
+    },
+    draw = function() {
+      if (!length(frags)) return(invisible(NULL))
+      r0 <- min(vapply(frags, function(f) min(f$row), 0)); r1 <- max(vapply(frags, function(f) max(f$row), 0))
+      c0 <- min(vapply(frags, function(f) min(f$col), 0)); c1 <- max(vapply(frags, function(f) max(f$col), 0))
+      h <- r1 - r0 + 1
+      w <- c1 - c0 + 1
+      out <- array(0, c(h, w, 4))
+      for (f in frags) {
+        idx <- (f$col - c0) * h + (f$row - r0 + 1)
+        a <- pmin(pmax(f$rgba[, 4], 0), 1)
+        for (k in 1:3) {
+          ch <- out[, , k]
+          ch[idx] <- pmin(pmax(f$rgba[, k], 0), 1) * a + ch[idx] * (1 - a)
+          out[, , k] <- ch
+        }
+        ch <- out[, , 4]
+        ch[idx] <- a + ch[idx] * (1 - a)
+        out[, , 4] <- ch
+      }
+      # The layer holds premultiplied color; the device wants it straight.
+      for (k in 1:3) out[, , k] <- ifelse(out[, , 4] > 0, out[, , k] / pmax(out[, , 4], 1e-12), 0)
+      grid::grid.raster(array_to_native_raster(out), x = grid::unit((c0 - 1) / W, "npc"),
+                        y = grid::unit(1 - r1 / H, "npc"), width = grid::unit(w / W, "npc"),
+                        height = grid::unit(h / H, "npc"), just = c("left", "bottom"), interpolate = FALSE)
+      invisible(NULL)
+    }
+  )
+}
+
 # vectorized_mobject_fill: a fragment of a triangle is drawn where
-# texture_mode * (u^2 - v) >= 0. With the texture coordinates (0, 0),
-# (0.5, 0), (1, 1) that is the whole triangle for mode 0, the part between
-# the curve and the control point for mode 1 and the part between the chord
-# and the curve for mode -1, the curve being the quadratic Bezier curve of
-# the three vertices. Pieces of one color are drawn as one path, so they
-# leave no seams.
+# texture_mode * (u^2 - v) >= 0, (u, v) being the interpolated texture
+# coordinates. With (0, 0), (0.5, 0), (1, 1) at the vertices that is the
+# whole triangle for mode 0, the part between the curve and the control
+# point for mode 1 and the part between the chord and the curve for mode -1.
+# The mode is flat, taken from the triangle's last vertex as OpenGL does.
 software_draw_fill <- function(buffer, uniforms, viewport) {
   verts <- get("in_vert", envir = buffer)
   if (!nrow(verts)) return(invisible(NULL))
   colors <- get("in_color", envir = buffer)
+  tex <- get("texture_coords", envir = buffer)
   modes <- get("texture_mode", envir = buffer)[, 1]
-  pieces <- list()
-  keys <- character(0)
-  for (k in seq(1, nrow(verts), by = 3)) {
-    v0 <- verts[k, ]; v1 <- verts[k + 1, ]; v2 <- verts[k + 2, ]
-    mode <- modes[k]
-    t <- software_curve_t(rbind(v0, v1, v2), uniforms, viewport)
-    curve <- outer((1 - t)^2, v0) + outer(2 * t * (1 - t), v1) + outer(t^2, v2)
-    poly <- if (mode == 0) rbind(v0, v1, v2) else if (mode > 0) rbind(v0, v1, curve[rev(seq_along(t)), ]) else curve
-    xy <- software_ndc(poly, uniforms)
-    area <- sum(xy[, 1] * xy[c(2:nrow(xy), 1), 2] - xy[c(2:nrow(xy), 1), 1] * xy[, 2])
-    if (!is.finite(area) || abs(area) < 1e-14) next
-    if (area < 0) xy <- xy[rev(seq_len(nrow(xy))), , drop = FALSE]
-    key <- software_rgba(colors[k, ])
-    keys <- c(keys, key)
-    pieces[[length(pieces) + 1]] <- xy
+  W <- viewport[3]
+  H <- viewport[4]
+  clip <- software_clip(verts, uniforms)
+  layer <- software_layer(W, H)
+  for (k in seq(1, nrow(verts) - 2, by = 3)) {
+    rows <- k:(k + 2)
+    f <- software_raster_triangle(clip[, rows, drop = FALSE], W, H)
+    if (is.null(f)) next
+    uv <- f$b %*% tex[rows, , drop = FALSE]
+    keep <- modes[k + 2] * (uv[, 1] * uv[, 1] - uv[, 2]) >= 0
+    if (!any(keep)) next
+    rgba <- f$b[keep, , drop = FALSE] %*% colors[rows, , drop = FALSE]
+    layer$add(f$row[keep], f$col[keep], rgba)
   }
-  if (!length(pieces)) return(invisible(NULL))
-  software_push_ndc()
-  on.exit(grid::popViewport(), add = TRUE)
-  for (key in unique(keys)) {
-    sel <- pieces[keys == key]
-    xy <- do.call(rbind, sel)
-    grid::grid.path(xy[, 1], xy[, 2], id = rep(seq_along(sel), vapply(sel, nrow, 0L)), default.units = "native",
-                    rule = "winding", gp = grid::gpar(fill = key, col = NA))
-  }
-  invisible(NULL)
+  layer$draw()
 }
 
 # Wireframe (moderngl's ctx.wireframe): the triangles are drawn as lines one
@@ -258,46 +315,18 @@ software_wire_stroke <- function(buffer, uniforms, viewport) {
   colors <- get("in_color", envir = buffer)
   widths <- get("in_width", envir = buffer)[, 1]
   normal <- uniforms$manim_unit_normal %||% OUT
-  t <- seq(0, 1, length.out = 65)
   s <- seq(0, 1, length.out = 201)
   software_push_ndc()
   on.exit(grid::popViewport(), add = TRUE)
   for (k in seq(1, nrow(curves) - 2, by = 3)) {
-    pts <- matrix(curves[k, ], 3, 3, byrow = TRUE)
-    v01 <- pts[2, ] - pts[1, ]
-    v12 <- pts[3, ] - pts[2, ]
-    distinct <- c(get_norm(v01), get_norm(v12)) > 1e-6
-    if (!any(distinct)) next
-    aligned <- all(distinct) && acos(min(max(sum(normalize(v01) * normalize(v12)), -1), 1)) < 5e-2
-    quad <- all(distinct) && !aligned
-    x_unit <- normalize(pts[3, ] - pts[1, ])
-    unit_normal <- if (quad) normalize(cross(v01, v12)) else normal
-    y_unit <- cross(unit_normal, x_unit)
-    if (quad && sum(y_unit * v01) < 0) y_unit <- -y_unit
-    uv <- cbind(pts %*% x_unit, pts %*% y_unit)
-    # bboxBezier() of the shader.
-    lo <- pmin(uv[1, ], uv[3, ])
-    hi <- pmax(uv[1, ], uv[3, ])
-    if (any(uv[2, ] < lo | uv[2, ] > hi)) {
-      tt <- pmin(pmax((uv[1, ] - uv[2, ]) / (uv[1, ] - 2 * uv[2, ] + uv[3, ]), 0), 1)
-      tt[!is.finite(tt)] <- 0
-      q <- (1 - tt)^2 * uv[1, ] + 2 * (1 - tt) * tt * uv[2, ] + tt^2 * uv[3, ]
-      lo <- pmin(lo, q)
-      hi <- pmax(hi, q)
-    }
-    thick <- 0.004 * widths[k]
-    origin <- pts[1, ] - thick * (x_unit + y_unit)
-    xv <- x_unit * (hi[1] - lo[1] + 2 * thick)
-    yv <- y_unit * (hi[2] - lo[2] + 2 * thick)
-    corner <- function(r) origin + tiles[r, 1] * xv + tiles[r, 2] * yv
-    tri <- rbind(corner(k), corner(k + 1), corner(k + 2))
-    path_uv <- if (quad) outer((1 - t)^2, uv[1, ]) + outer(2 * t * (1 - t), uv[2, ]) + outer(t^2, uv[3, ]) else
-      outer(1 - t, uv[1, ]) + outer(t, uv[3, ])
+    tile <- software_stroke_tile(matrix(curves[k, ], 3, 3, byrow = TRUE), tiles[k:(k + 2), , drop = FALSE],
+                                 widths[k], normal)
+    if (is.null(tile)) next
+    tri <- tile$corners
     for (e in list(1:2, 2:3, c(3, 1))) {
       seg <- outer(1 - s, tri[e[1], ]) + outer(s, tri[e[2], ])
-      suv <- cbind(seg %*% x_unit, seg %*% y_unit)
-      d <- apply(suv, 1, function(q) min(sqrt((path_uv[, 1] - q[1])^2 + (path_uv[, 2] - q[2])^2)))
-      keep <- d < thick
+      suv <- outer(1 - s, tile$corner_uv[e[1], ]) + outer(s, tile$corner_uv[e[2], ])
+      keep <- software_curve_distance(suv, tile$curve_uv, tile$quad) < tile$thick
       if (!any(keep)) next
       runs <- rle(keep)
       ends <- cumsum(runs$lengths)
@@ -312,43 +341,92 @@ software_wire_stroke <- function(buffer, uniforms, viewport) {
   invisible(NULL)
 }
 
-# vectorized_mobject_stroke: a fragment of a curve's tile is drawn within
-# 0.004 * width of the curve (the quadratic Bezier curve, or the line between
-# its ends when the three points are aligned), which is the curve drawn
-# 0.008 * width wide with round ends. A curve whose points coincide has an
-# empty tile.
+# vectorized_mobject_stroke: the vertex shader spans each curve with a tile
+# (two triangles) in the plane of the curve, and a fragment is drawn where
+# its point is within 0.004 * width of the curve: the quadratic Bezier
+# curve, or the line between its ends when the three points are aligned or
+# two coincide. A curve whose points all coincide draws nothing.
+software_stroke_tile <- function(pts, tile, width, normal) {
+  v01 <- pts[2, ] - pts[1, ]
+  v12 <- pts[3, ] - pts[2, ]
+  distinct <- c(get_norm(v01), get_norm(v12)) > 1e-6
+  if (!any(distinct)) return(NULL)
+  aligned <- all(distinct) && acos(min(max(sum(normalize(v01) * normalize(v12)), -1), 1)) < 5e-2
+  quad <- all(distinct) && !aligned
+  x_unit <- normalize(pts[3, ] - pts[1, ])
+  unit_normal <- if (quad) normalize(cross(v01, v12)) else normal
+  y_unit <- cross(unit_normal, x_unit)
+  if (quad && sum(y_unit * v01) < 0) y_unit <- -y_unit
+  uv <- cbind(pts %*% x_unit, pts %*% y_unit)
+  lo <- pmin(uv[1, ], uv[3, ])
+  hi <- pmax(uv[1, ], uv[3, ])
+  if (any(uv[2, ] < lo | uv[2, ] > hi)) {
+    tt <- pmin(pmax((uv[1, ] - uv[2, ]) / (uv[1, ] - 2 * uv[2, ] + uv[3, ]), 0), 1)
+    tt[!is.finite(tt)] <- 0
+    q <- (1 - tt)^2 * uv[1, ] + 2 * (1 - tt) * tt * uv[2, ] + tt^2 * uv[3, ]
+    lo <- pmin(lo, q)
+    hi <- pmax(hi, q)
+  }
+  thick <- 0.004 * width
+  origin <- pts[1, ] - thick * (x_unit + y_unit)
+  xv <- x_unit * (hi[1] - lo[1] + 2 * thick)
+  yv <- y_unit * (hi[2] - lo[2] + 2 * thick)
+  corners <- t(vapply(seq_len(nrow(tile)), function(r) origin + tile[r, 1] * xv + tile[r, 2] * yv, numeric(3)))
+  list(corners = corners, corner_uv = cbind(corners %*% x_unit, corners %*% y_unit), curve_uv = uv,
+       quad = quad, thick = thick)
+}
+
+# Distance from points (n x 2) to a quadratic Bezier curve or a segment in
+# the tile's plane: the nearest of dense samples, refined by Newton steps.
+software_curve_distance <- function(q, uv, quad) {
+  if (!quad) {
+    a <- uv[1, ]; d <- uv[3, ] - a
+    h <- pmin(pmax(((q[, 1] - a[1]) * d[1] + (q[, 2] - a[2]) * d[2]) / sum(d^2), 0), 1)
+    return(sqrt((q[, 1] - a[1] - h * d[1])^2 + (q[, 2] - a[2] - h * d[2])^2))
+  }
+  t <- seq(0, 1, length.out = 65)
+  cx <- (1 - t)^2 * uv[1, 1] + 2 * t * (1 - t) * uv[2, 1] + t^2 * uv[3, 1]
+  cy <- (1 - t)^2 * uv[1, 2] + 2 * t * (1 - t) * uv[2, 2] + t^2 * uv[3, 2]
+  d2 <- outer(q[, 1], cx, "-")^2 + outer(q[, 2], cy, "-")^2
+  s <- t[max.col(-d2, ties.method = "first")]
+  A <- uv[2, ] - uv[1, ]
+  B <- uv[1, ] - 2 * uv[2, ] + uv[3, ]
+  for (it in 1:4) {
+    px <- uv[1, 1] + 2 * A[1] * s + B[1] * s^2
+    py <- uv[1, 2] + 2 * A[2] * s + B[2] * s^2
+    dx <- 2 * A[1] + 2 * B[1] * s
+    dy <- 2 * A[2] + 2 * B[2] * s
+    g <- (px - q[, 1]) * dx + (py - q[, 2]) * dy
+    h <- dx^2 + dy^2 + (px - q[, 1]) * 2 * B[1] + (py - q[, 2]) * 2 * B[2]
+    s <- pmin(pmax(s - ifelse(abs(h) > 1e-300, g / h, 0), 0), 1)
+  }
+  px <- uv[1, 1] + 2 * A[1] * s + B[1] * s^2
+  py <- uv[1, 2] + 2 * A[2] * s + B[2] * s^2
+  sqrt((px - q[, 1])^2 + (py - q[, 2])^2)
+}
+
 software_draw_stroke <- function(buffer, uniforms, viewport) {
   curves <- get("current_curve", envir = buffer)
-  n <- nrow(curves) %/% 2
-  if (!n) return(invisible(NULL))
+  if (!nrow(curves)) return(invisible(NULL))
+  tiles <- get("tile_coordinate", envir = buffer)
   colors <- get("in_color", envir = buffer)
   widths <- get("in_width", envir = buffer)[, 1]
-  px_per_ndc <- viewport[4] / 2
-  software_push_ndc()
-  on.exit(grid::popViewport(), add = TRUE)
-  for (k in seq(1, n, by = 3)) {
-    pts <- matrix(curves[k, ], 3, 3, byrow = TRUE)
-    v01 <- pts[2, ] - pts[1, ]
-    v12 <- pts[3, ] - pts[2, ]
-    distinct <- c(get_norm(v01), get_norm(v12)) > 1e-6
-    if (!any(distinct)) next
-    aligned <- all(distinct) && acos(min(max(sum(normalize(v01) * normalize(v12)), -1), 1)) < 5e-2
-    line <- !all(distinct) || aligned
-    t <- if (line) NULL else software_curve_t(pts, uniforms, viewport)
-    path <- if (line) pts[c(1, 3), ] else outer((1 - t)^2, pts[1, ]) + outer(2 * t * (1 - t), pts[2, ]) + outer(t^2, pts[3, ])
-    thickness <- 0.004 * widths[k]
-    # The thickness at the curve's middle, measured on screen across it.
-    mid <- path[ceiling(nrow(path) / 2), ]
-    across <- cross(OUT, normalize(pts[3, ] - pts[1, ], fall_back = RIGHT))
-    xy <- software_ndc(rbind(path, mid, mid + thickness * across), uniforms)
-    m <- nrow(xy)
-    lwd_px <- 2 * sqrt(sum((xy[m, ] - xy[m - 1, ])^2)) * px_per_ndc
-    if (!is.finite(lwd_px) || lwd_px <= 0) next
-    grid::grid.lines(xy[seq_len(m - 2), 1], xy[seq_len(m - 2), 2], default.units = "native",
-                     gp = grid::gpar(col = software_rgba(colors[k, ]), lwd = lwd_px * 72 / 96,
-                                     lineend = "round", linejoin = "round"))
+  normal <- uniforms$manim_unit_normal %||% OUT
+  W <- viewport[3]
+  H <- viewport[4]
+  layer <- software_layer(W, H)
+  for (k in seq(1, nrow(curves) - 2, by = 3)) {
+    rows <- k:(k + 2)
+    tile <- software_stroke_tile(matrix(curves[k, ], 3, 3, byrow = TRUE), tiles[rows, , drop = FALSE], widths[k], normal)
+    if (is.null(tile)) next
+    f <- software_raster_triangle(software_clip(tile$corners, uniforms), W, H)
+    if (is.null(f)) next
+    q <- f$b %*% tile$corner_uv
+    keep <- software_curve_distance(q, tile$curve_uv, tile$quad) < tile$thick
+    if (!any(keep)) next
+    layer$add(f$row[keep], f$col[keep], f$b[keep, , drop = FALSE] %*% colors[rows, , drop = FALSE])
   }
-  invisible(NULL)
+  layer$draw()
 }
 
 # vectorized_mobject_rendering ----------------------------------------------------
