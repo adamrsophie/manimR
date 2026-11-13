@@ -232,9 +232,8 @@ values of their matrix, row by row; the decorators a function.
   interpreter takes the scalar, vector and square matrix types, in, out,
   uniform and const globals, user functions, `if`, `for`, `while`,
   [`break`](https://rdrr.io/r/base/Control.html), `continue`, `return`,
-  `discard`, structs and the common built-in functions, and runs a
-  geometry shader (points or triangles in, a triangle strip out) between
-  the two stages; textures and arrays inside structs raise an error, and
+  `discard`, structs and the common built-in functions; textures,
+  geometry shaders and arrays inside structs raise an error, and
   `Mesh$render()` of a mesh it cannot run needs an OpenGL context and
   stops.
 

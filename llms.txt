@@ -290,8 +290,8 @@ is embedded the same way when it is printed.
   surface shader, a plain `ImageMobject` is drawn by a grid camera, and
   a live preview `Window` is an R graphics device. Meshes are drawn too:
   upstream’s own mesh shaders by their rules, and other GLSL code of a
-  `Mesh` or `FullScreenQuad` in a GLSL interpreter (structs and geometry
-  shaders included; no textures). The OpenGL point clouds (`DotCloud`,
+  `Mesh` or `FullScreenQuad` in a GLSL interpreter (structs included; no
+  textures or geometry shaders). The OpenGL point clouds (`DotCloud`,
   `TrueDot`, `OpenGLPMobject`) run upstream’s true_dot shader, and the
   other OpenGL mobject classes (`OpenGLCircle`, `OpenGLSurface`, …) are
   subclasses of their Cairo counterparts.

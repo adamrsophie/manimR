@@ -82,7 +82,7 @@
   manim_coords, vertex_colors or test folders in software, and runs the
   vertex and fragment shaders of other meshes (and
   [`FullScreenQuad()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md))
-  in a GLSL interpreter, structs and geometry shaders included; textures
+  in a GLSL interpreter, structs included; textures and geometry shaders
   need an OpenGL context and stop with a message.
   [`OpenGLRenderer()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)
   renders scenes (also with `manim_config(renderer = "opengl")`) through
