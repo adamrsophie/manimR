@@ -207,8 +207,12 @@ bool_op <- function(shapes, op) {
         if (reverse) piece <- piece[4:1, , drop = FALSE]
         # Whether the piece starts at a point of the input, not a crossing.
         vertex <- if (reverse) m == length(t) - 1 else m == 1
+        # Whether it starts where the other shape crosses (or touches) it.
+        t0 <- if (reverse) t[m + 1] else t[m]
+        crossing <- any(abs(cuts[[s]][[i]][[k]][-(1:2)] - t0) < 1e-9)
         pieces[[length(pieces) + 1]] <- list(P = piece, rank = rank, reversed = reverse,
-                                             inside = any(state == "inside"), vertex = vertex)
+                                             inside = any(state == "inside"), vertex = vertex,
+                                             crossing = crossing)
       }
     }
   }
@@ -297,7 +301,9 @@ bool_write <- function(contours, input_starts) {
       if (length(hit)) {
         used[s] <- TRUE
         at <- hit[1]
-        moved <- TRUE
+        # Skia's own walk already starts at an input start the other shape
+        # touches, so pathops leaves that contour as it is.
+        moved <- !contour[[at]]$crossing
         break
       }
     }
