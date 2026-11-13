@@ -302,8 +302,12 @@ perspective-correct varyings, depth test and alpha blending. The
 interpreter takes the scalar, vector and square matrix types, in, out,
 uniform and const globals, user functions, <code>if</code>, <code>for</code>, <code>while</code>,
 <code><a href="https://rdrr.io/r/base/Control.html" class="external-link">break</a></code>, <code>continue</code>, <code>return</code>, <code>discard</code>, structs and the common
-built-in functions; textures, geometry shaders and arrays inside
-structs raise an error, and
+built-in functions, and runs a geometry shader (points or triangles in,
+a triangle strip out) between the two stages. A <code>sampler2D</code> uniform
+holds a texture unit: <code>context$texture(size, components, data)</code> makes
+a texture (bytes, the row at v = 0 first) and its <code>use(location)</code> binds
+it, sampled linearly and repeated as moderngl does. Other samplers and
+arrays inside structs raise an error, and
 <code>Mesh$render()</code> of a mesh it cannot run needs an OpenGL context and
 stops.</p></li>
 <li><p><code>Shader(context, name, source)</code> reads the GLSL code of a shader folder
