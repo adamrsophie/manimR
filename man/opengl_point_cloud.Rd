@@ -55,9 +55,9 @@ color, and \verb{$add_points()} appends one row per point.
 \item \code{OpenGLPGroup()} groups OpenGL point clouds.
 \item \code{OpenGLPMPoint()} is a single point at \code{location}.
 \item \code{DotCloud()} fills a disk of the given \code{radius} with concentric rings of
-dots spaced \code{1 / density} apart. \verb{$make_3d()} stores the gloss and
-shadow that upstream's shader uses; they do not change manimR's
-drawing.
+dots spaced \code{1 / density} apart. \verb{$make_3d()} sets the gloss and
+shadow that upstream's shader lights the dots with and turns on the
+depth test; the OpenGL renderer uses them, the Cairo renderer does not.
 \item \code{TrueDot()} is a \code{DotCloud}. Note that upstream overwrites its \code{center}
 and radius in \code{DotCloud}'s initializer, so a \code{TrueDot} is the default
 cloud of radius 2 at the origin; manimR keeps that behavior.

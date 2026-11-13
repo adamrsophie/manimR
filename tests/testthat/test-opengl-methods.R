@@ -717,3 +717,38 @@ test_that("OpenGLTexturedSurface samples its image as the textured_surface shade
     expect_equal(px(45, 80), c(0, 0, 255))
   })
 })
+
+test_that("OpenGL point clouds run the true_dot shader", {
+  tempconfig(list(pixel_width = 160, pixel_height = 90), {
+    r <- OpenGLRenderer()
+    s <- Scene$new(renderer = r)
+    on.exit(r$close_device(), add = TRUE)
+    # A dot of radius 0.4 (4.5 pixels) at the origin, between columns 80
+    # and 81.
+    dot <- OpenGLPMobject(stroke_width = 40, color = RED)
+    dot$add_points(rbind(c(0, 0, 0)), color = RED)
+    s$add(dot)
+    r$update_frame(s)
+    a <- r$get_raw_frame_buffer_object_data()
+    red <- color_to_rgb(RED) * 255
+    expect_lte(max(abs(as.numeric(a[45, 80, 1:3]) - red)), 1)
+    expect_lte(max(abs(as.numeric(a[45, 83, 1:3]) - red)), 1)
+    expect_equal(as.numeric(a[45, 87, 1:3]), c(0, 0, 0))
+    # The edge fades over anti_alias_width (1.5 pixels): the center of
+    # column 85 is on the circle, at about half the alpha.
+    edge <- a[45, 85, 1]
+    expect_gt(edge, 0)
+    expect_lt(edge, red[1])
+    # With the depth test a dot behind an opaque surface is hidden.
+    wall <- OpenGLSurface(function(u, v) c(u, v, 1), u_range = c(-1, 1), v_range = c(-1, 1), resolution = c(3, 3))
+    wall$set_color(GREEN)
+    wall$gloss <- 0
+    wall$shadow <- 0
+    dot$apply_depth_test()
+    s$clear()
+    s$add(wall, dot)
+    r$update_frame(s)
+    a <- r$get_raw_frame_buffer_object_data()
+    expect_lte(max(abs(as.numeric(a[45, 80, 1:3]) - color_to_rgb(GREEN) * 255)), 1)
+  })
+})

@@ -1,8 +1,9 @@
 # Point clouds of the OpenGL renderer, ported from
 # manim/mobject/opengl/opengl_point_cloud_mobject.py and dot_cloud.py.
 # Upstream draws them with the "true_dot" shader as round dots of radius
-# stroke_width / 100; manimR draws the same dots with grid (see
-# CameraClass$display_point_cloud()).
+# stroke_width / 100. The OpenGL renderer runs that shader in software
+# (software_draw_true_dot()); the Cairo renderer draws the dots with grid
+# (CameraClass$display_point_cloud()).
 
 # Rounds to single precision, as upstream stores these points as float32.
 as_float32 <- function(x) {
@@ -23,9 +24,9 @@ as_float32 <- function(x) {
 #' * `OpenGLPGroup()` groups OpenGL point clouds.
 #' * `OpenGLPMPoint()` is a single point at `location`.
 #' * `DotCloud()` fills a disk of the given `radius` with concentric rings of
-#'   dots spaced `1 / density` apart. `$make_3d()` stores the gloss and
-#'   shadow that upstream's shader uses; they do not change manimR's
-#'   drawing.
+#'   dots spaced `1 / density` apart. `$make_3d()` sets the gloss and
+#'   shadow that upstream's shader lights the dots with and turns on the
+#'   depth test; the OpenGL renderer uses them, the Cairo renderer does not.
 #' * `TrueDot()` is a `DotCloud`. Note that upstream overwrites its `center`
 #'   and radius in `DotCloud`'s initializer, so a `TrueDot` is the default
 #'   cloud of radius 2 at the origin; manimR keeps that behavior.

@@ -230,10 +230,10 @@ embedded the same way when it is printed.
   and lighting (lit once per mobject, not per pixel), the surface shaders
   of `OpenGLSurface` and `OpenGLTexturedSurface` and the projection
   shaders by their GLSL rules
-  (surfaces lit per pixel and depth tested), and a live preview `Window` is an R graphics
+  (surfaces and dots lit per pixel and depth tested), and a live preview `Window` is an R graphics
   device. GLSL code of a `Mesh` is not run. The OpenGL point clouds
-  (`DotCloud`, `TrueDot`, `OpenGLPMobject`) are drawn as round dots like
-  upstream's shader draws them, and the other OpenGL mobject classes
+  (`DotCloud`, `TrueDot`, `OpenGLPMobject`) run upstream's true_dot
+  shader, and the other OpenGL mobject classes
   (`OpenGLCircle`, `OpenGLSurface`, ...) are subclasses of their Cairo
   counterparts.
 * Interactive mode (`scene$interactive_embed()`, `embed()`, `interact()`)
