@@ -1052,7 +1052,7 @@ moment. Each `*_path()` constructor returns such a function.
 straight_path()
 #> function (start, end, alpha) 
 #> (1 - alpha) * start + alpha * end
-#> <bytecode: 0x5f6932e83a68>
+#> <bytecode: 0x5b2e4ed1a088>
 #> <environment: namespace:manimR>
 start <- rbind(LEFT)
 end <- rbind(RIGHT)

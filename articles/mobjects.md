@@ -84,12 +84,12 @@ eyes <- VGroup(Dot(c(-0.5, 0.4, 0)), Dot(c(0.5, 0.4, 0)))
 mouth <- Arc(radius = 0.8, start_angle = PI + 0.6, angle = PI - 1.2, color = YELLOW)
 face <- VGroup(Circle(radius = 1.5, color = YELLOW), eyes, mouth)$scale(1.5)
 print_family(face)
-#>  VGroup 47ca2af67a4f1d76f8-10
-#>   Circle 47ca2af67a4f1d76f8-9
-#>   VGroup 47ca2af67a4f1d76f8-7
-#>       Dot 47ca2af67a4f1d76f8-5
-#>       Dot 47ca2af67a4f1d76f8-6
-#>   Arc 47ca2af67a4f1d76f8-8
+#>  VGroup 46862af6815f142058-10
+#>   Circle 46862af6815f142058-9
+#>   VGroup 46862af6815f142058-7
+#>       Dot 46862af6815f142058-5
+#>       Dot 46862af6815f142058-6
+#>   Arc 46862af6815f142058-8
 length(face$submobjects)
 #> [1] 3
 length(face$get_family())
