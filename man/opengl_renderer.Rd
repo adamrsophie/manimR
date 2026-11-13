@@ -225,8 +225,9 @@ stroke the points within \code{0.004 * width} of its curve.
 GLSL code, as a \code{Mesh}'s, is not run.
 \item \code{Window(renderer)} is the window of a live preview: an R graphics
 device (an interactive session is needed) that shows the renderer's frame
-on \code{swap_buffers()} and passes mouse and key events to the scene's
-handlers. Its size follows \code{config$window_size} and its position
+on \code{swap_buffers()}; \code{handle_event()} waits for a mouse or key event
+in it and passes it to the scene's handlers, on devices that report
+events (X11 and Windows). Its size follows \code{config$window_size} and its position
 \code{config$window_position} on the monitor, which is
 \code{getOption("manimR.monitor")} (a list of \code{x}, \code{y}, \code{width} and \code{height})
 or 1920 by 1080 pixels at the origin.

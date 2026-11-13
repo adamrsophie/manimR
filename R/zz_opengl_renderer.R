@@ -56,8 +56,9 @@
 #'   GLSL code, as a `Mesh`'s, is not run.
 #' * `Window(renderer)` is the window of a live preview: an R graphics
 #'   device (an interactive session is needed) that shows the renderer's frame
-#'   on `swap_buffers()` and passes mouse and key events to the scene's
-#'   handlers. Its size follows `config$window_size` and its position
+#'   on `swap_buffers()`; `handle_event()` waits for a mouse or key event
+#'   in it and passes it to the scene's handlers, on devices that report
+#'   events (X11 and Windows). Its size follows `config$window_size` and its position
 #'   `config$window_position` on the monitor, which is
 #'   `getOption("manimR.monitor")` (a list of `x`, `y`, `width` and `height`)
 #'   or 1920 by 1080 pixels at the origin.
@@ -278,6 +279,10 @@ OpenGLCameraClass <- R6::R6Class("OpenGLCamera", inherit = OpenGLMobjectClass, l
     get_width = function() self$points[3, 1] - self$points[2, 1],
     get_height = function() self$points[5, 2] - self$points[4, 2],
     get_focal_distance = function() self$focal_distance * self$get_height(),
+    # manimR's scenes ask their camera for these.
+    get_frame_width = function() self$get_width(),
+    get_frame_height = function() self$get_height(),
+    get_frame_center = function() self$get_center(),
     interpolate = function(mobject1, mobject2, alpha, path_func = straight_path()) {
       super$interpolate(mobject1, mobject2, alpha, path_func)
       # The angles are not wrapped, so full turns asked for are animated.
@@ -291,6 +296,8 @@ OpenGLCameraClass <- R6::R6Class("OpenGLCamera", inherit = OpenGLMobjectClass, l
     # Upstream caches these on first use; manimR computes them each time.
     formatted_view_matrix = function() matrix_to_shader_input(self$unformatted_view_matrix),
     unformatted_view_matrix = function() solve(self$model_matrix),
+    pixel_width = function() cfg("pixel_width"),
+    pixel_height = function() cfg("pixel_height"),
     frame_center = function(value) {
       if (missing(value)) return(self$get_center())
       self$move_to(value)

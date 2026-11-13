@@ -324,7 +324,8 @@ opengl_texture_shade <- function(face, camera = NULL) {
     # normal nearly cancels across such a face.
     normal <- drop(rot %*% cross(p[9, ] - p[1, ], p[13, ] - p[5, ]))
     xyz <- drop(rot %*% (face$get_center() - center))
-    light <- drop(rot %*% c(-10, 10, 10))
+    # The OpenGL renderer's camera hands over its light_source_position.
+    light <- camera$uniforms$light_source_position %||% drop(rot %*% c(-10, 10, 10))
     dp <- if (get_norm(normal) > 0) sum(normalize(light - xyz) * normal) / get_norm(normal) else 1
     t <- min(max((dp + 0.2) / 0.4, 0), 1)
     a <- t * t * (3 - 2 * t)

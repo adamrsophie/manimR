@@ -40,8 +40,8 @@ OpenGLSoftwareFramebufferClass <- R6::R6Class("OpenGLSoftwareFramebuffer", lock_
               add = TRUE)
       draw()
     },
+    # The device opens when the framebuffer is first drawn to or read.
     use = function() {
-      self$open()
       self$context$target <- self
       invisible(self)
     },
@@ -348,6 +348,13 @@ render_mobject_strokes_with_matrix <- function(renderer, model_matrix, mobjects)
 
 # Grid camera for shader wrappers ------------------------------------------------
 
+# Whether a mobject is one of upstream's OpenGLVMobjects. manimR's OpenGL
+# shapes are subclasses of their Cairo counterparts, so their class names
+# tell; manimR's OpenGLSurface is a VMobject but upstream's is not.
+opengl_is_vmobject <- function(m) {
+  is_vmobject(m) && any(startsWith(class(m), "OpenGL")) && !inherits(m, "OpenGLSurface")
+}
+
 DEFAULT_OPENGL_FRAME_SHAPE <- c(8 * 16 / 9, 8)
 
 # Draws OpenGL mobjects as upstream's shaders place them: points rotated by
@@ -371,11 +378,11 @@ OpenGLGridCameraClass <- R6::R6Class("OpenGLGridCamera", inherit = ThreeDCameraC
     # With the projection shaders on, upstream's get_shader_wrapper_list()
     # leaves out the fill (or stroke) wrappers of OpenGL VMobjects.
     apply_fill = function(vmobject, paths) {
-      if (inherits(vmobject, "OpenGLVMobject") && isTRUE(cfg("use_projection_fill_shaders"))) return(invisible(self))
+      if (opengl_is_vmobject(vmobject) && isTRUE(cfg("use_projection_fill_shaders"))) return(invisible(self))
       super$apply_fill(vmobject, paths)
     },
     apply_stroke = function(vmobject, paths, background = FALSE) {
-      if (inherits(vmobject, "OpenGLVMobject") && isTRUE(cfg("use_projection_stroke_shaders"))) return(invisible(self))
+      if (opengl_is_vmobject(vmobject) && isTRUE(cfg("use_projection_stroke_shaders"))) return(invisible(self))
       super$apply_stroke(vmobject, paths, background)
     },
     draw_background = function() invisible(self),
@@ -503,7 +510,7 @@ OpenGLRendererClass <- R6::R6Class("OpenGLRenderer", inherit = RendererClass, lo
       invisible(self)
     },
     render_mobject = function(mobject) {
-      if (inherits(mobject, "OpenGLVMobject")) {
+      if (opengl_is_vmobject(mobject)) {
         if (isTRUE(cfg("use_projection_fill_shaders"))) render_opengl_vectorized_mobject_fill(self, mobject)
         if (isTRUE(cfg("use_projection_stroke_shaders"))) render_opengl_vectorized_mobject_stroke(self, mobject)
       }
@@ -627,7 +634,7 @@ OpenGLRendererClass <- R6::R6Class("OpenGLRenderer", inherit = RendererClass, lo
       self$num_plays == 0 && isTRUE(output$fallback_to_still)
     },
     # The frame as an R raster (upstream returns a PIL image).
-    get_image = function() grDevices::as.raster(self$get_frame()),
+    get_image = function() grDevices::as.raster(native_raster_to_array(self$get_frame()) / 255),
     save_static_frame_data = function(scene, static_mobjects) invisible(NULL),
     get_frame_buffer_object = function(context, samples = 0) {
       size <- c(cfg("pixel_width"), cfg("pixel_height"))
@@ -717,6 +724,7 @@ WindowClass <- R6::R6Class("Window", lock_objects = FALSE,
     position = NULL,
     renderer = NULL,
     device = NULL,
+    last_mouse = NULL,
     # The monitor is `getOption("manimR.monitor")` (a list with x, y, width
     # and height) or 1920 by 1080 pixels at the origin: R has no portable way
     # to ask for it. The window is an R graphics device.
@@ -747,6 +755,50 @@ WindowClass <- R6::R6Class("Window", lock_objects = FALSE,
               add = TRUE)
       grid::grid.newpage(recording = FALSE)
       grid::grid.raster(frame, interpolate = TRUE)
+      invisible(self)
+    },
+    # Waits for one mouse or key event in the window and passes it to the
+    # handlers below, as pyglet's event loop does. Positions are in pixels
+    # from the bottom left corner; R's buttons 0, 1 and 2 are pyglet's 1, 2
+    # and 4. Only devices that report events (X11 with the Xlib type, and
+    # Windows) can do this.
+    handle_event = function() {
+      if (is.null(self$device) || !self$device %in% grDevices::dev.list()) return(invisible(self))
+      prev <- grDevices::dev.cur()
+      grDevices::dev.set(self$device)
+      on.exit(if (prev > 1 && prev != self$device && prev %in% grDevices::dev.list()) grDevices::dev.set(prev),
+              add = TRUE)
+      if (!length(grDevices::dev.capabilities("events")$events)) {
+        stop("This graphics device does not report mouse and key events.", call. = FALSE)
+      }
+      px <- function(x, y) c(x * self$size[1], y * self$size[2])
+      moved <- function(p) {
+        d <- if (is.null(self$last_mouse)) c(0, 0) else p - self$last_mouse
+        self$last_mouse <- p
+        d
+      }
+      grDevices::setGraphicsEventHandlers(
+        which = self$device, prompt = self$title,
+        onMouseDown = function(buttons, x, y) {
+          p <- px(x, y)
+          moved(p)
+          self$on_mouse_press(p[1], p[2], 2^buttons[1])
+          TRUE
+        },
+        onMouseMove = function(buttons, x, y) {
+          p <- px(x, y)
+          d <- moved(p)
+          if (length(buttons)) self$on_mouse_drag(p[1], p[2], d[1], d[2], 2^buttons[1])
+          else self$on_mouse_motion(p[1], p[2], d[1], d[2])
+          TRUE
+        },
+        onKeybd = function(key) {
+          self$on_key_press(key)
+          self$on_key_release(key)
+          TRUE
+        }
+      )
+      grDevices::getGraphicsEvent()
       invisible(self)
     },
     close = function() {

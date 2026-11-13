@@ -563,20 +563,45 @@ test_that("Window places itself as upstream's find_initial_position()", {
 test_that("OpenGLRenderer draws a scene into its software framebuffer", {
   tempconfig(list(pixel_width = 160, pixel_height = 90), {
     r <- OpenGLRenderer()
+    devices <- grDevices::dev.list()
     s <- Scene$new(renderer = r)
+    # The framebuffer's device opens when it is first drawn to.
+    expect_identical(grDevices::dev.list(), devices)
+    on.exit(r$close_device(), add = TRUE)
+    # A red disk of radius 2 (22.5 pixels) with a blue stroke on its circle,
+    # which runs through the middles of columns 58 and 103.
     c <- OpenGLCircle(radius = 2)
     c$set_fill(RED, 1)
+    c$set_stroke(BLUE, 16)
     s$add(c)
+    px <- function(a, row, col) as.numeric(a[row, col, ])
+    red <- c(color_to_rgb(RED) * 255, 255)
+    blue <- c(color_to_rgb(BLUE) * 255, 255)
+    check <- function(a) {
+      expect_equal(dim(a), c(90, 160, 4))
+      expect_lte(max(abs(px(a, 45, 80) - red)), 2)
+      expect_lte(max(abs(px(a, 45, 103) - blue)), 2)
+      expect_lte(max(abs(px(a, 45, 58) - blue)), 2)
+      expect_equal(px(a, 3, 3), c(0, 0, 0, 255))
+    }
     r$update_frame(s)
-    a <- r$get_raw_frame_buffer_object_data()
-    expect_equal(dim(a), c(90, 160, 4))
-    expect_equal(as.numeric(a[45, 80, ]), c(color_to_rgb(RED) * 255, 255), tolerance = 2)
-    expect_equal(as.numeric(a[3, 3, ]), c(0, 0, 0, 255))
-    # Upstream's projection shaders draw the same disk.
+    check(r$get_raw_frame_buffer_object_data())
+    # Upstream's projection shaders: u_projection_matrix puts the circle at
+    # 0.1534 * 2 in device coordinates (24.5 pixels), and the stroke is
+    # 0.004 * 16 units on either side of it.
     tempconfig(list(use_projection_fill_shaders = TRUE, use_projection_stroke_shaders = TRUE), r$update_frame(s))
     b <- r$get_raw_frame_buffer_object_data()
-    expect_equal(as.numeric(b[45, 80, ]), c(color_to_rgb(RED) * 255, 255), tolerance = 2)
+    expect_lte(max(abs(px(b, 45, 80) - red)), 2)
+    expect_lte(max(abs(px(b, 45, 104) - red)), 2)
+    expect_equal(px(b, 45, 107), c(0, 0, 0, 255))
+    expect_gt(b[45, 105, 3], 2 * b[45, 105, 1] - 60)
+    expect_gt(b[45, 105, 3], 150)
     expect_s3_class(r$get_frame(), "nativeRaster")
-    r$close_device()
+    expect_equal(dim(r$get_image()), c(90, 160))
   })
+})
+
+test_that("an OpenGLCamera hashes the same in every run", {
+  expect_identical(digest::digest(manimR:::snapshot_camera(OpenGLCamera())),
+                   digest::digest(manimR:::snapshot_camera(OpenGLCamera())))
 })

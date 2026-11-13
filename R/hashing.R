@@ -132,7 +132,8 @@ snapshot_animation <- function(a, depth, memo = NULL) {
 }
 
 snapshot_camera <- function(cam, memo = NULL) {
-  fields <- data_fields(cam, skip = c("pixel_array", "background", "background_colored_vmobject_displayer"))
+  # An OpenGLCamera is a mobject; its id differs from run to run.
+  fields <- data_fields(cam, skip = c("pixel_array", "background", "background_colored_vmobject_displayer", "mob_id"))
   list(class = class(cam)[1], fields = lapply(fields, hash_snapshot, depth = 1, memo = memo))
 }
 
