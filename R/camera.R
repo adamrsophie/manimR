@@ -348,14 +348,15 @@ CameraClass <- R6::R6Class("Camera", lock_objects = FALSE,
         return(self$display_image_resampled(img, ul, ur, dl, dr, method))
       }
       # An enlarged rectangle is resized with Pillow's bicubic filter first;
-      # the device then only places it.
-      # Limitation: an image enlarged to more pixels than the whole frame (as
-      # in a zoomed camera, which shows a small part of it) uses the device's
-      # smooth interpolation instead, which keeps memory and time bounded.
+      # the device then only places it. One enlarged to more pixels than the
+      # frame (as in a zoomed camera) is sampled only at the frame pixels it
+      # covers, as upstream's paste into the frame keeps.
       new_h <- max(round(h * ppu), 1)
       new_w <- max(round(w * ppu), 1)
-      if (method == "bicubic" && (new_w > dim(img)[2] || new_h > dim(img)[1]) &&
-          new_h * new_w <= self$pixel_width * self$pixel_height) {
+      if (method == "bicubic" && (new_w > dim(img)[2] || new_h > dim(img)[1])) {
+        if (new_h * new_w > self$pixel_width * self$pixel_height) {
+          return(self$display_image_resampled(img, ul, ur, dl, dr, method))
+        }
         img <- cached_resize(image_mobject$mob_id, img, new_h, new_w)
       }
       # With y pointing up, an upright image has e1 x e2 < 0; a positive
@@ -385,18 +386,23 @@ CameraClass <- R6::R6Class("Camera", lock_objects = FALSE,
       if (is.null(Hinv)) return(invisible(self))
       xs <- c(ul[1], ur[1], dl[1], dr[1])
       ys <- c(ul[2], ur[2], dl[2], dr[2])
-      ppu <- self$pixel_width / self$get_frame_width()
-      nx <- max(ceiling((max(xs) - min(xs)) * ppu), 1)
-      ny <- max(ceiling((max(ys) - min(ys)) * ppu), 1)
-      # Limitation: the sampling grid has at most as many points as the frame
-      # has pixels, so a huge warped image is sampled more coarsely.
-      shrink <- sqrt(nx * ny / (self$pixel_width * self$pixel_height))
-      if (shrink > 1) {
-        nx <- max(floor(nx / shrink), 1)
-        ny <- max(floor(ny / shrink), 1)
-      }
-      gx <- min(xs) + (seq_len(nx) - 0.5) * (max(xs) - min(xs)) / nx
-      gy <- max(ys) - (seq_len(ny) - 0.5) * (max(ys) - min(ys)) / ny
+      # Sample at the centers of the frame pixels the image covers: upstream
+      # pastes the transformed image into the frame, so pixels outside it
+      # are dropped.
+      fc <- self$get_frame_center()
+      x0 <- fc[1] - self$get_frame_width() / 2
+      y1 <- fc[2] + self$get_frame_height() / 2
+      dx <- self$get_frame_width() / self$pixel_width
+      dy <- self$get_frame_height() / self$pixel_height
+      c0 <- max(floor((min(xs) - x0) / dx), 0)
+      c1 <- min(ceiling((max(xs) - x0) / dx), self$pixel_width)
+      r0 <- max(floor((y1 - max(ys)) / dy), 0)
+      r1 <- min(ceiling((y1 - min(ys)) / dy), self$pixel_height)
+      nx <- c1 - c0
+      ny <- r1 - r0
+      if (nx < 1 || ny < 1) return(invisible(self))
+      gx <- x0 + (c0 + seq_len(nx) - 0.5) * dx
+      gy <- y1 - (r0 + seq_len(ny) - 0.5) * dy
       px <- rep(gx, each = ny)
       py <- rep(gy, times = nx)
       q <- Hinv %*% rbind(px, py, 1)
@@ -414,10 +420,9 @@ CameraClass <- R6::R6Class("Camera", lock_objects = FALSE,
           out[, , k] <- matrix(ch, ny, nx)
         }
       }
-      grid::grid.raster(array_to_native_raster(out), x = grid::unit(min(xs), "native"), y = grid::unit(min(ys), "native"),
-                        width = grid::unit(max(xs) - min(xs), "native"),
-                        height = grid::unit(max(ys) - min(ys), "native"), just = c("left", "bottom"),
-                        interpolate = method != "nearest")
+      grid::grid.raster(array_to_native_raster(out), x = grid::unit(x0 + c0 * dx, "native"),
+                        y = grid::unit(y1 - r1 * dy, "native"), width = grid::unit(nx * dx, "native"),
+                        height = grid::unit(ny * dy, "native"), just = c("left", "bottom"), interpolate = FALSE)
       invisible(self)
     }
   ),

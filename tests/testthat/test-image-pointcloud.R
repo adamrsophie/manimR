@@ -190,3 +190,18 @@ test_that("bilinear and bicubic resampling differ, as in Pillow", {
   expect_equal(rowSums(w), c(1, 1, 1))
   expect_equal(w[1, ], c(0, 1, 0, 0))
 })
+
+test_that("an image far larger than the frame is sampled at the frame pixels it covers", {
+  check <- function(im) {
+    a <- manimR:::native_raster_to_array(im$get_image(pixel_width = 160, pixel_height = 90))
+    expect_equal(a[45, 5, 1:3], c(255, 0, 0))
+    expect_equal(a[45, 156, 1:3], c(0, 0, 255))
+    expect_true(all(a[, , 4] == 255))
+  }
+  big <- ImageMobject(matrix(rep(c("red", "blue"), each = 200), 1, 400), scale_to_resolution = FALSE)
+  big$stretch_to_fit_width(400)$stretch_to_fit_height(400)
+  check(big)
+  sheared <- big$copy()
+  sheared$apply_matrix(matrix(c(1, 0.01, 0, 0, 1, 0, 0, 0, 1), 3, byrow = TRUE))
+  check(sheared)
+})
