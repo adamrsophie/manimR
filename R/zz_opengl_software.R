@@ -1786,7 +1786,8 @@ Window <- build_constructor(WindowClass)
 # with mouse, wheel and key events sent as pyglet reports them, positions as
 # fractions of the window (symbols of
 # pyglet.window.key, modifier bits MOD_SHIFT 1, MOD_CTRL 2, MOD_ALT 4,
-# MOD_WINDOWS 32, MOD_COMMAND 64 and MOD_OPTION 128).
+# MOD_CAPSLOCK 8, MOD_WINDOWS 32, MOD_COMMAND 64 and MOD_OPTION 128; on macOS
+# Option sets MOD_ALT and MOD_OPTION, as pyglet's cocoa window does).
 opengl_window_page <- function(title, size) {
   js <- "
 const img = document.getElementById('f');
@@ -1794,7 +1795,7 @@ const ws = new WebSocket('ws://' + location.host + '/');
 ws.onmessage = () => { img.src = 'frame.png?' + Date.now(); };
 const mac = /Mac/.test(navigator.platform);
 const mods = e => (e.shiftKey ? 1 : 0) | (e.ctrlKey ? 2 : 0) | (e.altKey ? (mac ? 132 : 4) : 0) |
-  (e.metaKey ? (mac ? 64 : 32) : 0);
+  (e.metaKey ? (mac ? 64 : 32) : 0) | (e.getModifierState && e.getModifierState('CapsLock') ? 8 : 0);
 const pos = e => { const r = img.getBoundingClientRect();
   return [(e.clientX - r.left) / r.width, 1 - (e.clientY - r.top) / r.height]; };
 const send = o => { if (ws.readyState === 1) ws.send(JSON.stringify(o)); };
@@ -1809,7 +1810,9 @@ img.addEventListener('mousemove', e => { const p = pos(e);
   send({type: buttons ? 'drag' : 'motion', x: p[0], y: p[1], dx: d[0], dy: d[1], buttons: buttons,
         modifiers: mods(e)}); });
 img.addEventListener('wheel', e => { e.preventDefault(); const p = pos(e);
-  send({type: 'scroll', x: p[0], y: p[1], sx: -e.deltaX / 100, sy: -e.deltaY / 100}); }, {passive: false});
+  // One wheel notch is one step, as pyglet reports it: 100 pixels or 3 lines.
+  const step = e.deltaMode === 1 ? 3 : e.deltaMode === 2 ? 1 : 100;
+  send({type: 'scroll', x: p[0], y: p[1], sx: -e.deltaX / step, sy: -e.deltaY / step}); }, {passive: false});
 img.addEventListener('contextmenu', e => e.preventDefault());
 const special = {Shift: [65505, 65506], Control: [65507, 65508], Alt: mac ? [65519, 65520] : [65513, 65514],
   Meta: mac ? [65517, 65518] : [65515, 65516], CapsLock: 65509, Enter: 65293, Escape: 65307,
