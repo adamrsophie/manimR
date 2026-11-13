@@ -399,6 +399,14 @@ VMobjectClass <- R6::R6Class("VMobject", inherit = MobjectClass, lock_objects = 
     add_cubic_bezier_curve_to = function(handle1, handle2, anchor) {
       self$throw_error_if_no_points()
       new <- rbind(as_point(handle1), as_point(handle2), as_point(anchor))
+      if (isTRUE(self$opengl_quadratic)) {
+        # Upstream's OpenGL VMobject adds a cubic as two quadratics.
+        q <- get_quadratic_approximation_of_cubic(matrix(self$get_last_point(), 1), new[1, , drop = FALSE],
+                                                  new[2, , drop = FALSE], new[3, , drop = FALSE])
+        raised <- opengl_cubic_from_quadratic(q)
+        self$append_points(if (self$has_new_path_started()) raised[-1, , drop = FALSE] else raised)
+        return(invisible(self))
+      }
       if (self$has_new_path_started()) self$append_points(new)
       else self$append_points(rbind(self$get_last_point(), new))
       invisible(self)
@@ -407,11 +415,28 @@ VMobjectClass <- R6::R6Class("VMobject", inherit = MobjectClass, lock_objects = 
       handle <- as_point(handle)
       anchor <- as_point(anchor)
       last <- self$get_last_point()
+      if (isTRUE(self$opengl_quadratic)) {
+        # One quadratic, stored raised.
+        raised <- rbind(last, 2 / 3 * handle + 1 / 3 * last, 2 / 3 * handle + 1 / 3 * anchor, anchor)
+        dimnames(raised) <- NULL
+        self$append_points(if (self$has_new_path_started()) raised[-1, , drop = FALSE] else raised)
+        return(invisible(self))
+      }
       self$add_cubic_bezier_curve_to(2 / 3 * handle + 1 / 3 * last, 2 / 3 * handle + 1 / 3 * anchor, anchor)
     },
     add_line_to = function(point) {
       point <- as_point(point)
       last <- self$get_last_point()
+      if (isTRUE(self$opengl_quadratic)) {
+        # Upstream's OpenGL add_line_to: one straight quadratic, two with
+        # long_lines.
+        if (isTRUE(self$long_lines)) {
+          mid <- interpolate(last, point, 0.5)
+          self$add_quadratic_bezier_curve_to(interpolate(last, mid, 0.5), mid)
+          last <- mid
+        }
+        return(self$add_quadratic_bezier_curve_to(interpolate(last, point, 0.5), point))
+      }
       self$add_cubic_bezier_curve_to(interpolate(last, point, 1 / 3), interpolate(last, point, 2 / 3), point)
     },
     add_smooth_curve_to = function(...) {
@@ -503,6 +528,12 @@ VMobjectClass <- R6::R6Class("VMobject", inherit = MobjectClass, lock_objects = 
           new_sp <- sp
           new_sp[seq(2, nrow(sp), by = 4), ] <- h1
           new_sp[seq(3, nrow(sp), by = 4), ] <- h2
+          if (mode == "smooth" && isTRUE(m$opengl_quadratic)) {
+            # Upstream's OpenGL VMobject keeps each smooth cubic as two
+            # quadratics.
+            new_sp <- opengl_cubic_from_quadratic(get_quadratic_approximation_of_cubic(
+              anchors[-na, , drop = FALSE], h1, h2, anchors[-1, , drop = FALSE]))
+          }
           m$append_points(new_sp)
         }
       }

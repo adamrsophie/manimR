@@ -27,7 +27,8 @@ opengl_fill_shader_field <- function(sd, key, value) {
 opengl_quadratic_points <- function(vmob) {
   pts <- vmob$points
   n <- nrow(pts) - nrow(pts) %% 4
-  if (n == 0) return(matrix(0, 0, 3))
+  # A VectorizedPoint made under the OpenGL renderer keeps its one point.
+  if (n == 0) return(if (isTRUE(vmob$opengl_quadratic)) pts[, 1:3, drop = FALSE] else matrix(0, 0, 3))
   i <- seq(1, n, by = 4)
   a0 <- pts[i, , drop = FALSE]
   h0 <- pts[i + 1, , drop = FALSE]

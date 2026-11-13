@@ -105,6 +105,8 @@ MobjectClass <- R6::R6Class("Mobject",
     insert_submobjects = function(index, mobjects) {
       self$assert_valid_submobjects(mobjects)
       if (!length(mobjects)) return(invisible(self))
+      # Adding refreshes upstream's OpenGL bounding box.
+      self$opengl_empty_offset <- NULL
       ids <- vapply(mobjects, function(m) m$mob_id, "")
       keep <- !duplicated(ids, fromLast = TRUE)
       if (!all(keep)) {
@@ -293,8 +295,14 @@ MobjectClass <- R6::R6Class("Mobject",
     },
     shift = function(...) {
       v <- Reduce(`+`, lapply(list(...), as_point), c(0, 0, 0))
-      for (m in self$family_members_with_points()) {
+      moved <- self$family_members_with_points()
+      for (m in moved) {
         m$points <- m$points + rep(v, each = nrow(m$points))
+      }
+      # Upstream's OpenGL mobjects shift their cached bounding box too, so
+      # one without points remembers where it was moved to.
+      if (!length(moved) && identical(cfg("renderer"), "opengl")) {
+        for (m in self$get_family()) m$opengl_empty_offset <- (m$opengl_empty_offset %||% c(0, 0, 0)) + v
       }
       invisible(self)
     },
@@ -546,7 +554,8 @@ MobjectClass <- R6::R6Class("Mobject",
     # Queries --------------------------------------------------------------
     reduce_across_dimension = function(reduce_func, dim) {
       vals <- unlist(lapply(self$get_family(), function(m) {
-        if (nrow(m$points)) reduce_func(m$points[, dim]) else NULL
+        p <- if (isTRUE(m$opengl_quadratic) && is_vmobject(m)) opengl_quadratic_points(m) else m$points
+        if (nrow(p)) reduce_func(p[, dim]) else NULL
       }))
       if (is.null(vals)) NULL else reduce_func(vals)
     },
@@ -556,7 +565,9 @@ MobjectClass <- R6::R6Class("Mobject",
     },
     get_all_points = function() {
       fam <- self$get_family()
-      pts <- lapply(fam, function(m) m$points)
+      # A VMobject made under the OpenGL renderer counts by its quadratic
+      # curves, handles included, as upstream's OpenGLGroup bounds it.
+      pts <- lapply(fam, function(m) if (isTRUE(m$opengl_quadratic) && is_vmobject(m)) opengl_quadratic_points(m) else m$points)
       out <- do.call(rbind, pts)
       if (is.null(out)) matrix(0, 0, self$dim) else out
     },
@@ -572,7 +583,7 @@ MobjectClass <- R6::R6Class("Mobject",
       direction <- as_point(direction)
       result <- c(0, 0, 0)
       pts <- self$get_points_defining_boundary()
-      if (nrow(pts) == 0) return(result)
+      if (nrow(pts) == 0) return(self$opengl_empty_offset %||% result)
       for (d in 1:3) {
         v <- pts[, d]
         k <- dir_key(direction[d])

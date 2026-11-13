@@ -1306,3 +1306,25 @@ void main() { if (v_pos.x > 5.0) discard; mat2 r = mat2(0.0, 1.0, -1.0, 0.0);
     c = vec4(p[k], m[k % 2][1] + v[k]); }", c(0, 1, 2))
   expect_equal(unname(got), rbind(c(1, 9, 1, 7), c(2, 9, 2, 10), c(3, 9, 3, 9)))
 })
+
+test_that("shapes built under the OpenGL renderer follow upstream's quadratic constructions", {
+  tempconfig(list(renderer = "opengl"), {
+    nq <- function(m) nrow(opengl_quadratic_points(m))
+    # A line is one straight quadratic, so a sector is 9 + 1 + 9 + 1 curves.
+    expect_equal(nq(AnnularSector()), 60)
+    expect_equal(nq(Sector()), 60)
+    # SVG paths: a cubic becomes two quadratics, a line one.
+    expect_equal(nq(VMobjectFromSVGPath("M0 0 C1 1 2 1 3 0 L 4 0")), 9)
+    # make_smooth keeps each smooth cubic as two quadratics.
+    expect_equal(nq(FunctionGraph(function(x) x^2, x_range = c(-2, 2))), 2400)
+    # ThreeDAxes adds no shaded pieces, as upstream under OpenGL.
+    expect_length(ThreeDAxes()$get_family(), 37)
+    # A point keeps its single point, and an empty group keeps the shifts.
+    expect_equal(nq(VectorizedPoint(c(1, 2, 0))), 1)
+    g <- VGroup()$shift(c(0, 3, 0))
+    expect_equal(g$get_center(), c(0, 3, 0))
+    # Group bounds use the quadratic curves.
+    r <- SurroundingRectangle(Circle(), buff = 0.2)
+    expect_equal(range(r$points[, 1]), c(-1.264178, 1.2), tolerance = 1e-6)
+  })
+})

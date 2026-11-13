@@ -307,7 +307,9 @@ SingleStringMathTexClass <- R6::R6Class("SingleStringMathTex", inherit = SVGMobj
       file <- tex_to_svg_file(modify_special_strings(tex_string), environment = tex_environment,
                               tex_template = self$tex_template)
       super$initialize(file_name = file, should_center = should_center, stroke_width = stroke_width,
-                       height = height, color = NULL, ...)
+                       height = height, color = NULL,
+                       path_string_config = list(should_subdivide_sharp_curves = TRUE, should_remove_null_curves = TRUE),
+                       ...)
       self$color <- self$tex_color
       self$init_colors()
       # Upstream sets the mobject's own color too, so get_color() reports it.

@@ -306,7 +306,9 @@ TypstClass <- R6::R6Class("Typst", inherit = SVGMobjectClass, lock_objects = FAL
       self$svg_leaf_labels <- self$svg_leaf_labels %||% list()
       file <- typst_to_svg_file(typst_code, preamble = typst_preamble, font_paths = font_paths)
       super$initialize(file_name = file, should_center = should_center, height = NULL, width = NULL,
-                       stroke_width = stroke_width, color = NULL, ...)
+                       stroke_width = stroke_width, color = NULL,
+                       path_string_config = list(should_subdivide_sharp_curves = TRUE, should_remove_null_curves = TRUE),
+                       ...)
       if (!is.null(height)) self$height <- height
       if (!is.null(width)) self$width <- width
       self$rebuild_label_aliases()

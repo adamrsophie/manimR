@@ -628,8 +628,11 @@ ThreeDAxesClass <- R6::R6Class("ThreeDAxes", inherit = AxesClass, lock_objects =
       self$axes$add(z_axis)
       self$add(z_axis)
       self$z_axis <- z_axis
-      self$add_3d_pieces()
-      self$set_axis_shading()
+      # Upstream adds the shaded pieces only under the Cairo renderer.
+      if (!identical(cfg("renderer"), "opengl")) {
+        self$add_3d_pieces()
+        self$set_axis_shading()
+      }
     },
     # Every piece of an axis gets a sheen of 0.2 whose gradient runs across
     # the whole axis along the light source.

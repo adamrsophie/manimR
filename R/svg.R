@@ -50,7 +50,7 @@ svg_length_px <- function(s, ref = 1) {
 
 # Parse an SVG path data string into cubic points (4k x 3) in path
 # coordinates, following VMobjectFromSVGPath.handle_commands.
-svg_path_to_points <- function(d) {
+svg_path_to_points <- function(d, quadratic = FALSE, long_lines = FALSE) {
   tokens <- regmatches(d, gregexpr("[MmLlHhVvCcSsQqTtAaZz]|[-+]?(?:\\d*\\.\\d+|\\d+\\.?)(?:[eE][-+]?\\d+)?", d, perl = TRUE))[[1]]
   n <- length(tokens)
   out <- vector("list", 64)
@@ -63,6 +63,26 @@ svg_path_to_points <- function(d) {
   add_cubic <- function(s, c1, c2, e) push(s, c1, c2, e)
   add_line <- function(s, e) add_cubic(s, (2 * s + e) / 3, (s + 2 * e) / 3, e)
   add_quad <- function(s, c, e) add_cubic(s, (s + 2 * c) / 3, (2 * c + e) / 3, e)
+  if (quadratic) {
+    # Upstream's handle_commands with 3 points per curve (the OpenGL
+    # renderer): a cubic as two quadratics, a line or a quadratic as one,
+    # each stored raised to a cubic.
+    raise <- function(s, c, e) push(s, (s + 2 * c) / 3, (2 * c + e) / 3, e)
+    add_quad <- function(s, c, e) raise(s, c, e)
+    add_cubic <- function(s, c1, c2, e) {
+      q <- get_quadratic_approximation_of_cubic(rbind(s), rbind(c1), rbind(c2), rbind(e))
+      raise(q[1, ], q[2, ], q[3, ])
+      raise(q[4, ], q[5, ], q[6, ])
+    }
+    add_line <- function(s, e) {
+      if (long_lines) {
+        mid <- (s + e) / 2
+        add_quad(s, (s + mid) / 2, mid)
+        s <- mid
+      }
+      add_quad(s, (s + e) / 2, e)
+    }
+  }
   i <- 1L
   cmd <- ""
   cur <- c(0, 0)
@@ -750,7 +770,9 @@ VMobjectFromSVGPathClass <- R6::R6Class("VMobjectFromSVGPath", inherit = VMobjec
     # curves become cubics, and a closing command adds a line back to the
     # start unless the path already ends there.
     handle_commands = function() {
-      self$points <- if (is.null(self$path_string)) matrix(0, 0, 3) else svg_path_to_points(self$path_string)
+      self$points <- if (is.null(self$path_string)) matrix(0, 0, 3)
+                     else svg_path_to_points(self$path_string, quadratic = isTRUE(self$opengl_quadratic),
+                                             long_lines = isTRUE(self$long_lines))
       invisible(self)
     }
   )
