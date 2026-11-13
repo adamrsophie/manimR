@@ -41,8 +41,7 @@ Suggests:
     miniUI,
     knitr,
     rmarkdown,
-    jsonlite,
-    polyclip
+    jsonlite
 SystemRequirements: ffmpeg (for video output), LaTeX and dvisvgm (for Tex and
     MathTex), typst (for Typst and MathTypst), Python with Pygments (optional,
     for highlighting every language in Code)

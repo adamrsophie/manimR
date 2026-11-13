@@ -116,7 +116,7 @@ arguments for the \code{\link[=NumberLine]{NumberLine()}} of every axis or of on
 
 \item{num_axis_pieces}{Number of pieces each axis is cut into for 3D depth sorting.}
 
-\item{light_source}{Light direction; stored, but the upstream axis sheen is not applied.}
+\item{light_source}{Light direction; every axis piece has a sheen of 0.2 along it.}
 
 \item{depth, gloss}{Unused; kept for compatibility.}
 

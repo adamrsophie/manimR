@@ -23,7 +23,6 @@ has_typst <- nzchar(Sys.which("typst"))
 ```
 
 ```{r helpers, include = FALSE}
-has_polyclip <- requireNamespace("polyclip", quietly = TRUE)
 ```
 
 Everything you see in a manimR scene is a *mobject* (a mathematical
@@ -845,11 +844,11 @@ plot(catalog(list(
 ### Boolean operations
 
 `Union()`, `Intersection()`, `Difference()` and `Exclusion()` combine
-shapes the way a drawing program does. They need the suggested
-'polyclip' package. The result is a new VMobject made of straight segments
-(curves are sampled finely), and it takes the usual style arguments.
+shapes the way a drawing program does. As upstream's skia-pathops result,
+the outline is made of pieces of the input curves cut where they cross, and
+the new VMobject takes the usual style arguments.
 
-```{r boolean, eval = has_polyclip}
+```{r boolean}
 sq <- Square(color = RED, fill_opacity = 0.5)$move_to(0.4 * LEFT)
 ci <- Circle(color = BLUE, fill_opacity = 0.5)$move_to(0.4 * RIGHT + 0.4 * UP)
 plot(catalog(list(

@@ -25,11 +25,12 @@ misc_layout <- function(g, ref) misc_mat(g$graph_layout[names(ref)])
 # Boolean operations ----------------------------------------------------------
 
 test_that("boolean operations match upstream bounding boxes and areas", {
-  skip_if_not_installed("polyclip")
   o <- misc_oracle()
   area <- function(m) {
+    # Shoelace area of the curves sampled finely, as the oracle samples them.
+    tt <- seq(0, 1, length.out = 33)[-33]
     sum(vapply(m$get_subpaths(), function(sp) {
-      a <- sp[seq(1, nrow(sp), by = 4), , drop = FALSE]
+      a <- do.call(rbind, lapply(seq(1, nrow(sp), by = 4), function(k) bezier(sp[k:(k + 3), , drop = FALSE])(tt)))
       b <- a[c(2:nrow(a), 1), , drop = FALSE]
       0.5 * (sum(a[, 1] * b[, 2]) - sum(b[, 1] * a[, 2]))
     }, numeric(1)))
@@ -48,6 +49,56 @@ test_that("boolean operations match upstream bounding boxes and areas", {
   expect_error(Intersection(Square()), "At least 2")
   three <- Intersection(Square(), Circle(), Square()$shift(RIGHT * 0.5))
   expect_equal(misc_bbox(three)[1:2], c(-0.5, 1), tolerance = 1e-6)
+})
+
+test_that("boolean operations cut the curves where skia-pathops does", {
+  skip_if_not_installed("jsonlite")
+  o <- jsonlite::fromJSON(test_path("fixtures", "boolean_ops_oracle.json"), simplifyVector = FALSE)
+  as_pts <- function(x) if (length(x)) do.call(rbind, lapply(x, function(p) as.numeric(unlist(p)))) else matrix(0, 0, 3)
+  # The pieces of an outline, each written from its lower end, in order.
+  pieces <- function(m) {
+    if (!nrow(m)) return(matrix(0, 0, 8))
+    segs <- lapply(seq(1, nrow(m), 4), function(k) m[k:(k + 3), 1:2])
+    segs <- Filter(function(s) max(abs(s - s[rep(1, 4), ])) > 1e-9, segs)
+    segs <- lapply(segs, function(s) {
+      if (s[4, 1] < s[1, 1] - 1e-4 || (abs(s[4, 1] - s[1, 1]) <= 1e-4 && s[4, 2] < s[1, 2])) s <- s[4:1, ]
+      c(t(s))
+    })
+    out <- do.call(rbind, segs)
+    out[order(round(out[, 1], 4), round(out[, 2], 4), round(out[, 7], 4), round(out[, 8], 4)), , drop = FALSE]
+  }
+  make <- list(
+    sq_cr = function() list(Square()$move_to(c(-2, 0, 0)), Circle()$move_to(c(-1.3, 0.7, 0))),
+    ellipses = function() { e1 <- Ellipse(width = 4, height = 5)$move_to(LEFT); list(e1, e1$copy()$move_to(RIGHT)) },
+    nested = function() list(Square(side_length = 4), Circle(radius = 1)),
+    apart = function() list(Circle()$shift(2 * LEFT), Circle()$shift(2 * RIGHT)),
+    poly = function() list(RegularPolygon(n = 5), Triangle()$scale(1.5)$shift(0.4 * UP)),
+    star = function() list(Star(), Circle(radius = 0.8)$shift(0.3 * RIGHT)),
+    offset_square = function() list(Square(), Square()$shift(0.5 * RIGHT + 0.5 * UP)),
+    rect_circle = function() list(Rectangle(width = 4, height = 1), Circle(radius = 1.2)))
+  ops <- list(union = Union, intersection = Intersection, difference = Difference, exclusion = Exclusion)
+  # Skia computes crossings in single precision, so points agree to about
+  # 1e-6. Results whose contours hold an input start match point for point.
+  exact <- c("sq_cr_union", "sq_cr_intersection", "sq_cr_exclusion", "ellipses_union",
+             "ellipses_intersection", "nested_union", "nested_intersection", "nested_difference",
+             "nested_exclusion", "apart_union", "apart_intersection", "apart_difference",
+             "apart_exclusion", "poly_difference", "star_union", "offset_square_union",
+             "offset_square_intersection", "offset_square_exclusion", "rect_circle_union",
+             "rect_circle_intersection", "rect_circle_difference")
+  for (cn in names(make)) for (on in names(ops)) {
+    key <- paste0(cn, "_", on)
+    ab <- make[[cn]]()
+    got <- ops[[on]](ab[[1]], ab[[2]])$points
+    want <- as_pts(o[[key]])
+    if (key %in% exact) expect_lt(max(abs(got - want)), 1e-5, label = key)
+    pg <- pieces(got)
+    pw <- pieces(want)
+    expect_identical(dim(pg), dim(pw), info = key)
+    if (identical(dim(pg), dim(pw))) expect_lt(max(c(0, abs(pg - pw))), 1e-5, label = key)
+  }
+  three <- list(Square(), Circle()$shift(0.8 * RIGHT), Triangle()$shift(0.6 * UP))
+  expect_lt(max(abs(do.call(Union, three)$points - as_pts(o$three_union))), 1e-5)
+  expect_lt(max(abs(do.call(Intersection, three)$points - as_pts(o$three_intersection))), 1e-5)
 })
 
 # ChangeSpeed -----------------------------------------------------------------

@@ -246,8 +246,10 @@ embedded the same way when it is printed.
   Pango, so glyph shapes and metrics follow the installed fonts.
   `MarkupText()` wraps and justifies lines at upstream's Pango layout width.
 * Boolean operations (`Union()`, `Intersection()`, `Difference()`,
-  `Exclusion()`) use the `polyclip` package, so their results are made of
-  straight segments.
+  `Exclusion()`) cut the input curves where they cross, as skia-pathops
+  does, in double precision rather than skia's single precision. A contour
+  that holds no input start point can start at a different point, and an
+  exclusion can split its outline into different (equally filled) contours.
 * `Code()` highlights with Pygments, as upstream, when Python with the
   pygments module is installed; without it, a built in tokenizer highlights
   R and Python.

@@ -36,15 +36,12 @@ these functions call.
 \description{
 \code{Union()} merges two or more shapes, \code{Intersection()} keeps the region they
 all share, \code{Difference()} removes \code{clip} from \code{subject} and \code{Exclusion()}
-keeps the region covered by exactly one of the two. The inputs are
-flattened to polygons (curves are sampled finely) and clipped with the
-'polyclip' package, so the result is made of straight segments. Install
-'polyclip' to use these classes.
+keeps the region covered by exactly one of the two. As upstream's
+skia-pathops result, the outline is made of pieces of the input curves,
+cut where they cross.
 }
 \examples{
-\dontshow{if (requireNamespace("polyclip", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 sq <- Square(color = RED, fill_opacity = 1)$move_to(c(-2, 0, 0))
 cr <- Circle(color = BLUE, fill_opacity = 1)$move_to(c(-1.3, 0.7, 0))
 un <- Union(sq, cr, color = GREEN, fill_opacity = 1)$move_to(c(1.5, 0.3, 0))
-\dontshow{\}) # examplesIf}
 }
