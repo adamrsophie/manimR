@@ -27,8 +27,9 @@
 #'   perspective-correct varyings, depth test and alpha blending. The
 #'   interpreter takes the scalar, vector and square matrix types, in, out,
 #'   uniform and const globals, user functions, `if`, `for`, `while`,
-#'   `break`, `continue`, `return`, `discard` and the common built-in
-#'   functions; structs, textures and geometry shaders raise an error, and
+#'   `break`, `continue`, `return`, `discard`, structs and the common
+#'   built-in functions; textures, geometry shaders and arrays inside
+#'   structs raise an error, and
 #'   `Mesh$render()` of a mesh it cannot run needs an OpenGL context and
 #'   stops.
 #' * `Shader(context, name, source)` reads the GLSL code of a shader folder

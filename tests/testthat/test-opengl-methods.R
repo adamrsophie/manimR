@@ -976,6 +976,37 @@ void main() {
     r$get_raw_frame_buffer_object_data()
   })
   expect_lte(max(abs(quad - oracle("vquad"))), 2)
+  # Structs: constructors, fields, nested writes, inout, returns, arrays.
+  structs <- tempconfig(list(pixel_width = 160, pixel_height = 90), {
+    r <- OpenGLRenderer()
+    s <- Scene$new(renderer = r)
+    on.exit(r$close_device(), add = TRUE)
+    s$add(FullScreenQuad(r$context, fragment_shader_source = "
+        #version 330
+        out vec4 frag_color;
+        struct Ring { vec2 center; float radius; vec3 color; };
+        Ring grow(Ring r, float f) { r.radius *= f; return r; }
+        void tint(inout Ring r) { r.color.g = 1.0 - r.color.g; }
+        void main() {
+            vec2 p = gl_FragCoord.xy / vec2(160.0, 90.0);
+            Ring rings[3];
+            rings[0] = Ring(vec2(0.25, 0.5), 0.12, vec3(1.0, 0.2, 0.1));
+            rings[1] = grow(Ring(vec2(0.55, 0.45), 0.1, vec3(0.1, 0.3, 1.0)), 1.6);
+            rings[2] = rings[0];
+            rings[2].center.x = 0.8;
+            tint(rings[2]);
+            vec3 c = vec3(0.05);
+            for (int i = 0; i < 3; i++) {
+                float d = length((p - rings[i].center) * vec2(1.78, 1.0));
+                if (d < rings[i].radius) c = mix(c, rings[i].color, 0.7);
+            }
+            frag_color = vec4(c, 1.0);
+        }
+        "))
+    r$update_frame(s)
+    r$get_raw_frame_buffer_object_data()
+  })
+  expect_lte(max(abs(structs - oracle("vstruct"))), 2)
   # Shapes made under the OpenGL renderer have upstream's OpenGL geometry
   # (a circle of 9 quadratic arcs), drawn without conversion.
   native <- tempconfig(list(renderer = "opengl", pixel_width = 160, pixel_height = 90), {

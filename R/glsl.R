@@ -10,8 +10,9 @@
 # if/else, for and while loops with break and continue; return; discard;
 # the arithmetic, comparison, logical and ternary operators with ++ and --;
 # swizzles and indexing; constructors, arrays such as vec3[9](...) and the
-# common built-in functions. Structs, textures and geometry shaders raise
-# an error.
+# common built-in functions; structs, whose value is one matrix of their
+# fields side by side (a "glsl_struct" attribute names the struct).
+# Textures, geometry shaders and arrays inside structs raise an error.
 
 glsl_tokenize <- function(code) {
   code <- gsub("/\\*.*?\\*/", " ", code, perl = TRUE)
@@ -51,7 +52,34 @@ glsl_parse <- function(tokens) {
     pos <<- pos + 1
     t
   }
-  is_type <- function(t) t %in% c(names(GLSL_TYPES), "void")
+  structs <- list()
+  is_type <- function(t) t %in% c(names(GLSL_TYPES), names(structs), "void")
+  # struct Name { type field, field; ... }; its fields' column offsets.
+  struct_def <- function() {
+    take("struct")
+    name <- take()
+    take("{")
+    fields <- list()
+    offset <- 0
+    while (peek() != "}") {
+      qualifiers()
+      ftype <- take()
+      size <- if (!is.null(structs[[ftype]])) structs[[ftype]]$size else GLSL_TYPES[ftype]
+      if (is.na(size)) glsl_error("the type '", ftype, "' is not supported.")
+      repeat {
+        fname <- take()
+        if (peek() == "[") glsl_error("arrays inside structs are not supported by manimR's GLSL interpreter.")
+        fields[[fname]] <- list(type = ftype, offset = offset, size = unname(size))
+        offset <- offset + size
+        if (peek() == ",") take(",") else break
+      }
+      take(";")
+    }
+    take("}")
+    if (peek() != ";") glsl_error("declare the variables of struct ", name, " in their own statement.")
+    take(";")
+    structs[[name]] <<- list(fields = fields, size = unname(offset))
+  }
   is_number <- function(t) grepl("^(\\d|\\.\\d)", t)
   binary <- list(c("||"), c("^^"), c("&&"), c("==", "!="), c("<", ">", "<=", ">="), c("+", "-"), c("*", "/", "%"))
   expr <- function() assignment()
@@ -270,7 +298,10 @@ glsl_parse <- function(tokens) {
       take(";")
       return(list(list(kind = t)))
     }
-    if (t == "struct") glsl_error("structs are not supported by manimR's GLSL interpreter.")
+    if (t == "struct") {
+      struct_def()
+      return(list())
+    }
     quals <- qualifiers()
     if (is_type(peek()) && grepl("^[A-Za-z_]", peek(1))) {
       type <- take()
@@ -288,7 +319,10 @@ glsl_parse <- function(tokens) {
       while (take() != ";") NULL
       next
     }
-    if (peek() == "struct") glsl_error("structs are not supported by manimR's GLSL interpreter.")
+    if (peek() == "struct") {
+      struct_def()
+      next
+    }
     quals <- qualifiers()
     if (!length(quals) && is_type(peek()) && grepl("^[A-Za-z_]", peek(1)) && peek(2) == "(") {
       type <- take()
@@ -325,7 +359,28 @@ glsl_parse <- function(tokens) {
     type <- take()
     globals <- c(globals, declarations(type, quals))
   }
-  list(globals = globals, functions = functions)
+  list(globals = globals, functions = functions, structs = structs)
+}
+
+# The number of columns of a type's value, and a value marked as that type.
+glsl_size <- function(type, st) {
+  s <- st$program$structs[[type]]
+  if (!is.null(s)) return(s$size)
+  k <- GLSL_TYPES[type]
+  if (is.na(k)) glsl_error("the type '", type, "' is not supported.")
+  unname(k)
+}
+glsl_typed <- function(x, type, st) {
+  if (is.list(x)) return(x)
+  attr(x, "glsl_dim") <- glsl_type_dim(type)
+  attr(x, "glsl_struct") <- if (!is.null(st$program$structs[[type]])) type
+  x
+}
+# A field of a struct value.
+glsl_field <- function(x, sname, name, st) {
+  f <- st$program$structs[[sname]]$fields[[name]]
+  if (is.null(f)) glsl_error("struct ", sname, " has no field '", name, "'.")
+  glsl_typed(x[, f$offset + seq_len(f$size), drop = FALSE], f$type, st)
 }
 
 # Rows of a value for n rows: a single row is repeated.
@@ -333,8 +388,10 @@ glsl_rows <- function(x, n) {
   if (is.list(x)) return(lapply(x, glsl_rows, n))
   if (nrow(x) == 1 && n != 1) {
     d <- attr(x, "glsl_dim")
+    sn <- attr(x, "glsl_struct")
     x <- x[rep(1, n), , drop = FALSE]
     attr(x, "glsl_dim") <- d
+    attr(x, "glsl_struct") <- sn
   }
   x
 }
@@ -547,6 +604,8 @@ glsl_eval <- function(e, env, st, mask) {
     },
     swizzle = {
       x <- ev(e$args[[1]])
+      sname <- attr(x, "glsl_struct")
+      if (!is.null(sname)) return(glsl_field(x, sname, e$name, st))
       glsl_with_dim(x[, glsl_swizzle_index(e$name), drop = FALSE], NULL)
     },
     index = {
@@ -622,16 +681,26 @@ glsl_assign <- function(target, how, value, env, st, mask) {
   }
   old <- glsl_rows(if (is.null(element)) whole else whole[[element]], n)
   d <- attr(old, "glsl_dim")
+  sname <- attr(old, "glsl_struct")
   cols <- seq_len(ncol(old))
+  # Narrow the columns step by step; d and sname describe the selection.
   for (p in path) {
-    if (p$kind == "index") {
-      cols <- if (!is.null(d) && length(cols) == ncol(old)) cols[(p$i - 1) * d[2] + seq_len(d[2])] else cols[p$i]
+    if (p$kind == "swizzle" && !is.null(sname)) {
+      f <- st$program$structs[[sname]]$fields[[p$name]]
+      if (is.null(f)) glsl_error("struct ", sname, " has no field '", p$name, "'.")
+      cols <- cols[f$offset + seq_len(f$size)]
+      d <- glsl_type_dim(f$type)
+      sname <- if (!is.null(st$program$structs[[f$type]])) f$type
+    } else if (p$kind == "index") {
+      cols <- if (!is.null(d)) cols[(p$i - 1) * d[2] + seq_len(d[2])] else cols[p$i]
+      d <- NULL
     } else {
       cols <- cols[glsl_swizzle_index(p$name)]
+      d <- NULL
     }
   }
   if (how != "=") {
-    current <- glsl_with_dim(old[, cols, drop = FALSE], if (length(cols) == ncol(old)) d else NULL)
+    current <- glsl_with_dim(old[, cols, drop = FALSE], d)
     value <- if (how == "*=") glsl_mul(current, value)
              else glsl_map(switch(how, `+=` = `+`, `-=` = `-`, `/=` = `/`), current, value)
   }
@@ -654,6 +723,12 @@ glsl_call <- function(name, arg_exprs, env, st, mask) {
   if (is.null(fns)) {
     args <- lapply(arg_exprs, glsl_eval, env, st, mask)
     if (name %in% names(GLSL_TYPES)) return(glsl_construct(name, args))
+    if (!is.null(st$program$structs[[name]])) {
+      n <- max(vapply(args, nrow, 1))
+      out <- do.call(cbind, lapply(args, function(a) glsl_with_dim(glsl_rows(a, n), NULL)))
+      if (ncol(out) != st$program$structs[[name]]$size) glsl_error("wrong arguments for struct ", name, ".")
+      return(glsl_typed(out, name, st))
+    }
     return(glsl_builtin(name, args))
   }
   # Overloads: the one with the matching number of parameters.
@@ -664,20 +739,18 @@ glsl_call <- function(name, arg_exprs, env, st, mask) {
   for (i in seq_along(fn$params)) {
     p <- fn$params[[i]]
     value <- if (p$out && !p$inout) {
-      matrix(0, 1, GLSL_TYPES[[p$type]])
+      matrix(0, 1, glsl_size(p$type, st))
     } else {
       glsl_eval(arg_exprs[[i]], env, st, mask)
     }
-    d <- glsl_type_dim(p$type)
-    if (!is.null(d) && !is.list(value)) value <- glsl_with_dim(value, d)
-    assign(p$name, glsl_rows(value, st$n), envir = local)
+    assign(p$name, glsl_rows(glsl_typed(value, p$type, st), st$n), envir = local)
   }
   saved <- list(ret = st$ret, returned = st$returned)
-  st$ret <- if (fn$type == "void") NULL else matrix(0, st$n, GLSL_TYPES[[fn$type]])
+  st$ret <- if (fn$type == "void") NULL else matrix(0, st$n, glsl_size(fn$type, st))
   st$returned <- rep(FALSE, st$n)
   glsl_exec(fn$body, local, st, rep_len(mask, st$n))
   result <- st$ret
-  if (!is.null(result) && !is.null(glsl_type_dim(fn$type))) result <- glsl_with_dim(result, glsl_type_dim(fn$type))
+  if (!is.null(result)) result <- glsl_typed(result, fn$type, st)
   st$ret <- saved$ret
   st$returned <- saved$returned
   for (i in seq_along(fn$params)) {
@@ -753,23 +826,23 @@ glsl_exec <- function(statements, env, st, mask) {
 }
 
 glsl_declare <- function(s, env, st, mask, value = NULL) {
-  k <- GLSL_TYPES[[s$type]]
-  if (is.null(k)) glsl_error("the type '", s$type, "' is not supported.")
+  k <- glsl_size(s$type, st)
   d <- glsl_type_dim(s$type)
+  is_struct <- !is.null(st$program$structs[[s$type]])
   if (is.null(value)) {
     value <- if (!is.null(s$value)) {
       glsl_eval(s$value, env, st, mask)
     } else if (!is.null(s$size)) {
       size <- glsl_eval(s$size, env, st, mask)[1, 1]
-      replicate(size, matrix(0, 1, k), simplify = FALSE)
+      replicate(size, glsl_typed(matrix(0, 1, k), s$type, st), simplify = FALSE)
     } else {
       matrix(0, 1, k)
     }
   }
   if (!is.list(value)) {
-    if (ncol(value) == 1 && k > 1 && is.null(d)) value <- value[, rep(1, k), drop = FALSE]
+    if (ncol(value) == 1 && k > 1 && is.null(d) && !is_struct) value <- value[, rep(1, k), drop = FALSE]
     if (glsl_is_int_type(s$type)) value <- trunc(value)
-    if (!is.null(d)) value <- glsl_with_dim(value, d)
+    value <- glsl_typed(value, s$type, st)
   }
   assign(s$name, value, envir = env)
 }
@@ -790,8 +863,7 @@ glsl_run <- function(program, n, inputs = list(), uniforms = list(), builtins = 
   assign("gl_PointSize", matrix(1, 1, 1), envir = g)
   mask <- rep(TRUE, n)
   for (s in program$globals) {
-    k <- GLSL_TYPES[[s$type]]
-    d <- glsl_type_dim(s$type)
+    k <- glsl_size(s$type, st)
     value <- NULL
     if (any(s$quals %in% c("in", "attribute", "varying")) && !"out" %in% s$quals && s$name %in% names(inputs)) {
       v <- as.matrix(inputs[[s$name]])
@@ -803,7 +875,7 @@ glsl_run <- function(program, n, inputs = list(), uniforms = list(), builtins = 
       }
       value <- v[, seq_len(k), drop = FALSE]
     } else if ("uniform" %in% s$quals) {
-      u <- uniforms[[s$name]]
+      u <- glsl_flat_uniform(uniforms[[s$name]], s$type, st)
       value <- if (is.null(u)) matrix(0, 1, k) else matrix(as.numeric(u)[seq_len(k)], 1, k)
       value[is.na(value)] <- 0
     } else if (any(s$quals %in% c("out", "varying"))) {
@@ -815,6 +887,16 @@ glsl_run <- function(program, n, inputs = list(), uniforms = list(), builtins = 
   if (is.null(main)) glsl_error("the shader has no main().")
   glsl_exec(main[[1]]$body, new.env(parent = g), st, mask)
   st
+}
+
+# A uniform's numbers; a struct uniform is a named list of its fields.
+glsl_flat_uniform <- function(u, type, st) {
+  s <- st$program$structs[[type]]
+  if (is.null(s) || !is.list(u)) return(if (is.null(u)) NULL else as.numeric(unlist(u)))
+  unlist(lapply(names(s$fields), function(f) {
+    v <- glsl_flat_uniform(u[[f]], s$fields[[f]]$type, st)
+    if (is.null(v)) rep(0, s$fields[[f]]$size) else v
+  }))
 }
 
 glsl_program_cache <- new.env(parent = emptyenv())
