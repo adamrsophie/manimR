@@ -175,8 +175,9 @@ on top of it.
 whose faces take the color of the image at their center: \code{u} runs
 along the image from left to right and \code{v} from bottom to top, as
 upstream's texture coordinates. Upstream's shader shows
-\code{dark_image_file} on the side facing away from the light; manimR keeps
-it in \code{dark_image} but draws the light image on both sides.
+\code{dark_image_file} on the side facing away from the light, which is at
+(-10, 10, 10) in the camera's frame; each face is blended from its two
+colors when the camera draws it, as upstream's shader does.
 }
 }
 \examples{

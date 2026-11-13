@@ -74,8 +74,9 @@
 #'   whose faces take the color of the image at their center: `u` runs
 #'   along the image from left to right and `v` from bottom to top, as
 #'   upstream's texture coordinates. Upstream's shader shows
-#'   `dark_image_file` on the side facing away from the light; manimR keeps
-#'   it in `dark_image` but draws the light image on both sides.
+#'   `dark_image_file` on the side facing away from the light, which is at
+#'   (-10, 10, 10) in the camera's frame; each face is blended from its two
+#'   colors when the camera draws it, as upstream's shader does.
 #'
 #' @param uv_surface A [Surface()].
 #' @param resolution Number of mesh lines along `u` and `v`.
@@ -277,19 +278,22 @@ OpenGLTexturedSurfaceClass <- R6::R6Class("OpenGLTexturedSurface", inherit = Ope
       invisible(self)
     },
     # Fills each face with the image's color at the face's center: u from
-    # left to right, v from the bottom of the image to its top.
+    # left to right, v from the bottom of the image to its top. The opacity
+    # is the surface's, as upstream's shader ignores the image's alpha. With a
+    # dark image each face keeps both colors, and the camera blends them
+    # when it draws the face (opengl_texture_shade()).
     apply_texture = function() {
-      img <- self$image
-      ih <- dim(img)[1]
-      iw <- dim(img)[2]
       ur <- self$u_range
       vr <- self$v_range
+      at <- function(img, un, vn) {
+        sample_image(img, min(max(un, 0), 1) * dim(img)[2], min(max(1 - vn, 0), 1) * dim(img)[1], "bilinear")
+      }
       for (f in self$list_of_faces) {
         un <- ((f$u1 + f$u2) / 2 - ur[1]) / (ur[2] - ur[1])
         vn <- ((f$v1 + f$v2) / 2 - vr[1]) / (vr[2] - vr[1])
-        rgba <- sample_image(img, min(max(un, 0), 1) * iw, min(max(1 - vn, 0), 1) * ih, "bilinear")
-        f$set_fill(color = grDevices::rgb(rgba[1], rgba[2], rgba[3], maxColorValue = 255),
-                   opacity = rgba[4] / 255 * (self$fill_opacity %||% 1))
+        f$texture_rgbas <- rbind(at(self$image, un, vn), if (!is.null(self$dark_image)) at(self$dark_image, un, vn))
+        opengl_texture_shade(f)
+        f$set_fill(opacity = self$fill_opacity %||% 1)
       }
       invisible(self)
     }
@@ -297,6 +301,29 @@ OpenGLTexturedSurfaceClass <- R6::R6Class("OpenGLTexturedSurface", inherit = Ope
 )
 
 OpenGLSurfaceMesh <- build_constructor(OpenGLSurfaceMeshClass)
+
+# The color of a textured face, as upstream's textured_surface shader gives
+# it: with a dark image, dp is the cosine between the face's normal and the
+# direction to the light at (-10, 10, 10) in the camera's frame, and the
+# dark color shows where dp is below 0, blended with smoothstep over 0.2 on
+# either side. Without a camera the frame is upstream's default one.
+opengl_texture_shade <- function(face, camera = NULL) {
+  rgbas <- face$texture_rgbas
+  rgba <- rgbas[1, ]
+  if (nrow(rgbas) > 1) {
+    p <- face$points
+    rot <- if (!is.null(camera) && is.function(camera$get_rotation_matrix)) camera$get_rotation_matrix() else diag(3)
+    center <- if (is.null(camera)) ORIGIN else camera$get_frame_center()
+    normal <- drop(rot %*% cross(p[5, ] - p[1, ], p[13, ] - p[1, ]))
+    xyz <- drop(rot %*% (face$get_center() - center))
+    dp <- if (get_norm(normal) > 0) sum(normalize(c(-10, 10, 10) - xyz) * normal) / get_norm(normal) else 1
+    t <- min(max((dp + 0.2) / 0.4, 0), 1)
+    a <- t * t * (3 - 2 * t)
+    rgba <- rgbas[2, ] * (1 - a) + rgbas[1, ] * a
+  }
+  face$set_fill(color = grDevices::rgb(rgba[1], rgba[2], rgba[3], maxColorValue = 255))
+  invisible(face)
+}
 
 # A surface with no faces of its own that groups other surfaces.
 OpenGLSurfaceGroupClass <- R6::R6Class("OpenGLSurfaceGroup", inherit = OpenGLSurfaceClass, lock_objects = FALSE,

@@ -649,6 +649,39 @@ test_that("OpenGL mobject classes are their Cairo counterparts", {
   expect_identical(get_vectorized_mobject_class(), VMobjectClass)
 })
 
+test_that("OpenGLTexturedSurface shows its dark image on faces turned from the light", {
+  plane <- OpenGLSurface(function(u, v) c(u, v, 0), u_range = c(-1, 1), v_range = c(-1, 1), resolution = 3)
+  tex <- OpenGLTexturedSurface(plane, matrix("red", 2, 2), dark_image_file = matrix("blue", 2, 2))
+  colors <- function(camera = NULL) {
+    unique(toupper(vapply(tex$list_of_faces, function(f) manimR:::opengl_texture_shade(f, camera)$get_fill_color(), "")))
+  }
+  # The faces' normal is OUT, toward the light at (-10, 10, 10).
+  expect_equal(colors(), "#FF0000")
+  tex$rotate(PI, axis = RIGHT)
+  expect_equal(colors(), "#0000FF")
+  cam <- ThreeDCamera()
+  cam$set_phi(PI)
+  cam$reset_rotation_matrix()
+  expect_equal(colors(cam), "#FF0000")
+  # The camera blends the faces when it draws them: turned back to OUT, the
+  # faces show the light image again.
+  tex$rotate(PI, axis = RIGHT)
+  tex$list_of_faces[[1]]$set_fill(GREEN)
+  tex$set_opacity(0.4)
+  cap <- ragg::agg_capture(width = 160, height = 90)
+  on.exit(grDevices::dev.off())
+  Camera(pixel_width = 160, pixel_height = 90)$draw_frame(list(tex))
+  expect_equal(toupper(tex$list_of_faces[[1]]$get_fill_color()), "#FF0000")
+  expect_equal(tex$list_of_faces[[1]]$get_fill_opacity(), 0.4)
+  # One face at the origin with its normal (1, 1, 0) at right angles to the
+  # light: smoothstep gives half of each image.
+  one <- OpenGLSurface(function(u, v) c(u, v, 0), u_range = c(-1, 1), v_range = c(-1, 1), resolution = 2)
+  tex <- OpenGLTexturedSurface(one, matrix("red", 2, 2), dark_image_file = matrix("blue", 2, 2))
+  tex$rotate(PI / 2, axis = c(-1, 1, 0), about_point = ORIGIN)
+  face <- manimR:::opengl_texture_shade(tex$list_of_faces[[1]])
+  expect_lte(max(abs(color_to_rgb(face$get_fill_color()) * 255 - c(127.5, 0, 127.5))), 0.5)
+})
+
 test_that("Code reads its defaults from the class attributes", {
   expect_equal(CodeClass$default_paragraph_config$font, "Monospace")
   old <- CodeClass$default_background_config
