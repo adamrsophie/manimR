@@ -64,9 +64,10 @@ encoding runs in the R process, one segment at a time.
 \code{log_to_file} (write a log per scene to \code{log_dir}), \code{media_loglevel}.
 \item LaTeX: \code{tex_template} (a \code{\link[=TexTemplate]{TexTemplate()}}), \code{tex_template_file},
 \code{no_latex_cleanup} (keep .aux, .dvi and .log files in \code{tex_dir}).
-\item Other: \code{seed} (random seed of every scene), \code{renderer} (\code{"cairo"};
-\code{"opengl"} is accepted and renders with the Cairo style renderer, the
-only one ported), \code{plugins}, \code{write_all}, \code{scene_names},
+\item Other: \code{seed} (random seed of every scene), \code{renderer} (\code{"cairo"}, or
+\code{"opengl"} for \link[=opengl_renderer]{OpenGLRenderer()}, upstream's OpenGL renderer drawn in
+software; scenes with their own camera class, such as \code{\link[=ThreeDScene]{ThreeDScene()}},
+keep the Cairo style renderer), \code{plugins}, \code{write_all}, \code{scene_names},
 \code{notify_outdated_version}, and the OpenGL window settings
 \code{enable_gui}, \code{live_preview}, \code{gui_location}, \code{fullscreen},
 \code{window_position}, \code{window_size}, \code{window_monitor},

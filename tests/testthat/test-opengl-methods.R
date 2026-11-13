@@ -465,3 +465,118 @@ test_that("Shader and FullScreenQuad read upstream's GLSL and keep declared unif
   expect_error(Mesh(s, q$attributes)$render(), "needs an OpenGL context")
   expect_true(dir.exists(SHADER_FOLDER))
 })
+
+# A context that keeps the buffers and the shader it is given, as the
+# oracle's mock context does.
+recording_renderer <- function() {
+  rec <- new.env()
+  rec$buffers <- list()
+  r <- OpenGLRenderer()
+  r$context <- list(
+    buffer = function(data) {
+      rec$buffers[[length(rec$buffers) + 1]] <- data
+      data
+    },
+    simple_vertex_array = function(program, buffer, ...) {
+      rec$program <- program
+      list(render = function() invisible(NULL), release = function() invisible(NULL))
+    }
+  )
+  r$frame_buffer_object <- list(viewport = c(0, 0, 1280, 720), use = function() invisible(NULL))
+  list(renderer = r, rec = rec)
+}
+
+test_that("OpenGLRenderer computes upstream's perspective uniforms and pixel coordinates", {
+  r <- recording_renderer()$renderer
+  r$camera$set_euler_angles(0.3, 0.6, 0.1)
+  r$refresh_perspective_uniforms(r$camera)
+  want <- oracle$perspective_uniforms
+  for (k in names(want)) {
+    expect_equal(as.numeric(r$perspective_uniforms[[k]]), as.numeric(want[[k]]), tolerance = 1e-9, info = k)
+  }
+  r$camera$set_euler_angles(0, 0, 0)
+  got <- rbind(r$pixel_coords_to_space_coords(100, 200),
+               r$pixel_coords_to_space_coords(30, -20, relative = TRUE),
+               r$pixel_coords_to_space_coords(100, 200, top_left = TRUE))
+  expect_equal(unname(got), unname(oracle$pixel_to_space), tolerance = 1e-9)
+  r$background_color <- "#336699"
+  expect_equal(r$background_color, oracle$background_color, tolerance = 1e-9)
+})
+
+test_that("render_* functions build upstream's fill and stroke buffers", {
+  rr <- recording_renderer()
+  r <- rr$renderer
+  rec <- rr$rec
+  circle <- OpenGLVMobject()
+  circle$set_points(Circle(radius = 1.5)$points)
+  circle$set_fill(RED, 0.5)
+  circle$set_stroke(RED, 6)
+  sq <- OpenGLVMobject()
+  sq$set_points(Square(side_length = 1)$points)
+  sq$set_fill(BLUE, 1)
+  circle$add(sq)
+  render_opengl_vectorized_mobject_fill(r, circle)
+  want <- oracle$fill_buffers
+  expect_length(rec$buffers, nrow(want))
+  b <- rec$buffers[[1]]
+  expect_equal(length(b), want$n[1])
+  expect_equal(get("in_vert", envir = b)[1:6, ], want$in_vert[[1]], tolerance = 1e-6)
+  expect_equal(get("in_color", envir = b)[c(1, length(b)), ], want$in_color[[1]], tolerance = 1e-6)
+  expect_equal(get("texture_coords", envir = b)[1:6, ], want$texture_coords[[1]], tolerance = 1e-9)
+  expect_equal(get("texture_mode", envir = b)[, 1], want$texture_mode[[1]])
+  for (k in names(oracle$fill_uniforms)) {
+    expect_equal(as.numeric(rec$program$uniforms[[k]]), oracle$fill_uniforms[[k]], tolerance = 1e-9, info = k)
+  }
+  rec$buffers <- list()
+  render_opengl_vectorized_mobject_stroke(r, circle)
+  want <- oracle$stroke_buffers
+  expect_length(rec$buffers, nrow(want))
+  b <- rec$buffers[[1]]
+  n <- length(b)
+  expect_equal(n, want$n[1])
+  curve <- get("current_curve", envir = b)[c(1, 2, 4), ]
+  want_curve <- want$current_curve[[1]]
+  for (i in 1:3) expect_equal(curve[i, ], as.numeric(t(want_curve[i, , ])), tolerance = 1e-6)
+  expect_equal(get("tile_coordinate", envir = b)[c(1, 2, 3, n / 2 + 1, n / 2 + 2), ], want$tile_coordinate[[1]])
+  expect_equal(get("in_color", envir = b)[1, ], want$in_color[[1]], tolerance = 1e-6)
+  expect_equal(get("in_width", envir = b)[c(1, n), 1], want$in_width[[1]])
+  for (k in names(oracle$stroke_uniforms)) {
+    expect_equal(as.numeric(rec$program$uniforms[[k]]), oracle$stroke_uniforms[[k]], tolerance = 1e-9, info = k)
+  }
+})
+
+test_that("Window places itself as upstream's find_initial_position()", {
+  r <- recording_renderer()$renderer
+  monitor <- list(x = 10, y = 20, width = 1920, height = 1080)
+  for (pos in names(oracle$window_positions)) {
+    tempconfig(list(window_position = pos), {
+      w <- Window(r, window_size = c(640, 360), monitor = monitor, open = FALSE)
+      expect_equal(w$position, as.numeric(oracle$window_positions[[pos]]), info = pos)
+    })
+  }
+  w <- Window(r, window_size = "default", monitor = monitor, open = FALSE)
+  expect_equal(w$size, c(960L, 540L))
+  expect_equal(Window(r, window_size = "800,450", monitor = monitor, open = FALSE)$size, c(800L, 450L))
+  expect_error(Window(r, window_size = "800", monitor = monitor, open = FALSE), "window_size must be")
+})
+
+test_that("OpenGLRenderer draws a scene into its software framebuffer", {
+  tempconfig(list(pixel_width = 160, pixel_height = 90), {
+    r <- OpenGLRenderer()
+    s <- Scene$new(renderer = r)
+    c <- OpenGLCircle(radius = 2)
+    c$set_fill(RED, 1)
+    s$add(c)
+    r$update_frame(s)
+    a <- r$get_raw_frame_buffer_object_data()
+    expect_equal(dim(a), c(90, 160, 4))
+    expect_equal(as.numeric(a[45, 80, ]), c(color_to_rgb(RED) * 255, 255), tolerance = 2)
+    expect_equal(as.numeric(a[3, 3, ]), c(0, 0, 0, 255))
+    # Upstream's projection shaders draw the same disk.
+    tempconfig(list(use_projection_fill_shaders = TRUE, use_projection_stroke_shaders = TRUE), r$update_frame(s))
+    b <- r$get_raw_frame_buffer_object_data()
+    expect_equal(as.numeric(b[45, 80, ]), c(color_to_rgb(RED) * 255, 255), tolerance = 2)
+    expect_s3_class(r$get_frame(), "nativeRaster")
+    r$close_device()
+  })
+})

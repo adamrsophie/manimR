@@ -1,15 +1,15 @@
 # The CPU side of upstream's OpenGL renderer: manim/renderer/shader.py,
 # opengl_renderer.py (OpenGLCamera) and vectorized_mobject_rendering.py.
-# manimR draws with grid and has no OpenGL context, so these classes and
-# functions hold and compute what upstream's renderer sends to the GPU; the
-# calls that draw stop with a message.
+# These classes and functions hold and compute what upstream's renderer
+# sends to the GPU; zz_opengl_software.R draws it.
 
-#' The CPU side of upstream's OpenGL renderer
+#' Upstream's OpenGL renderer
 #'
 #' Upstream's OpenGL renderer keeps a camera mobject, a tree of 3D objects
 #' and meshes, and compiled shader programs, and draws them with moderngl.
-#' manimR draws with grid and has no OpenGL context, so these ports compute
-#' what upstream computes on the CPU and stop where upstream would draw:
+#' manimR computes what upstream computes on the CPU and draws the result in
+#' software, with a context whose framebuffers are off screen graphics
+#' devices:
 #'
 #' * `OpenGLCamera()` is upstream's camera mobject: a frame of five points
 #'   (center, left, right, bottom, top), a model matrix that places it at
@@ -32,9 +32,45 @@
 #'   are upstream's decorators as functions: they wrap a method `func(self,
 #'   ...)`.
 #'
-#' The drawing functions of `vectorized_mobject_rendering`
-#' (`render_opengl_vectorized_mobject_fill()` and the rest),
-#' `OpenGLRenderer` and `Window` need an OpenGL context and are not ported.
+#' * `OpenGLRenderer()` renders scenes as upstream's renderer: it clears its
+#'   framebuffer to the background color, sets the perspective uniforms from
+#'   the camera (`refresh_perspective_uniforms()`) and draws each mobject.
+#'   The shader wrappers of a mobject are drawn by a grid camera that places
+#'   points as upstream's shaders do (rotated by `camera_rotation`, scaled
+#'   by `focal_distance / (focal_distance - z)`, fixed in frame mobjects in
+#'   the default frame) and lights them with upstream's `add_light()`, once
+#'   per mobject rather than per pixel. `config$renderer = "opengl"` makes
+#'   scenes use it. `get_frame()` gives a `nativeRaster`;
+#'   `get_raw_frame_buffer_object_data()` the pixels bottom row first, as
+#'   OpenGL reads them.
+#' * `render_opengl_vectorized_mobject_fill()`,
+#'   `render_opengl_vectorized_mobject_stroke()` and their `_with_matrix`
+#'   helpers build upstream's vertex buffers and uniforms and draw them as
+#'   upstream's projection shaders do (with `config$use_projection_fill_shaders`
+#'   and `config$use_projection_stroke_shaders`): the fill keeps the part of
+#'   each triangle on the side of its curve given by its texture mode, and the
+#'   stroke the points within `0.004 * width` of its curve.
+#' * `OpenGLSoftwareContext()` stands for moderngl's context: `framebuffer()`,
+#'   `buffer()` and `simple_vertex_array()`, whose `render()` draws the
+#'   `vectorized_mobject_fill` and `vectorized_mobject_stroke` shaders. Other
+#'   GLSL code, as a `Mesh`'s, is not run.
+#' * `Window(renderer)` is the window of a live preview: an R graphics
+#'   device (an interactive session is needed) that shows the renderer's frame
+#'   on `swap_buffers()` and passes mouse and key events to the scene's
+#'   handlers. Its size follows `config$window_size` and its position
+#'   `config$window_position` on the monitor, which is
+#'   `getOption("manimR.monitor")` (a list of `x`, `y`, `width` and `height`)
+#'   or 1920 by 1080 pixels at the origin.
+#'
+#' @param renderer An `OpenGLRenderer`.
+#' @param mobject An OpenGL VMobject.
+#' @param model_matrix A 4 by 4 model matrix.
+#' @param mobjects A list of OpenGL VMobjects.
+#' @param file_writer_class Class of the scene's file writer.
+#' @param skip_animations Whether animations are skipped.
+#' @param window_size `"default"`, `"width,height"` or two integers.
+#' @param monitor List of `x`, `y`, `width` and `height` of the monitor.
+#' @param open Whether to open the window's graphics device.
 #'
 #' @param frame_shape Width and height of the frame; the config's frame
 #'   size by default.
@@ -54,7 +90,7 @@
 #' @param indices Vertex indices, 0 based.
 #' @param use_depth_test Whether the mesh is drawn with a depth test.
 #' @param primitive moderngl primitive number (4 for triangles).
-#' @param context An OpenGL context; manimR has none and keeps what is given.
+#' @param context A context, as `OpenGLSoftwareContext()`, kept with the shader.
 #' @param name Name of a shader folder under `SHADER_FOLDER`.
 #' @param source List of GLSL code.
 #' @param fragment_shader_source,fragment_shader_name Code of the fragment
@@ -62,8 +98,10 @@
 #' @param unfiltered_attributes Shader data.
 #' @param mob An OpenGL mobject.
 #' @param func A method, a function of `self` and further arguments.
-#' @return `OpenGLCamera()`, `Object3D()`, `Mesh()`, `Shader()` and
-#'   `FullScreenQuad()` return R6 objects; `filter_attributes()` and
+#' @return `OpenGLCamera()`, `Object3D()`, `Mesh()`, `Shader()`,
+#'   `FullScreenQuad()`, `OpenGLRenderer()`, `OpenGLSoftwareContext()` and
+#'   `Window()` return R6 objects; the `render_*` functions return `NULL`
+#'   invisibly; `filter_attributes()` and
 #'   `triangulate_mobject()` shader data; `build_matrix_lists()` a list of
 #'   mobject lists named by the 16 values of their matrix, row by row; the
 #'   decorators a function.
@@ -77,6 +115,14 @@
 #' length(tri)
 #' s <- Shader(name = "surface")
 #' names(s$shader_program)
+#' \donttest{
+#' r <- OpenGLRenderer()
+#' scene <- Scene$new(renderer = r)
+#' scene$add(OpenGLCircle()$set_fill(RED, 1))
+#' r$update_frame(scene)
+#' dim(r$get_raw_frame_buffer_object_data())
+#' r$close_device()
+#' }
 NULL
 
 #' @rdname opengl_renderer

@@ -75,7 +75,7 @@
 #'   along the image from left to right and `v` from bottom to top, as
 #'   upstream's texture coordinates. Upstream's shader shows
 #'   `dark_image_file` on the side facing away from the light, which is at
-#'   (-10, 10, 10) in the camera's frame; each face is blended from its two
+#'   (-10, 10, 10) and turns with the view as upstream's light does; each face is blended from its two
 #'   colors when the camera draws it, as upstream's shader does.
 #'
 #' @param uv_surface A [Surface()].
@@ -306,7 +306,8 @@ OpenGLSurfaceMesh <- build_constructor(OpenGLSurfaceMeshClass)
 
 # The color of a textured face, as upstream's textured_surface shader gives
 # it: with a dark image, dp is the cosine between the face's normal and the
-# direction to the light at (-10, 10, 10) in the camera's frame, and the
+# direction to the light at (-10, 10, 10), rotated into the camera's frame
+# as upstream's light_source_position uniform is, and the
 # dark color shows where dp is below 0, blended with smoothstep over 0.2 on
 # either side. Without a camera the frame is upstream's default one.
 opengl_texture_shade <- function(face, camera = NULL) {
@@ -323,7 +324,8 @@ opengl_texture_shade <- function(face, camera = NULL) {
     # normal nearly cancels across such a face.
     normal <- drop(rot %*% cross(p[9, ] - p[1, ], p[13, ] - p[5, ]))
     xyz <- drop(rot %*% (face$get_center() - center))
-    dp <- if (get_norm(normal) > 0) sum(normalize(c(-10, 10, 10) - xyz) * normal) / get_norm(normal) else 1
+    light <- drop(rot %*% c(-10, 10, 10))
+    dp <- if (get_norm(normal) > 0) sum(normalize(light - xyz) * normal) / get_norm(normal) else 1
     t <- min(max((dp + 0.2) / 0.4, 0), 1)
     a <- t * t * (3 - 2 * t)
     rgba <- rgbas[2, ] * (1 - a) + rgbas[1, ] * a

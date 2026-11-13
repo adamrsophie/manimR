@@ -42,7 +42,12 @@
   (`OpenGLCamera()`), trees of 3D objects and meshes (`Object3D()`,
   `Mesh()`), `Shader()`, `triangulate_mobject()` and
   `build_matrix_lists()`; drawing a mesh needs an OpenGL context and stops
-  with a message.
+  with a message. `OpenGLRenderer()` renders scenes (also with
+  `manim_config(renderer = "opengl")`) through a software context
+  (`OpenGLSoftwareContext()`) whose framebuffers are ragg devices, the
+  `render_opengl_vectorized_mobject_fill()` and `_stroke()` functions draw
+  upstream's projection shaders by their GLSL rules, and `Window()` shows a
+  live preview in an R graphics device.
   Where an OpenGL class differs from its Cairo counterpart, it follows
   upstream's OpenGL class: `OpenGLArrow()` is a filled shape,
   `OpenGLLine()` applies `buff` twice, arcs are made of quadratic pieces,

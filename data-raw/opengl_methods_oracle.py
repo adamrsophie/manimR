@@ -189,4 +189,87 @@ g = OpenGLVGroup(OpenGLSquare(), OpenGLCircle())
 g.submobjects[1].model_matrix = np.diag([2.0, 1, 1, 1])
 out["matrix_lists"] = [{"matrix": list(k), "n": len(v)} for k, v in build_matrix_lists(g).items()]
 
+# The renderer's CPU side, with a context that keeps the buffers and
+# uniforms instead of drawing them.
+from manim import config as _config
+from manim.renderer.opengl_renderer import OpenGLRenderer
+from manim.renderer import vectorized_mobject_rendering as _vmr
+from manim.renderer.opengl_renderer_window import Window as _Window
+from manim.mobject.opengl.opengl_geometry import OpenGLCircle as _OGCircle
+
+
+class _Program(dict):
+    pass
+
+
+class _Context:
+    def __init__(self):
+        self.buffers = []
+
+    def program(self, **kwargs):
+        p = _Program()
+        p.ctx = self
+        return p
+
+    def buffer(self, data):
+        self.buffers.append(data)
+        return type("B", (), {"release": lambda s: None})()
+
+    def simple_vertex_array(self, program, vbo, *names):
+        self.last_program = program
+        return type("V", (), {"render": lambda s: None, "release": lambda s: None})()
+
+
+class _FBO:
+    viewport = (0, 0, 1280, 720)
+
+    def use(self):
+        pass
+
+
+r = OpenGLRenderer()
+r.context = _Context()
+r.frame_buffer_object = _FBO()
+r.camera.set_euler_angles(0.3, 0.6, 0.1)
+r.refresh_perspective_uniforms(r.camera)
+out["perspective_uniforms"] = {k: np.asarray(v, dtype=float).ravel().tolist() for k, v in r.perspective_uniforms.items()}
+r.camera.set_euler_angles(0, 0, 0)
+out["pixel_to_space"] = [r.pixel_coords_to_space_coords(100, 200).tolist(),
+                         r.pixel_coords_to_space_coords(30, -20, relative=True).tolist(),
+                         r.pixel_coords_to_space_coords(100, 200, top_left=True).tolist()]
+r.background_color = "#336699"
+out["background_color"] = [float(x) for x in r.background_color]
+# Quadratic curves of Cairo shapes, as manimR's OpenGL mobjects keep cubic
+# points and hand their quadratic halves to the shaders.
+from manim import RED as _RED, Circle as _Circle
+circle = OpenGLVMobject().set_points(quadratic(_Circle(radius=1.5)))
+circle.set_fill(_RED, 0.5)
+circle.set_stroke(_RED, 6)
+circle.add(OpenGLVMobject().set_points(quadratic(Square(side_length=1))).set_fill(BLUE, 1))
+_vmr.render_opengl_vectorized_mobject_fill(r, circle)
+fill_dtype = [("in_vert", np.float32, (3,)), ("in_color", np.float32, (4,)), ("texture_coords", np.float32, (2,)),
+              ("texture_mode", np.int32)]
+fills = [np.frombuffer(b, dtype=fill_dtype) for b in r.context.buffers]
+out["fill_buffers"] = [{"n": len(f), "in_vert": f["in_vert"][:6].tolist(), "in_color": f["in_color"][[0, -1]].tolist(),
+                        "texture_coords": f["texture_coords"][:6].tolist(), "texture_mode": f["texture_mode"].tolist()}
+                       for f in fills]
+out["fill_uniforms"] = {k: np.asarray(v, dtype=float).ravel().tolist() for k, v in r.context.last_program.items()}
+r.context.buffers = []
+_vmr.render_opengl_vectorized_mobject_stroke(r, circle)
+stroke_dtype = [("current_curve", np.float32, (3, 3)), ("tile_coordinate", np.float32, (2,)),
+                ("in_color", np.float32, (4,)), ("in_width", np.float32)]
+strokes = [np.frombuffer(b, dtype=stroke_dtype) for b in r.context.buffers]
+out["stroke_buffers"] = [{"n": len(f), "current_curve": f["current_curve"][[0, 1, 3]].tolist(),
+                          "tile_coordinate": f["tile_coordinate"][[0, 1, 2, len(f) // 2, len(f) // 2 + 1]].tolist(),
+                          "in_color": f["in_color"][0].tolist(), "in_width": f["in_width"][[0, -1]].tolist()}
+                         for f in strokes]
+out["stroke_uniforms"] = {k: np.asarray(v, dtype=float).ravel().tolist() for k, v in r.context.last_program.items()}
+_Monitor = type("M", (), {"x": 10, "y": 20, "width": 1920, "height": 1080})
+positions = {}
+for pos in ["UR", "OO", "DL", "LEFT", "UP", "ORIGIN", "100,200"]:
+    _config.window_position = pos
+    positions[pos] = list(_Window.find_initial_position(None, (640, 360), _Monitor))
+_config.window_position = "UR"
+out["window_positions"] = positions
+
 json.dump(out, open(sys.argv[1], "w"), indent=1)

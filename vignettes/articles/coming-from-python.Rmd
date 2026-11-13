@@ -574,8 +574,10 @@ config$frame_height
 manim_frame$top
 ```
 
-The `renderer` setting accepts `"opengl"` for compatibility, but every scene
-renders with the Cairo style renderer, the only one ported. See
+With `renderer = "opengl"`, scenes render with `OpenGLRenderer()`, a port of
+upstream's OpenGL renderer that draws its shaders' triangles in software
+instead of on the GPU. Scenes with their own camera, such as `ThreeDScene`,
+keep the Cairo style renderer. See
 [Rendering, configuration and output](rendering.html) for every setting.
 
 ## The command line

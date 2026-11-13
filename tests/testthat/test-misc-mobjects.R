@@ -659,10 +659,12 @@ test_that("OpenGLTexturedSurface shows its dark image on faces turned from the l
   expect_equal(colors(), "#FF0000")
   tex$rotate(PI, axis = RIGHT)
   expect_equal(colors(), "#0000FF")
+  # The light turns with the view, as upstream's light_source_position
+  # uniform: a camera looking from below still sees the dark side.
   cam <- ThreeDCamera()
   cam$set_phi(PI)
   cam$reset_rotation_matrix()
-  expect_equal(colors(cam), "#FF0000")
+  expect_equal(colors(cam), "#0000FF")
   # The camera blends the faces when it draws them: turned back to OUT, the
   # faces show the light image again.
   tex$rotate(PI, axis = RIGHT)
@@ -687,13 +689,13 @@ test_that("OpenGLTexturedSurface shows its dark image on faces turned from the l
   at_pole <- vapply(tex$list_of_faces, function(f) f$v1 == 0, NA)
   expect_true(any(at_pole))
   expect_equal(unique(toupper(vapply(tex$list_of_faces, function(f) f$get_fill_color(), ""))), "#0000FF")
-  # A 3D camera looking from below sees the lit side of each face.
+  # A 3D camera looking from below sees the same dark faces.
   cam <- ThreeDCamera(pixel_width = 160, pixel_height = 90)
   cam$set_phi(PI)
   cap2 <- ragg::agg_capture(width = 160, height = 90)
   cam$draw_frame(list(tex))
   grDevices::dev.off()
-  expect_equal(unique(toupper(vapply(tex$list_of_faces, function(f) f$get_fill_color(), ""))), "#FF0000")
+  expect_equal(unique(toupper(vapply(tex$list_of_faces, function(f) f$get_fill_color(), ""))), "#0000FF")
 })
 
 test_that("Code reads its defaults from the class attributes", {

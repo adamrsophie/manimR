@@ -221,18 +221,19 @@ embedded the same way when it is printed.
 
 ## Differences from Python manim
 
-* Every scene renders with the Cairo style renderer (`CairoRenderer`), which
+* Scenes render with the Cairo style renderer (`CairoRenderer`), which
   draws with grid on a ragg device instead of pycairo, so the camera's
-  Cairo context helpers have no counterpart. `manim_config(renderer =
-  "opengl")` is accepted but renders the same way. The OpenGL point clouds
+  Cairo context helpers have no counterpart. With `manim_config(renderer =
+  "opengl")`, scenes render with `OpenGLRenderer`, a port of upstream's
+  OpenGL renderer that draws in software instead of on the GPU: shader
+  wrappers are drawn by a grid camera with the OpenGL camera's projection
+  and lighting (lit once per mobject, not per pixel), the projection
+  shaders by their GLSL rules, and a live preview `Window` is an R graphics
+  device. GLSL code of a `Mesh` is not run. The OpenGL point clouds
   (`DotCloud`, `TrueDot`, `OpenGLPMobject`) are drawn as round dots like
   upstream's shader draws them, and the other OpenGL mobject classes
   (`OpenGLCircle`, `OpenGLSurface`, ...) are subclasses of their Cairo
-  counterparts. The CPU side of upstream's OpenGL renderer is ported
-  (`OpenGLCamera()`, `Mesh()`, `Shader()`, `triangulate_mobject()` and
-  the rest), but nothing is drawn through OpenGL: `OpenGLRenderer`, its
-  window and its `render_*` functions need an OpenGL context and are not
-  ported.
+  counterparts.
 * Interactive mode (`scene$interactive_embed()`, `embed()`, `interact()`)
   opens a Shiny window instead of upstream's OpenGL window: it shows the
   live scene, takes the same key and mouse events (orbit, pan, zoom, `r`,

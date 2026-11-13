@@ -47,6 +47,13 @@ Scene <- R6::R6Class("Scene", lock_objects = FALSE,
       self$always_update_mobjects <- always_update_mobjects
       self$random_seed <- random_seed %||% cfg("seed")
       self$skip_animations <- skip_animations
+      # As upstream, config$renderer = "opengl" draws with the OpenGL
+      # renderer; scenes with their own camera class keep the Cairo one,
+      # whose cameras they drive.
+      if (is.null(renderer) && identical(cfg("renderer"), RendererType$OPENGL) &&
+          identical(self$camera_class, CameraClass)) {
+        renderer <- OpenGLRendererClass$new(skip_animations = skip_animations)
+      }
       self$renderer <- renderer %||% CairoRendererClass$new(camera_class = self$camera_class,
                                                             skip_animations = skip_animations, ...)
       self$camera <- self$renderer$camera
