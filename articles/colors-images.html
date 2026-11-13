@@ -280,7 +280,7 @@ toward white or black.</p>
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/interpolate_color.html">interpolate_color</a></span><span class="op">(</span><span class="va">RED</span>, <span class="va">BLUE</span>, <span class="fl">0.5</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ManimColor('#AA9399')</span></span>
 <span><span class="fu"><a href="../reference/interpolate_color.html">color_gradient</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">RED</span>, <span class="va">YELLOW</span>, <span class="va">GREEN</span><span class="op">)</span>, <span class="fl">5</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "#FC6255" "#F99D62" "#F7D96F" "#BDCD6B" "#83C167"</span></span>
+<span><span class="co">#&gt; [1] "#FC6255" "#F99D61" "#F7D96F" "#BDCD6B" "#83C167"</span></span>
 <span><span class="fu"><a href="../reference/interpolate_color.html">average_color</a></span><span class="op">(</span><span class="va">RED</span>, <span class="va">BLUE</span>, <span class="va">GREEN</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ManimColor('#9DA288')</span></span>
 <span><span class="fu"><a href="../reference/interpolate_color.html">invert_color</a></span><span class="op">(</span><span class="va">RED</span><span class="op">)</span></span>
@@ -843,15 +843,15 @@ to a temporary file so the example is self contained.</p>
 <span>  <span class="st">'&lt;/svg&gt;'</span><span class="op">)</span>, <span class="va">svg_file</span><span class="op">)</span></span>
 <span><span class="va">house</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/SVGMobjectClass.html">SVGMobject</a></span><span class="op">(</span><span class="va">svg_file</span>, height <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/print_family.html">print_family</a></span><span class="op">(</span><span class="va">house</span><span class="op">)</span></span>
-<span><span class="co">#&gt;  SVGMobject 3c442af690b213e1d8-523</span></span>
-<span><span class="co">#&gt;   Rectangle 3c442af690b213e1d8-528</span></span>
-<span><span class="co">#&gt;   Polygon 3c442af690b213e1d8-531</span></span>
-<span><span class="co">#&gt;   Rectangle 3c442af690b213e1d8-533</span></span>
-<span><span class="co">#&gt;   Circle 3c442af690b213e1d8-536</span></span>
-<span><span class="co">#&gt;   Circle 3c442af690b213e1d8-538</span></span>
-<span><span class="co">#&gt;   Line 3c442af690b213e1d8-540</span></span>
-<span><span class="co">#&gt;   VMobject 3c442af690b213e1d8-542</span></span>
-<span><span class="co">#&gt;   VMobjectFromSVGPath 3c442af690b213e1d8-545</span></span></code></pre></div>
+<span><span class="co">#&gt;  SVGMobject 3c272af69832109230-523</span></span>
+<span><span class="co">#&gt;   Rectangle 3c272af69832109230-528</span></span>
+<span><span class="co">#&gt;   Polygon 3c272af69832109230-531</span></span>
+<span><span class="co">#&gt;   Rectangle 3c272af69832109230-533</span></span>
+<span><span class="co">#&gt;   Circle 3c272af69832109230-536</span></span>
+<span><span class="co">#&gt;   Circle 3c272af69832109230-538</span></span>
+<span><span class="co">#&gt;   Line 3c272af69832109230-540</span></span>
+<span><span class="co">#&gt;   VMobject 3c272af69832109230-542</span></span>
+<span><span class="co">#&gt;   VMobjectFromSVGPath 3c272af69832109230-545</span></span></code></pre></div>
 <p>By default the result is centered and scaled to
 <code>height = 2</code>; pass <code>height</code> or <code>width</code>
 to choose the size and <code>should_center = FALSE</code> to keep the

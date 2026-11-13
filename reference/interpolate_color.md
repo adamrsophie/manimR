@@ -61,5 +61,5 @@ it from other colors. `color_gradient()` returns a character vector of
 interpolate_color(RED, BLUE, 0.5)
 #> ManimColor('#AA9399')
 color_gradient(c(RED, YELLOW, GREEN), 5)
-#> [1] "#FC6255" "#F99D62" "#F7D96F" "#BDCD6B" "#83C167"
+#> [1] "#FC6255" "#F99D61" "#F7D96F" "#BDCD6B" "#83C167"
 ```

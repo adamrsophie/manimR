@@ -212,7 +212,7 @@ blend toward white or black.
 interpolate_color(RED, BLUE, 0.5)
 #> ManimColor('#AA9399')
 color_gradient(c(RED, YELLOW, GREEN), 5)
-#> [1] "#FC6255" "#F99D62" "#F7D96F" "#BDCD6B" "#83C167"
+#> [1] "#FC6255" "#F99D61" "#F7D96F" "#BDCD6B" "#83C167"
 average_color(RED, BLUE, GREEN)
 #> ManimColor('#9DA288')
 invert_color(RED)
@@ -845,15 +845,15 @@ writeLines(c(
   '</svg>'), svg_file)
 house <- SVGMobject(svg_file, height = 4)
 print_family(house)
-#>  SVGMobject 3c442af690b213e1d8-523
-#>   Rectangle 3c442af690b213e1d8-528
-#>   Polygon 3c442af690b213e1d8-531
-#>   Rectangle 3c442af690b213e1d8-533
-#>   Circle 3c442af690b213e1d8-536
-#>   Circle 3c442af690b213e1d8-538
-#>   Line 3c442af690b213e1d8-540
-#>   VMobject 3c442af690b213e1d8-542
-#>   VMobjectFromSVGPath 3c442af690b213e1d8-545
+#>  SVGMobject 3c272af69832109230-523
+#>   Rectangle 3c272af69832109230-528
+#>   Polygon 3c272af69832109230-531
+#>   Rectangle 3c272af69832109230-533
+#>   Circle 3c272af69832109230-536
+#>   Circle 3c272af69832109230-538
+#>   Line 3c272af69832109230-540
+#>   VMobject 3c272af69832109230-542
+#>   VMobjectFromSVGPath 3c272af69832109230-545
 ```
 
 By default the result is centered and scaled to `height = 2`; pass
