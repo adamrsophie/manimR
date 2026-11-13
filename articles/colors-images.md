@@ -623,8 +623,12 @@ When an image is drawn larger than its pixels,
 accepted names are listed in `RESAMPLING_ALGORITHMS`. As with Pillow’s
 transform in Python manim, `"nearest"` shows sharp pixel blocks,
 `"bilinear"` blends neighboring pixels linearly and `"bicubic"` (the
-default) uses Pillow’s bicubic filter, which is a little sharper;
-`"lanczos"`, `"box"` and `"hamming"` are drawn as `"bilinear"`.
+default) uses Pillow’s bicubic filter, which is a little sharper.
+Pillow’s transform cannot use `"lanczos"`, `"box"` or `"hamming"`, so
+Python manim’s camera raises an error for them; manimR draws them as
+`"bilinear"`.
+[`OpenGLImageMobject()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
+upscales image arrays with all six filters, as Pillow’s `resize()` does.
 
 ``` r
 
@@ -841,15 +845,15 @@ writeLines(c(
   '</svg>'), svg_file)
 house <- SVGMobject(svg_file, height = 4)
 print_family(house)
-#>  SVGMobject 3c202af6696711a788-523
-#>   Rectangle 3c202af6696711a788-528
-#>   Polygon 3c202af6696711a788-531
-#>   Rectangle 3c202af6696711a788-533
-#>   Circle 3c202af6696711a788-536
-#>   Circle 3c202af6696711a788-538
-#>   Line 3c202af6696711a788-540
-#>   VMobject 3c202af6696711a788-542
-#>   VMobjectFromSVGPath 3c202af6696711a788-545
+#>  SVGMobject 3ed32af66e5e13d238-523
+#>   Rectangle 3ed32af66e5e13d238-528
+#>   Polygon 3ed32af66e5e13d238-531
+#>   Rectangle 3ed32af66e5e13d238-533
+#>   Circle 3ed32af66e5e13d238-536
+#>   Circle 3ed32af66e5e13d238-538
+#>   Line 3ed32af66e5e13d238-540
+#>   VMobject 3ed32af66e5e13d238-542
+#>   VMobjectFromSVGPath 3ed32af66e5e13d238-545
 ```
 
 By default the result is centered and scaled to `height = 2`; pass

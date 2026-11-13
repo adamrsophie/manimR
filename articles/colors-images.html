@@ -644,9 +644,12 @@ The accepted names are listed in <code>RESAMPLING_ALGORITHMS</code>. As
 with Pillow’s transform in Python manim, <code>"nearest"</code> shows
 sharp pixel blocks, <code>"bilinear"</code> blends neighboring pixels
 linearly and <code>"bicubic"</code> (the default) uses Pillow’s bicubic
-filter, which is a little sharper; <code>"lanczos"</code>,
-<code>"box"</code> and <code>"hamming"</code> are drawn as
-<code>"bilinear"</code>.</p>
+filter, which is a little sharper. Pillow’s transform cannot use
+<code>"lanczos"</code>, <code>"box"</code> or <code>"hamming"</code>, so
+Python manim’s camera raises an error for them; manimR draws them as
+<code>"bilinear"</code>. <code><a href="../reference/opengl_mobjects.html">OpenGLImageMobject()</a></code> upscales
+image arrays with all six filters, as Pillow’s <code>resize()</code>
+does.</p>
 <div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">RESAMPLING_ALGORITHMS</span></span>
 <span><span class="co">#&gt;    nearest       none    lanczos  antialias   bilinear     linear    bicubic </span></span>
@@ -840,15 +843,15 @@ to a temporary file so the example is self contained.</p>
 <span>  <span class="st">'&lt;/svg&gt;'</span><span class="op">)</span>, <span class="va">svg_file</span><span class="op">)</span></span>
 <span><span class="va">house</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/SVGMobjectClass.html">SVGMobject</a></span><span class="op">(</span><span class="va">svg_file</span>, height <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/print_family.html">print_family</a></span><span class="op">(</span><span class="va">house</span><span class="op">)</span></span>
-<span><span class="co">#&gt;  SVGMobject 3c202af6696711a788-523</span></span>
-<span><span class="co">#&gt;   Rectangle 3c202af6696711a788-528</span></span>
-<span><span class="co">#&gt;   Polygon 3c202af6696711a788-531</span></span>
-<span><span class="co">#&gt;   Rectangle 3c202af6696711a788-533</span></span>
-<span><span class="co">#&gt;   Circle 3c202af6696711a788-536</span></span>
-<span><span class="co">#&gt;   Circle 3c202af6696711a788-538</span></span>
-<span><span class="co">#&gt;   Line 3c202af6696711a788-540</span></span>
-<span><span class="co">#&gt;   VMobject 3c202af6696711a788-542</span></span>
-<span><span class="co">#&gt;   VMobjectFromSVGPath 3c202af6696711a788-545</span></span></code></pre></div>
+<span><span class="co">#&gt;  SVGMobject 3ed32af66e5e13d238-523</span></span>
+<span><span class="co">#&gt;   Rectangle 3ed32af66e5e13d238-528</span></span>
+<span><span class="co">#&gt;   Polygon 3ed32af66e5e13d238-531</span></span>
+<span><span class="co">#&gt;   Rectangle 3ed32af66e5e13d238-533</span></span>
+<span><span class="co">#&gt;   Circle 3ed32af66e5e13d238-536</span></span>
+<span><span class="co">#&gt;   Circle 3ed32af66e5e13d238-538</span></span>
+<span><span class="co">#&gt;   Line 3ed32af66e5e13d238-540</span></span>
+<span><span class="co">#&gt;   VMobject 3ed32af66e5e13d238-542</span></span>
+<span><span class="co">#&gt;   VMobjectFromSVGPath 3ed32af66e5e13d238-545</span></span></code></pre></div>
 <p>By default the result is centered and scaled to
 <code>height = 2</code>; pass <code>height</code> or <code>width</code>
 to choose the size and <code>should_center = FALSE</code> to keep the

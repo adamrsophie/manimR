@@ -4,14 +4,18 @@ their canonical names. Images are drawn with the filters Pillow's
 perspective transform has: &quot;nearest&quot; draws the pixels as blocks,
 &quot;bilinear&quot; interpolates linearly, and &quot;bicubic&quot; (the default) uses
 Pillow's bicubic filter for enlarged, sheared or perspective images. Pillow
-cannot transform with &quot;lanczos&quot;, &quot;box&quot; or &quot;hamming&quot;; manimR draws
-them as &quot;bilinear&quot;."><meta property="og:description" content="Names accepted by ImageMobject$set_resampling_algorithm(), mapped to
+cannot transform with &quot;lanczos&quot;, &quot;box&quot; or &quot;hamming&quot;, so upstream's
+camera raises for them; manimR draws them as &quot;bilinear&quot;.
+OpenGLImageMobject() upscales image arrays with all six filters, as
+Pillow's resize() does."><meta property="og:description" content="Names accepted by ImageMobject$set_resampling_algorithm(), mapped to
 their canonical names. Images are drawn with the filters Pillow's
 perspective transform has: &quot;nearest&quot; draws the pixels as blocks,
 &quot;bilinear&quot; interpolates linearly, and &quot;bicubic&quot; (the default) uses
 Pillow's bicubic filter for enlarged, sheared or perspective images. Pillow
-cannot transform with &quot;lanczos&quot;, &quot;box&quot; or &quot;hamming&quot;; manimR draws
-them as &quot;bilinear&quot;."><meta property="og:image" content="https://adamrsophie.github.io/manimR/logo.svg"></head><body>
+cannot transform with &quot;lanczos&quot;, &quot;box&quot; or &quot;hamming&quot;, so upstream's
+camera raises for them; manimR draws them as &quot;bilinear&quot;.
+OpenGLImageMobject() upscales image arrays with all six filters, as
+Pillow's resize() does."><meta property="og:image" content="https://adamrsophie.github.io/manimR/logo.svg"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -77,8 +81,10 @@ their canonical names. Images are drawn with the filters Pillow's
 perspective transform has: <code>"nearest"</code> draws the pixels as blocks,
 <code>"bilinear"</code> interpolates linearly, and <code>"bicubic"</code> (the default) uses
 Pillow's bicubic filter for enlarged, sheared or perspective images. Pillow
-cannot transform with <code>"lanczos"</code>, <code>"box"</code> or <code>"hamming"</code>; manimR draws
-them as <code>"bilinear"</code>.</p>
+cannot transform with <code>"lanczos"</code>, <code>"box"</code> or <code>"hamming"</code>, so upstream's
+camera raises for them; manimR draws them as <code>"bilinear"</code>.
+<code><a href="opengl_mobjects.html">OpenGLImageMobject()</a></code> upscales image arrays with all six filters, as
+Pillow's <code>resize()</code> does.</p>
     </div>
 
     <div class="section level2">
