@@ -328,8 +328,9 @@ stroke the points within <code>0.004 * width</code> of its curve.</p></li>
 GLSL code, as a <code>Mesh</code>'s, is not run.</p></li>
 <li><p><code>Window(renderer)</code> is the window of a live preview: an R graphics
 device (an interactive session is needed) that shows the renderer's frame
-on <code>swap_buffers()</code> and passes mouse and key events to the scene's
-handlers. Its size follows <code>config$window_size</code> and its position
+on <code>swap_buffers()</code>; <code>handle_event()</code> waits for a mouse or key event
+in it and passes it to the scene's handlers, on devices that report
+events (X11 and Windows). Its size follows <code>config$window_size</code> and its position
 <code>config$window_position</code> on the monitor, which is
 <code>getOption("manimR.monitor")</code> (a list of <code>x</code>, <code>y</code>, <code>width</code> and <code>height</code>)
 or 1920 by 1080 pixels at the origin.</p></li>

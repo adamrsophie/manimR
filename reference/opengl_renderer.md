@@ -269,9 +269,10 @@ values of their matrix, row by row; the decorators a function.
 
 - `Window(renderer)` is the window of a live preview: an R graphics
   device (an interactive session is needed) that shows the renderer's
-  frame on `swap_buffers()` and passes mouse and key events to the
-  scene's handlers. Its size follows `config$window_size` and its
-  position `config$window_position` on the monitor, which is
+  frame on `swap_buffers()`; `handle_event()` waits for a mouse or key
+  event in it and passes it to the scene's handlers, on devices that
+  report events (X11 and Windows). Its size follows `config$window_size`
+  and its position `config$window_position` on the monitor, which is
   `getOption("manimR.monitor")` (a list of `x`, `y`, `width` and
   `height`) or 1920 by 1080 pixels at the origin.
 
