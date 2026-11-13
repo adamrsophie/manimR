@@ -238,7 +238,9 @@ embedded the same way when it is printed.
   (`DotCloud`, `TrueDot`, `OpenGLPMobject`) run upstream's true_dot
   shader, and the other OpenGL mobject classes
   (`OpenGLCircle`, `OpenGLSurface`, ...) are subclasses of their Cairo
-  counterparts.
+  counterparts. Mobjects made under this renderer take upstream's OpenGL
+  geometry and methods; their quadratic curves are stored raised to
+  cubics, so `$points` holds 4 points per curve where upstream's holds 3.
 * Interactive mode (`scene$interactive_embed()`, `embed()`, `interact()`)
   opens a Shiny window instead of upstream's OpenGL window: it shows the
   live scene, takes the same key and mouse events (orbit, pan, zoom, `r`,
