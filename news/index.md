@@ -77,8 +77,10 @@
   [`Shader()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md),
   [`triangulate_mobject()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)
   and
-  [`build_matrix_lists()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md);
-  drawing a mesh needs an OpenGL context and stops with a message.
+  [`build_matrix_lists()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md).
+  A scene draws meshes whose shader is one of upstream’s default,
+  manim_coords, vertex_colors or test folders in software; a mesh with
+  other GLSL code needs an OpenGL context and stops with a message.
   [`OpenGLRenderer()`](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md)
   renders scenes (also with `manim_config(renderer = "opengl")`) through
   a software context
