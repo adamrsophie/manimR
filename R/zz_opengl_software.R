@@ -93,7 +93,15 @@ OpenGLSoftwareVertexArrayClass <- R6::R6Class("OpenGLSoftwareVertexArray", lock_
       )
       fbo <- self$context$target
       if (is.null(fbo)) stop("No framebuffer is in use.", call. = FALSE)
-      fbo$with_device(function() draw(self$buffer, self$shader$uniforms, fbo$viewport))
+      wire <- isTRUE(self$context$wireframe)
+      fbo$with_device(function() {
+        if (wire) {
+          wdraw <- if (identical(draw, software_draw_fill)) software_wire_fill else software_wire_stroke
+          wdraw(self$buffer, self$shader$uniforms, fbo$viewport)
+        } else {
+          draw(self$buffer, self$shader$uniforms, fbo$viewport)
+        }
+      })
       invisible(NULL)
     },
     release = function() invisible(NULL)
@@ -157,6 +165,15 @@ software_ndc <- function(points, uniforms) {
   cbind(clip[1, ] / clip[4, ], clip[2, ] / clip[4, ])
 }
 
+# Parameters along a quadratic curve that sample it at least once a pixel on
+# screen: its control polygon is at least as long as the curve.
+software_curve_t <- function(pts, uniforms, viewport) {
+  xy <- software_ndc(pts, uniforms)
+  len <- sum(sqrt(rowSums(diff(xy)^2))) * max(viewport[3:4]) / 2
+  n <- if (is.finite(len)) min(max(ceiling(len), 2L), 4096L) else 2L
+  seq(0, 1, length.out = n + 1)
+}
+
 software_push_ndc <- function() {
   grid::pushViewport(grid::viewport(xscale = c(-1, 1), yscale = c(-1, 1)))
 }
@@ -179,12 +196,12 @@ software_draw_fill <- function(buffer, uniforms, viewport) {
   if (!nrow(verts)) return(invisible(NULL))
   colors <- get("in_color", envir = buffer)
   modes <- get("texture_mode", envir = buffer)[, 1]
-  t <- seq(0, 1, length.out = 17)
   pieces <- list()
   keys <- character(0)
   for (k in seq(1, nrow(verts), by = 3)) {
     v0 <- verts[k, ]; v1 <- verts[k + 1, ]; v2 <- verts[k + 2, ]
     mode <- modes[k]
+    t <- software_curve_t(rbind(v0, v1, v2), uniforms, viewport)
     curve <- outer((1 - t)^2, v0) + outer(2 * t * (1 - t), v1) + outer(t^2, v2)
     poly <- if (mode == 0) rbind(v0, v1, v2) else if (mode > 0) rbind(v0, v1, curve[rev(seq_along(t)), ]) else curve
     xy <- software_ndc(poly, uniforms)
@@ -207,6 +224,94 @@ software_draw_fill <- function(buffer, uniforms, viewport) {
   invisible(NULL)
 }
 
+# Wireframe (moderngl's ctx.wireframe): the triangles are drawn as lines one
+# pixel wide, and the fragment shader still keeps or drops each fragment. On
+# a fill triangle the edges v0 v1 and v1 v2 have u^2 - v >= 0 and the chord
+# v0 v2 has u^2 - v <= 0, so mode 0 draws all three edges, mode 1 the two
+# outer ones and mode -1 the chord.
+software_wire_fill <- function(buffer, uniforms, viewport) {
+  verts <- get("in_vert", envir = buffer)
+  if (!nrow(verts)) return(invisible(NULL))
+  colors <- get("in_color", envir = buffer)
+  modes <- get("texture_mode", envir = buffer)[, 1]
+  software_push_ndc()
+  on.exit(grid::popViewport(), add = TRUE)
+  for (k in seq(1, nrow(verts), by = 3)) {
+    xy <- software_ndc(verts[k:(k + 2), , drop = FALSE], uniforms)
+    if (!all(is.finite(xy))) next
+    edges <- if (modes[k] == 0) list(1:2, 2:3, c(3, 1)) else if (modes[k] > 0) list(1:2, 2:3) else list(c(1, 3))
+    for (e in edges) {
+      grid::grid.lines(xy[e, 1], xy[e, 2], default.units = "native",
+                       gp = grid::gpar(col = software_rgba(colors[k, ]), lwd = 72 / 96, lineend = "butt"))
+    }
+  }
+  invisible(NULL)
+}
+
+# Wireframe of a stroke: the edges of each curve's tile, as the vertex
+# shader builds it, keep only the fragments within the stroke's thickness of
+# the curve, which is where an edge crosses the stroke.
+software_wire_stroke <- function(buffer, uniforms, viewport) {
+  curves <- get("current_curve", envir = buffer)
+  if (!nrow(curves)) return(invisible(NULL))
+  tiles <- get("tile_coordinate", envir = buffer)
+  colors <- get("in_color", envir = buffer)
+  widths <- get("in_width", envir = buffer)[, 1]
+  normal <- uniforms$manim_unit_normal %||% OUT
+  t <- seq(0, 1, length.out = 65)
+  s <- seq(0, 1, length.out = 201)
+  software_push_ndc()
+  on.exit(grid::popViewport(), add = TRUE)
+  for (k in seq(1, nrow(curves) - 2, by = 3)) {
+    pts <- matrix(curves[k, ], 3, 3, byrow = TRUE)
+    v01 <- pts[2, ] - pts[1, ]
+    v12 <- pts[3, ] - pts[2, ]
+    distinct <- c(get_norm(v01), get_norm(v12)) > 1e-6
+    if (!any(distinct)) next
+    aligned <- all(distinct) && acos(min(max(sum(normalize(v01) * normalize(v12)), -1), 1)) < 5e-2
+    quad <- all(distinct) && !aligned
+    x_unit <- normalize(pts[3, ] - pts[1, ])
+    unit_normal <- if (quad) normalize(cross(v01, v12)) else normal
+    y_unit <- cross(unit_normal, x_unit)
+    if (quad && sum(y_unit * v01) < 0) y_unit <- -y_unit
+    uv <- cbind(pts %*% x_unit, pts %*% y_unit)
+    # bboxBezier() of the shader.
+    lo <- pmin(uv[1, ], uv[3, ])
+    hi <- pmax(uv[1, ], uv[3, ])
+    if (any(uv[2, ] < lo | uv[2, ] > hi)) {
+      tt <- pmin(pmax((uv[1, ] - uv[2, ]) / (uv[1, ] - 2 * uv[2, ] + uv[3, ]), 0), 1)
+      tt[!is.finite(tt)] <- 0
+      q <- (1 - tt)^2 * uv[1, ] + 2 * (1 - tt) * tt * uv[2, ] + tt^2 * uv[3, ]
+      lo <- pmin(lo, q)
+      hi <- pmax(hi, q)
+    }
+    thick <- 0.004 * widths[k]
+    origin <- pts[1, ] - thick * (x_unit + y_unit)
+    xv <- x_unit * (hi[1] - lo[1] + 2 * thick)
+    yv <- y_unit * (hi[2] - lo[2] + 2 * thick)
+    corner <- function(r) origin + tiles[r, 1] * xv + tiles[r, 2] * yv
+    tri <- rbind(corner(k), corner(k + 1), corner(k + 2))
+    path_uv <- if (quad) outer((1 - t)^2, uv[1, ]) + outer(2 * t * (1 - t), uv[2, ]) + outer(t^2, uv[3, ]) else
+      outer(1 - t, uv[1, ]) + outer(t, uv[3, ])
+    for (e in list(1:2, 2:3, c(3, 1))) {
+      seg <- outer(1 - s, tri[e[1], ]) + outer(s, tri[e[2], ])
+      suv <- cbind(seg %*% x_unit, seg %*% y_unit)
+      d <- apply(suv, 1, function(q) min(sqrt((path_uv[, 1] - q[1])^2 + (path_uv[, 2] - q[2])^2)))
+      keep <- d < thick
+      if (!any(keep)) next
+      runs <- rle(keep)
+      ends <- cumsum(runs$lengths)
+      starts <- ends - runs$lengths + 1
+      for (r in which(runs$values)) {
+        xy <- software_ndc(seg[starts[r]:ends[r], , drop = FALSE], uniforms)
+        grid::grid.lines(xy[, 1], xy[, 2], default.units = "native",
+                         gp = grid::gpar(col = software_rgba(colors[k, ]), lwd = 72 / 96, lineend = "butt"))
+      }
+    }
+  }
+  invisible(NULL)
+}
+
 # vectorized_mobject_stroke: a fragment of a curve's tile is drawn within
 # 0.004 * width of the curve (the quadratic Bezier curve, or the line between
 # its ends when the three points are aligned), which is the curve drawn
@@ -219,7 +324,6 @@ software_draw_stroke <- function(buffer, uniforms, viewport) {
   colors <- get("in_color", envir = buffer)
   widths <- get("in_width", envir = buffer)[, 1]
   px_per_ndc <- viewport[4] / 2
-  t <- seq(0, 1, length.out = 17)
   software_push_ndc()
   on.exit(grid::popViewport(), add = TRUE)
   for (k in seq(1, n, by = 3)) {
@@ -230,6 +334,7 @@ software_draw_stroke <- function(buffer, uniforms, viewport) {
     if (!any(distinct)) next
     aligned <- all(distinct) && acos(min(max(sum(normalize(v01) * normalize(v12)), -1), 1)) < 5e-2
     line <- !all(distinct) || aligned
+    t <- if (line) NULL else software_curve_t(pts, uniforms, viewport)
     path <- if (line) pts[c(1, 3), ] else outer((1 - t)^2, pts[1, ]) + outer(2 * t * (1 - t), pts[2, ]) + outer(t^2, pts[3, ])
     thickness <- 0.004 * widths[k]
     # The thickness at the curve's middle, measured on screen across it.
@@ -689,6 +794,15 @@ OpenGLRenderer <- build_constructor(OpenGLRendererClass)
 
 # Window ------------------------------------------------------------------------------
 
+# The monitor config$window_monitor picks, as upstream: monitors[min(index,
+# len(monitors) - 1)]. `monitors` is one monitor (a list with x, y, width and
+# height) or a list of them; R cannot list the screens itself.
+opengl_monitor <- function(monitors, index = 0) {
+  if (is.null(monitors)) monitors <- list(list(x = 0, y = 0, width = 1920, height = 1080))
+  if (!is.null(monitors$width)) monitors <- list(monitors)
+  monitors[[min(as.integer(index %||% 0), length(monitors) - 1) + 1]]
+}
+
 # Size of upstream's window from config$window_size and the monitor.
 opengl_window_size <- function(window_size, monitor) {
   msg <- paste0("window_size must be specified either as 'default', a string of the form 'width,height', ",
@@ -725,11 +839,13 @@ WindowClass <- R6::R6Class("Window", lock_objects = FALSE,
     renderer = NULL,
     device = NULL,
     last_mouse = NULL,
-    # The monitor is `getOption("manimR.monitor")` (a list with x, y, width
-    # and height) or 1920 by 1080 pixels at the origin: R has no portable way
-    # to ask for it. The window is an R graphics device.
+    # The monitor is the one of `getOption("manimR.monitor")` (a monitor, a
+    # list with x, y, width and height, or a list of them) that
+    # config$window_monitor picks, else 1920 by 1080 pixels at the origin: R
+    # has no portable way to list the screens. The window is an R graphics
+    # device.
     initialize = function(renderer, window_size = cfg("window_size"), monitor = NULL, open = TRUE, ...) {
-      monitor <- monitor %||% getOption("manimR.monitor") %||% list(x = 0, y = 0, width = 1920, height = 1080)
+      monitor <- monitor %||% opengl_monitor(getOption("manimR.monitor"), cfg("window_monitor"))
       size <- opengl_window_size(window_size, monitor)
       self$title <- paste("Manim Community", as.character(utils::packageVersion("manimR")))
       self$size <- size

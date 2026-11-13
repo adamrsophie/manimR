@@ -601,6 +601,34 @@ test_that("OpenGLRenderer draws a scene into its software framebuffer", {
   })
 })
 
+test_that("enable_wireframe draws the projection shaders' triangles as lines", {
+  count <- function(wire) tempconfig(list(pixel_width = 160, pixel_height = 90, enable_wireframe = wire,
+                                          use_projection_fill_shaders = TRUE, use_projection_stroke_shaders = TRUE), {
+    r <- OpenGLRenderer()
+    on.exit(r$close_device(), add = TRUE)
+    s <- Scene$new(renderer = r)
+    c <- OpenGLCircle(radius = 2)
+    c$set_fill(RED, 1)
+    s$add(c)
+    expect_identical(r$context$wireframe, wire)
+    r$update_frame(s)
+    a <- r$get_raw_frame_buffer_object_data()
+    sum(a[, , 1] > 150)
+  })
+  solid <- count(FALSE)
+  lines <- count(TRUE)
+  expect_gt(lines, 0)
+  expect_lt(lines, solid / 3)
+})
+
+test_that("window_monitor picks a monitor as upstream does", {
+  mons <- list(list(x = 0, y = 0, width = 1920, height = 1080), list(x = 1920, y = 0, width = 2560, height = 1440))
+  expect_identical(manimR:::opengl_monitor(mons, 1), mons[[2]])
+  expect_identical(manimR:::opengl_monitor(mons, 5), mons[[2]])
+  expect_identical(manimR:::opengl_monitor(mons[[1]], 3), mons[[1]])
+  expect_equal(manimR:::opengl_monitor(NULL, 0)$width, 1920)
+})
+
 test_that("an OpenGLCamera hashes the same in every run", {
   expect_identical(digest::digest(manimR:::snapshot_camera(OpenGLCamera())),
                    digest::digest(manimR:::snapshot_camera(OpenGLCamera())))
