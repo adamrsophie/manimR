@@ -33,7 +33,7 @@ The path, or `NULL` when the setting is empty.
 
 ``` r
 get_dir("tex_dir")
-#> [1] "/tmp/Rtmp5By5Dr/media/Tex"
+#> [1] "/tmp/Rtmp2fvc9m/media/Tex"
 get_dir("video_dir", module_name = "scenes")
-#> [1] "/tmp/Rtmp5By5Dr/media/videos/scenes/1080p60"
+#> [1] "/tmp/Rtmp2fvc9m/media/videos/scenes/1080p60"
 ```
