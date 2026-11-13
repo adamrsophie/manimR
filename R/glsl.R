@@ -12,7 +12,9 @@
 # swizzles and indexing; constructors, arrays such as vec3[9](...) and the
 # common built-in functions; structs, whose value is one matrix of their
 # fields side by side (a "glsl_struct" attribute names the struct).
-# Textures, geometry shaders and arrays inside structs raise an error.
+# Geometry shaders run with one row per input primitive: EmitVertex() and
+# EndPrimitive() record the outputs of the rows under the mask. Textures
+# and arrays inside structs raise an error.
 
 glsl_tokenize <- function(code) {
   code <- gsub("/\\*.*?\\*/", " ", code, perl = TRUE)
@@ -53,6 +55,7 @@ glsl_parse <- function(tokens) {
     t
   }
   structs <- list()
+  layouts <- character()
   is_type <- function(t) t %in% c(names(GLSL_TYPES), names(structs), "void")
   # struct Name { type field, field; ... }; its fields' column offsets.
   struct_def <- function() {
@@ -194,6 +197,7 @@ glsl_parse <- function(tokens) {
           t <- take()
           if (t == "(") depth <- depth + 1
           if (t == ")") depth <- depth - 1
+          if (depth == 1 && grepl("^[a-z_]+$", t)) layouts <<- c(layouts, t)
         }
       } else if (peek() %in% GLSL_QUALIFIERS) {
         quals <- c(quals, take())
@@ -359,7 +363,7 @@ glsl_parse <- function(tokens) {
     type <- take()
     globals <- c(globals, declarations(type, quals))
   }
-  list(globals = globals, functions = functions, structs = structs)
+  list(globals = globals, functions = functions, structs = structs, layouts = layouts)
 }
 
 # The number of columns of a type's value, and a value marked as that type.
@@ -720,6 +724,14 @@ glsl_assign <- function(target, how, value, env, st, mask) {
 
 glsl_call <- function(name, arg_exprs, env, st, mask) {
   fns <- st$program$functions[[name]]
+  if (is.null(fns) && name %in% c("EmitVertex", "EndPrimitive") && !is.null(st$emits)) {
+    event <- list(mask = rep_len(mask, st$n), end = name == "EndPrimitive")
+    if (!event$end) {
+      event$values <- lapply(stats::setNames(nm = st$gs_outputs), function(nm) glsl_rows(get(nm, envir = st$globals), st$n))
+    }
+    st$emits[[length(st$emits) + 1]] <- event
+    return(matrix(0, 1, 1))
+  }
   if (is.null(fns)) {
     args <- lapply(arg_exprs, glsl_eval, env, st, mask)
     if (name %in% names(GLSL_TYPES)) return(glsl_construct(name, args))
@@ -850,10 +862,21 @@ glsl_declare <- function(s, env, st, mask, value = NULL) {
 # Runs one shader stage for n rows. `inputs` and `uniforms` are named lists
 # of values (a uniform matrix as its column-major numbers); `builtins` sets
 # variables such as gl_FragCoord. Returns the state, whose globals hold the
-# outputs and whose `discarded` flags the discarded rows.
-glsl_run <- function(program, n, inputs = list(), uniforms = list(), builtins = list()) {
+# outputs and whose `discarded` flags the discarded rows. For a geometry
+# shader, `inputs` hold lists (one matrix per vertex of the primitive),
+# `geometry` the vertices' gl_Position, and the state's `emits` the events
+# of EmitVertex() and EndPrimitive().
+glsl_run <- function(program, n, inputs = list(), uniforms = list(), builtins = list(), geometry = NULL) {
   st <- glsl_new_state(program, n)
   g <- st$globals
+  if (!is.null(geometry)) {
+    st$program$structs$gl_PerVertex <- list(fields = list(gl_Position = list(type = "vec4", offset = 0, size = 4)),
+                                            size = 4)
+    assign("gl_in", lapply(geometry, function(p) glsl_typed(as.matrix(p), "gl_PerVertex", st)), envir = g)
+    assign("gl_PrimitiveIDIn", matrix(seq_len(n) - 1, n, 1), envir = g)
+    st$emits <- list()
+    st$gs_outputs <- c("gl_Position", vapply(glsl_outputs(program), function(s) s$name, ""))
+  }
   st$returned <- rep(FALSE, n)
   st$brk <- rep(FALSE, n)
   st$cont <- rep(FALSE, n)
@@ -865,7 +888,10 @@ glsl_run <- function(program, n, inputs = list(), uniforms = list(), builtins = 
   for (s in program$globals) {
     k <- glsl_size(s$type, st)
     value <- NULL
-    if (any(s$quals %in% c("in", "attribute", "varying")) && !"out" %in% s$quals && s$name %in% names(inputs)) {
+    if (any(s$quals %in% c("in", "attribute", "varying")) && !"out" %in% s$quals && s$name %in% names(inputs) &&
+        is.list(inputs[[s$name]])) {
+      value <- lapply(inputs[[s$name]], function(v) glsl_typed(as.matrix(v)[, seq_len(k), drop = FALSE], s$type, st))
+    } else if (any(s$quals %in% c("in", "attribute", "varying")) && !"out" %in% s$quals && s$name %in% names(inputs)) {
       v <- as.matrix(inputs[[s$name]])
       if (ncol(v) < k) {
         # Missing components are filled from (0, 0, 0, 1), as OpenGL does.

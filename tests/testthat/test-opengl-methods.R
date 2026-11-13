@@ -959,6 +959,54 @@ void main() {
     r$get_raw_frame_buffer_object_data()
   })
   expect_lte(max(abs(custom - oracle("vglsl"))), 2)
+  # A geometry shader: triangles in, a triangle strip out, with EmitVertex()
+  # under a mask.
+  glsl_gs <- "#version 330
+layout(triangles) in;
+layout(triangle_strip, max_vertices = 6) out;
+in vec2 v_uv[];
+in float v_height[];
+out vec3 g_color;
+void main() {
+    vec4 c = (gl_in[0].gl_Position + gl_in[1].gl_Position + gl_in[2].gl_Position) / 3.0;
+    for (int i = 0; i < 3; i++) {
+        gl_Position = mix(c, gl_in[i].gl_Position, 0.8);
+        g_color = vec3(v_uv[i], 0.5 + 0.2 * v_height[i]);
+        EmitVertex();
+    }
+    EndPrimitive();
+    if (gl_PrimitiveIDIn == 0) {
+        for (int i = 0; i < 3; i++) {
+            gl_Position = mix(c, gl_in[i].gl_Position, 0.3);
+            gl_Position.z -= 0.1 * gl_Position.w;
+            g_color = vec3(1.0, 1.0, float(i) / 2.0);
+            EmitVertex();
+        }
+        EndPrimitive();
+    }
+}
+"
+  glsl_gfs <- "#version 330
+in vec3 g_color;
+out vec4 frag_color;
+void main() {
+    frag_color = vec4(g_color, 1.0);
+}
+"
+  geom <- tempconfig(list(pixel_width = 160, pixel_height = 90), {
+    r <- OpenGLRenderer()
+    s <- Scene$new(renderer = r)
+    on.exit(r$close_device(), add = TRUE)
+    r$camera$set_euler_angles(theta = -20 * DEGREES, phi = 40 * DEGREES)
+    quad <- shader_data(c(in_vert = 3, in_uv = 2), 4)
+    assign("in_vert", rbind(c(-4, -3, -2), c(4, -3, -2), c(4, 3, 2), c(-4, 3, 2)), envir = quad)
+    assign("in_uv", rbind(c(0, 0), c(1, 0), c(1, 1), c(0, 1)), envir = quad)
+    sh <- Shader(r$context, source = list(vertex_shader = glsl_vs, geometry_shader = glsl_gs, fragment_shader = glsl_gfs))
+    s$add(Mesh(sh, quad, indices = c(0, 1, 2, 0, 2, 3)))
+    r$update_frame(s)
+    r$get_raw_frame_buffer_object_data()
+  })
+  expect_lte(max(abs(geom - oracle("vgeom"))), 2)
   # A FullScreenQuad runs its fragment shader over the frame.
   quad <- tempconfig(list(pixel_width = 160, pixel_height = 90), {
     r <- OpenGLRenderer()
@@ -1069,7 +1117,7 @@ void main() {
     s$add(parent, coords, Mesh(Shader(r$context, name = "test"), corner))
     r$update_frame(s)
     out <- r$get_raw_frame_buffer_object_data()
-    # A mesh with a geometry shader is not run.
+    # A geometry shader without a triangle strip output is not run.
     s$add(Mesh(Shader(r$context, source = list(vertex_shader = "void main() {}", fragment_shader = "void main() {}",
                                                geometry_shader = "void main() {}")),
                tri(rbind(c(0, 0, 0), c(1, 0, 0), c(0, 1, 0)))))

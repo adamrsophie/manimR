@@ -291,6 +291,48 @@ def vstruct(r):
     from manim.renderer.shader import FullScreenQuad
     return [FullScreenQuad(r.context, fragment_shader_source=STRUCT_FS)]
 frame("vstruct", lambda: [], meshes=vstruct)
+GEOM_GS = """#version 330
+layout(triangles) in;
+layout(triangle_strip, max_vertices = 6) out;
+in vec2 v_uv[];
+in float v_height[];
+out vec3 g_color;
+void main() {
+    vec4 c = (gl_in[0].gl_Position + gl_in[1].gl_Position + gl_in[2].gl_Position) / 3.0;
+    for (int i = 0; i < 3; i++) {
+        gl_Position = mix(c, gl_in[i].gl_Position, 0.8);
+        g_color = vec3(v_uv[i], 0.5 + 0.2 * v_height[i]);
+        EmitVertex();
+    }
+    EndPrimitive();
+    if (gl_PrimitiveIDIn == 0) {
+        for (int i = 0; i < 3; i++) {
+            gl_Position = mix(c, gl_in[i].gl_Position, 0.3);
+            gl_Position.z -= 0.1 * gl_Position.w;
+            g_color = vec3(1.0, 1.0, float(i) / 2.0);
+            EmitVertex();
+        }
+        EndPrimitive();
+    }
+}
+"""
+GEOM_FS = """#version 330
+in vec3 g_color;
+out vec4 frag_color;
+void main() {
+    frag_color = vec4(g_color, 1.0);
+}
+"""
+def vgeom(r):
+    # The quad of vglsl through a geometry shader: each triangle shrunk,
+    # and one more small triangle for the first.
+    from manim.renderer.shader import Mesh, Shader
+    quad = np.zeros(4, dtype=[("in_vert", np.float32, (3,)), ("in_uv", np.float32, (2,))])
+    quad["in_vert"] = [[-4, -3, -2], [4, -3, -2], [4, 3, 2], [-4, 3, 2]]
+    quad["in_uv"] = [[0, 0], [1, 0], [1, 1], [0, 1]]
+    sh = Shader(r.context, source={"vertex_shader": GLSL_VS, "geometry_shader": GEOM_GS, "fragment_shader": GEOM_FS})
+    return [Mesh(sh, quad, indices=np.array([0, 1, 2, 0, 2, 3]))]
+frame("vgeom", lambda: [], lambda cam: cam.set_euler_angles(theta=-20 * np.pi / 180, phi=40 * np.pi / 180), meshes=vgeom)
 # Each frame as a PNG, rows as OpenGL reads them (bottom row first).
 from PIL import Image
 for name, a in out.items():

@@ -570,14 +570,47 @@ software_mesh_triangles <- function(idx, primitive) {
     NULL)
 }
 
-# A mesh with other GLSL code: its vertex shader runs on the vertices and
-# its fragment shader on the fragments, with the varyings interpolated
-# with perspective correction, as OpenGL does.
+# The triangles of the strips a geometry shader emitted: every vertex its
+# rows emitted (outputs by name, rows in emission order) and the triangles
+# of each row's strips.
+software_gs_strips <- function(emits, n) {
+  cur <- vector("list", n)
+  tris <- list()
+  vals <- list()
+  count <- 0
+  close <- function(r) {
+    ids <- cur[[r]]
+    if (length(ids) >= 3) tris[[length(tris) + 1]] <<- software_mesh_triangles(ids, 5)
+    cur[r] <<- list(NULL)
+  }
+  for (e in emits) {
+    rows <- which(e$mask)
+    if (e$end) {
+      for (r in rows) close(r)
+      next
+    }
+    if (!length(rows)) next
+    ids <- count + seq_along(rows)
+    count <- count + length(rows)
+    vals[[length(vals) + 1]] <- lapply(e$values, function(v) v[rows, , drop = FALSE])
+    for (i in seq_along(rows)) cur[[rows[i]]] <- c(cur[[rows[i]]], ids[i])
+  }
+  for (r in seq_len(n)) close(r)
+  if (!length(vals)) return(NULL)
+  values <- lapply(stats::setNames(nm = names(vals[[1]])), function(nm) do.call(rbind, lapply(vals, `[[`, nm)))
+  list(values = values, tri = do.call(rbind, c(list(matrix(0L, 0, 3)), tris)))
+}
+
+# A mesh with other GLSL code: its vertex shader runs on the vertices, a
+# geometry shader (points or triangles in, a triangle strip out) on the
+# primitives, and its fragment shader on the fragments, with the varyings
+# interpolated with perspective correction, as OpenGL does.
 software_draw_mesh_glsl <- function(fbo, mesh) {
   program <- mesh$shader$shader_program
   vs <- program$vertex_shader
   fs <- program$fragment_shader
-  if (!is.character(vs) || !is.character(fs) || !is.null(program$geometry_shader)) return(FALSE)
+  gs <- program$geometry_shader
+  if (!is.character(vs) || !is.character(fs) || !(is.null(gs) || is.character(gs))) return(FALSE)
   vprog <- glsl_program(vs)
   fprog <- glsl_program(fs)
   attrs <- mesh$attributes
@@ -588,16 +621,38 @@ software_draw_mesh_glsl <- function(fbo, mesh) {
   uniforms <- mesh$shader$uniforms
   vst <- glsl_run(vprog, n, inputs, uniforms)
   clip <- glsl_rows(get("gl_Position", envir = vst$globals), n)
+  varyings <- lapply(glsl_outputs(vprog), function(s) glsl_rows(get(s$name, envir = vst$globals), n))
+  names(varyings) <- vapply(glsl_outputs(vprog), function(s) s$name, "")
+  idx <- if (length(mesh$indices)) as.integer(mesh$indices) + 1L else seq_len(n)
+  primitive <- as.integer(mesh$primitive)
+  if (!is.null(gs)) {
+    gprog <- glsl_program(gs)
+    if (!"triangle_strip" %in% gprog$layouts) return(FALSE)
+    prims <- if ("points" %in% gprog$layouts && primitive == 0L) {
+      matrix(idx, ncol = 1)
+    } else if ("triangles" %in% gprog$layouts) {
+      software_mesh_triangles(idx, primitive)
+    }
+    if (is.null(prims)) return(FALSE)
+    if (!nrow(prims)) return(TRUE)
+    k <- ncol(prims)
+    gin <- lapply(varyings, function(v) lapply(seq_len(k), function(j) v[prims[, j], , drop = FALSE]))
+    gst <- glsl_run(gprog, nrow(prims), gin, uniforms,
+                    geometry = lapply(seq_len(k), function(j) clip[prims[, j], , drop = FALSE]))
+    emitted <- software_gs_strips(gst$emits, nrow(prims))
+    if (is.null(emitted) || !nrow(emitted$tri)) return(TRUE)
+    clip <- emitted$values$gl_Position
+    varyings <- emitted$values[names(emitted$values) != "gl_Position"]
+    tri <- emitted$tri
+  } else {
+    tri <- software_mesh_triangles(idx, primitive)
+    if (is.null(tri)) return(primitive %in% c(4L, 5L, 6L))
+  }
   w <- clip[, 4]
   ndc <- clip[, 1:3, drop = FALSE] / w
-  idx <- if (length(mesh$indices)) as.integer(mesh$indices) + 1L else seq_len(n)
-  tri <- software_mesh_triangles(idx, as.integer(mesh$primitive))
-  if (is.null(tri)) return(as.integer(mesh$primitive) %in% c(4L, 5L, 6L))
   # Triangles behind the camera are left out (no near-plane clipping).
   tri <- tri[rowSums(matrix(w[tri] > 0, ncol = 3)) == 3, , drop = FALSE]
   if (!nrow(tri)) return(TRUE)
-  varyings <- lapply(glsl_outputs(vprog), function(s) glsl_rows(get(s$name, envir = vst$globals), n))
-  names(varyings) <- vapply(glsl_outputs(vprog), function(s) s$name, "")
   outs <- Filter(function(s) GLSL_TYPES[[s$type]] == 4, glsl_outputs(fprog))
   W <- fbo$viewport[3]
   H <- fbo$viewport[4]

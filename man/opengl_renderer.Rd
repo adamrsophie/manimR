@@ -199,8 +199,9 @@ perspective-correct varyings, depth test and alpha blending. The
 interpreter takes the scalar, vector and square matrix types, in, out,
 uniform and const globals, user functions, \code{if}, \code{for}, \code{while},
 \code{break}, \code{continue}, \code{return}, \code{discard}, structs and the common
-built-in functions; textures, geometry shaders and arrays inside
-structs raise an error, and
+built-in functions, and runs a geometry shader (points or triangles in,
+a triangle strip out) between the two stages; textures and arrays
+inside structs raise an error, and
 \code{Mesh$render()} of a mesh it cannot run needs an OpenGL context and
 stops.
 \item \code{Shader(context, name, source)} reads the GLSL code of a shader folder
