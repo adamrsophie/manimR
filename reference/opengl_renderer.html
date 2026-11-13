@@ -292,7 +292,12 @@ and view matrices.</p></li>
 <li><p><code>Object3D(...)</code> is a node of a tree of objects with a model matrix,
 a normal matrix and updaters; <code>Mesh()</code> adds vertex attributes, indices
 and a shader, and <code>FullScreenQuad()</code> is a mesh covering the frame.
-<code>Mesh$render()</code> needs an OpenGL context and stops.</p></li>
+A scene takes meshes with <code>add()</code>, and <code>OpenGLRenderer</code> draws them
+after the mobjects: a mesh whose shader is one of upstream's mesh
+shaders (the <code>default</code>, <code>manim_coords</code>, <code>vertex_colors</code> and <code>test</code>
+folders) is rasterized by their rules; <code>Mesh$render()</code> of other GLSL
+code needs an OpenGL context and stops, as does a <code>FullScreenQuad</code>
+(whose vertex shader upstream's GLSL compiler rejects).</p></li>
 <li><p><code>Shader(context, name, source)</code> reads the GLSL code of a shader folder
 under <code>SHADER_FOLDER</code> (or takes <code>source</code>, a list of
 <code>vertex_shader</code>, <code>fragment_shader</code> and <code>geometry_shader</code> code) and keeps
@@ -333,8 +338,8 @@ each triangle on the side of its curve given by its texture mode, and the
 stroke the points within <code>0.004 * width</code> of its curve.</p></li>
 <li><p><code>OpenGLSoftwareContext()</code> stands for moderngl's context: <code>framebuffer()</code>,
 <code>buffer()</code> and <code>simple_vertex_array()</code>, whose <code><a href="render.html">render()</a></code> draws the
-<code>vectorized_mobject_fill</code> and <code>vectorized_mobject_stroke</code> shaders. Other
-GLSL code, as a <code>Mesh</code>'s, is not run.</p></li>
+<code>vectorized_mobject_fill</code> and <code>vectorized_mobject_stroke</code> shaders.
+GLSL code written for a <code>Mesh</code> is not run.</p></li>
 <li><p><code>Window(renderer)</code> is the window of a live preview: an R graphics
 device (an interactive session is needed) that shows the renderer's frame
 on <code>swap_buffers()</code>; <code>handle_event()</code> waits for a mouse or key event

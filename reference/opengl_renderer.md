@@ -221,8 +221,13 @@ values of their matrix, row by row; the decorators a function.
 
 - `Object3D(...)` is a node of a tree of objects with a model matrix, a
   normal matrix and updaters; `Mesh()` adds vertex attributes, indices
-  and a shader, and `FullScreenQuad()` is a mesh covering the frame.
-  `Mesh$render()` needs an OpenGL context and stops.
+  and a shader, and `FullScreenQuad()` is a mesh covering the frame. A
+  scene takes meshes with `add()`, and `OpenGLRenderer` draws them after
+  the mobjects: a mesh whose shader is one of upstream's mesh shaders
+  (the `default`, `manim_coords`, `vertex_colors` and `test` folders) is
+  rasterized by their rules; `Mesh$render()` of other GLSL code needs an
+  OpenGL context and stops, as does a `FullScreenQuad` (whose vertex
+  shader upstream's GLSL compiler rejects).
 
 - `Shader(context, name, source)` reads the GLSL code of a shader folder
   under `SHADER_FOLDER` (or takes `source`, a list of `vertex_shader`,
@@ -275,7 +280,7 @@ values of their matrix, row by row; the decorators a function.
   `framebuffer()`, `buffer()` and `simple_vertex_array()`, whose
   [`render()`](https://adamrsophie.github.io/manimR/reference/render.md)
   draws the `vectorized_mobject_fill` and `vectorized_mobject_stroke`
-  shaders. Other GLSL code, as a `Mesh`'s, is not run.
+  shaders. GLSL code written for a `Mesh` is not run.
 
 - `Window(renderer)` is the window of a live preview: an R graphics
   device (an interactive session is needed) that shows the renderer's
