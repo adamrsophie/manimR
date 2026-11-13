@@ -52,7 +52,10 @@ bool_crossings <- function(P, Q, n = 48) {
   rP <- apply(P, 2, range)
   rQ <- apply(Q, 2, range)
   if (rP[2, 1] < rQ[1, 1] - 1e-9 || rQ[2, 1] < rP[1, 1] - 1e-9 ||
-      rP[2, 2] < rQ[1, 2] - 1e-9 || rQ[2, 2] < rP[1, 2] - 1e-9) return(matrix(0, 0, 2))
+      rP[2, 2] < rQ[1, 2] - 1e-9 || rQ[2, 2] < rP[1, 2] - 1e-9) return(matrix(0, 0, 3))
+  # The same curve, either way round: they meet only at their ends.
+  if (max(abs(P - Q)) < 1e-9) return(rbind(c(0, 0, 2), c(1, 1, 2)))
+  if (max(abs(P - Q[4:1, ])) < 1e-9) return(rbind(c(0, 1, 2), c(1, 0, 2)))
   s <- seq(0, 1, length.out = n + 1)
   a <- bool_eval(P, s)
   b <- bool_eval(Q, s)
@@ -67,7 +70,7 @@ bool_crossings <- function(P, Q, n = 48) {
   ta <- (w[, 1] * d[, 2] - w[, 2] * d[, 1]) / den
   ub <- (w[, 1] * r[, 2] - w[, 2] * r[, 1]) / den
   hit <- is.finite(ta) & ta >= -0.01 & ta <= 1.01 & ub >= -0.01 & ub <= 1.01
-  out <- matrix(0, 0, 2)
+  out <- matrix(0, 0, 3)
   for (k in which(hit)) {
     t <- (i[k] - 1 + ta[k]) / n
     u <- (j[k] - 1 + ub[k]) / n
@@ -83,7 +86,7 @@ bool_crossings <- function(P, Q, n = 48) {
     }
     if (t >= -1e-9 && t <= 1 + 1e-9 && u >= -1e-9 && u <= 1 + 1e-9 &&
         sqrt(sum((bool_eval(P, t) - bool_eval(Q, u))^2)) < 1e-9) {
-      out <- rbind(out, c(min(max(t, 0), 1), min(max(u, 0), 1)))
+      out <- rbind(out, c(min(max(t, 0), 1), min(max(u, 0), 1), NA))
     }
   }
   # Endpoints lying on the other curve.
@@ -106,11 +109,18 @@ bool_crossings <- function(P, Q, n = 48) {
   }
   for (t in c(0, 1)) {
     u <- on_curve(drop(bool_eval(P, t)), Q)
-    if (!is.na(u)) out <- rbind(out, c(t, u))
+    if (!is.na(u)) out <- rbind(out, c(t, u, NA))
   }
   for (u in c(0, 1)) {
     t <- on_curve(drop(bool_eval(Q, u)), P)
-    if (!is.na(t)) out <- rbind(out, c(t, u))
+    if (!is.na(t)) out <- rbind(out, c(t, u, NA))
+  }
+  # Third column: 1 where the curves meet at an angle, 0 where they run
+  # together, 2 (above) for the same curve.
+  for (r in seq_len(nrow(out))) if (is.na(out[r, 3])) {
+    a <- drop(bool_deriv(P, out[r, 1]))
+    b <- drop(bool_deriv(Q, out[r, 2]))
+    out[r, 3] <- abs(a[1] * b[2] - a[2] * b[1]) > 1e-6 * sqrt(sum(a^2) * sum(b^2))
   }
   out
 }
@@ -163,6 +173,9 @@ bool_op <- function(shapes, op) {
   flat <- lapply(shapes, bool_flatten, n = 400)
   # Cut parameters of every segment.
   cuts <- lapply(shapes, function(sh) lapply(sh, function(segs) lapply(segs, function(P) c(0, 1))))
+  # Points where the shapes meet at an angle, and ends of curves they share.
+  touch <- matrix(0, 0, 2)
+  shared <- matrix(0, 0, 2)
   for (sa in seq_len(ns - 1)) for (sb in (sa + 1):ns) {
     A <- shapes[[sa]]
     B <- shapes[[sb]]
@@ -171,6 +184,9 @@ bool_op <- function(shapes, op) {
       if (nrow(x)) {
         cuts[[sa]][[ia]][[ka]] <- c(cuts[[sa]][[ia]][[ka]], x[, 1])
         cuts[[sb]][[ib]][[kb]] <- c(cuts[[sb]][[ib]][[kb]], x[, 2])
+        at <- bool_eval(A[[ia]][[ka]], x[, 1])
+        touch <- rbind(touch, at[x[, 3] == 1, , drop = FALSE])
+        shared <- rbind(shared, at[x[, 3] == 2, , drop = FALSE])
       }
     }
   }
@@ -207,9 +223,11 @@ bool_op <- function(shapes, op) {
         if (reverse) piece <- piece[4:1, , drop = FALSE]
         # Whether the piece starts at a point of the input, not a crossing.
         vertex <- if (reverse) m == length(t) - 1 else m == 1
-        # Whether it starts where the other shape crosses (or touches) it.
-        t0 <- if (reverse) t[m + 1] else t[m]
-        crossing <- any(abs(cuts[[s]][[i]][[k]][-(1:2)] - t0) < 1e-9)
+        # Whether it starts where the shapes meet at an angle (not at the end
+        # of a curve they share).
+        p0 <- piece[1, ]
+        near <- function(M) nrow(M) > 0 && any(abs(M[, 1] - p0[1]) < 1e-7 & abs(M[, 2] - p0[2]) < 1e-7)
+        crossing <- near(touch) && !near(shared)
         pieces[[length(pieces) + 1]] <- list(P = piece, rank = rank, reversed = reverse,
                                              inside = any(state == "inside"), vertex = vertex,
                                              crossing = crossing)

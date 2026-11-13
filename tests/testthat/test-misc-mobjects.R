@@ -67,6 +67,16 @@ test_that("boolean operations cut the curves where skia-pathops does", {
     out <- do.call(rbind, segs)
     out[order(round(out[, 1], 4), round(out[, 2], 4), round(out[, 7], 4), round(out[, 8], 4)), , drop = FALSE]
   }
+  # Which points of a grid the outline fills, by the nonzero rule.
+  grid <- as.matrix(expand.grid(seq(-3.2, 3.2, length.out = 41) + 0.0123, seq(-3.2, 3.2, length.out = 41) + 0.0071))
+  filled <- function(m) {
+    if (!nrow(m)) return(logical(nrow(grid)))
+    v <- VMobject()
+    v$points <- m
+    flat <- lapply(v$get_subpaths(), function(sp) do.call(rbind, lapply(seq(1, nrow(sp), 4), function(k)
+      bezier(sp[k:(k + 3), , drop = FALSE])(seq(0, 1, length.out = 41)[-41])[, 1:2, drop = FALSE])))
+    apply(grid, 1, function(p) manimR:::bool_winding(p, flat) != 0)
+  }
   make <- list(
     sq_cr = function() list(Square()$move_to(c(-2, 0, 0)), Circle()$move_to(c(-1.3, 0.7, 0))),
     ellipses = function() { e1 <- Ellipse(width = 4, height = 5)$move_to(LEFT); list(e1, e1$copy()$move_to(RIGHT)) },
@@ -91,6 +101,7 @@ test_that("boolean operations cut the curves where skia-pathops does", {
     got <- ops[[on]](ab[[1]], ab[[2]])$points
     want <- as_pts(o[[key]])
     if (key %in% exact) expect_lt(max(abs(got - want)), 1e-5, label = key)
+    expect_identical(filled(got), filled(want), info = key)
     pg <- pieces(got)
     pw <- pieces(want)
     expect_identical(dim(pg), dim(pw), info = key)
