@@ -93,6 +93,24 @@ def vstroke():
     arc.set_points(np.array([[-3.0, -2.5, 0], [0, 0.5, 0], [3, -2.5, 0]]))
     return [zig, arc]
 frame("vstroke", vstroke)
+def vtilt():
+    from manim.constants import LineJointType
+    sq = from_cubic(cubic_polygon(np.array([[1.0, 1, 0], [-1, 1, 0], [-1, -1, 0], [1, -1, 0]])), color=YELLOW,
+                    fill_color=BLUE, fill_opacity=0.8, stroke_width=12)
+    sq.rotate(np.pi / 3, axis=np.array([1.0, 0, 0])).rotate(np.pi / 6, axis=np.array([0, 1.0, 0])).shift(np.array([-3.5, 0, 0]))
+    out = [sq]
+    for k, joint in enumerate([LineJointType.ROUND, LineJointType.MITER, LineJointType.BEVEL]):
+        zig = from_cubic(cubic_polygon(np.array([[0.0, 1, 0], [1, -1, 0], [2, 1, 0], [3, -1, 0]]))[:-4],
+                         stroke_color=[RED, GREEN, WHITE][k], stroke_width=16)
+        zig.joint_type = joint
+        zig.shift(np.array([-0.5, 2.5 - 2.5 * k, 0]))
+        out.append(zig)
+    return out
+frame("vtilt", vtilt)
+def vdup():
+    corners = np.array([[-4.0, -1, 0], [-2, 1.5, 0], [-2, 1.5, 0], [0, -1, 0], [2, 1.5, 0], [4, -1, 0]])
+    return [from_cubic(cubic_polygon(corners)[:-4], stroke_color=GREEN, stroke_width=10)]
+frame("vdup", vdup)
 # Each frame as a PNG, rows as OpenGL reads them (bottom row first).
 from PIL import Image
 for name, a in out.items():

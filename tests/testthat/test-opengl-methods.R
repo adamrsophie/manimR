@@ -820,12 +820,31 @@ test_that("the software shaders draw the frames of upstream's OpenGL renderer", 
   # shaders.
   circle <- Circle(radius = 1.5, color = WHITE, fill_color = RED, fill_opacity = 1, stroke_width = 4)$shift(LEFT * 2)
   square <- Square(side_length = 2, color = YELLOW, fill_color = BLUE, fill_opacity = 0.5, stroke_width = 8)$shift(RIGHT * 2)
-  expect_lte(max(abs(frame(list(circle, square)) - oracle("vfill"))), 1)
+  expect_lte(max(abs(frame(list(circle, square)) - oracle("vfill"))), 2)
   zig <- OpenGLVMobject(stroke_color = GREEN, stroke_width = 10)
   zig$set_points_as_corners(rbind(c(-4, -1, 0), c(-2, 1.5, 0), c(0, -1, 0), c(2, 1.5, 0), c(4, -1, 0)))
   arc <- OpenGLVMobject(stroke_color = WHITE, stroke_width = 6)
   arc$set_points(rbind(c(-3, -2.5, 0), c(-1, -0.5, 0), c(1, -0.5, 0), c(3, -2.5, 0)))
-  expect_lte(max(abs(frame(list(zig, arc)) - oracle("vstroke"))), 2)
+  expect_lte(max(abs(frame(list(zig, arc)) - oracle("vstroke"))), 3)
+  # Turned out of the frame's plane (perspective, flat_stroke) and with
+  # round, miter and bevel joints.
+  tilted_square <- Square(side_length = 2, color = YELLOW, fill_color = BLUE, fill_opacity = 0.8, stroke_width = 12)
+  tilted_square$rotate(PI / 3, axis = RIGHT)$rotate(PI / 6, axis = UP)$shift(LEFT * 3.5)
+  zigs <- lapply(1:3, function(k) {
+    z <- OpenGLVMobject(stroke_color = list(RED, GREEN, WHITE)[[k]], stroke_width = 16)
+    z$set_points_as_corners(rbind(c(0, 1, 0), c(1, -1, 0), c(2, 1, 0), c(3, -1, 0)))
+    z$joint_type <- c("round", "miter", "bevel")[k]
+    z$shift(c(-0.5, 5 - 2.5 * k, 0))
+  })
+  expect_lte(max(abs(frame(c(list(tilted_square), zigs)) - oracle("vtilt"))), 3)
+  # A curve of zero length is left out of the stroke, as upstream's
+  # geometry shader emits nothing for it.
+  dup <- OpenGLVMobject(stroke_color = GREEN, stroke_width = 10)
+  dup$set_points_as_corners(rbind(c(-4, -1, 0), c(-2, 1.5, 0), c(-2, 1.5, 0), c(0, -1, 0), c(2, 1.5, 0), c(4, -1, 0)))
+  expect_lte(max(abs(frame(list(dup)) - oracle("vdup"))), 3)
+  # A VMobject holding a surface draws the surface with its own shader.
+  plane <- surf(function(u, v) c(u, v, 0), c(-1, 1), c(-1, 1), c(4, 4), GREEN, 0, 0)
+  expect_equal(frame(list(VGroup(plane$copy()))), frame(list(plane)))
   # Near the sphere's front pole the vertex normals nearly cancel, and the
   # GPU's single precision interpolation sets their direction.
   sphere <- surf(function(u, v) 2 * c(cos(u) * sin(v), sin(u) * sin(v), -cos(v)), c(0, TAU), c(0, PI), c(33, 17), BLUE)

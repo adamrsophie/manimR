@@ -18,7 +18,8 @@ software_vmobject_data <- function(m) {
       stroke = list(point = get("point", envir = stroke), prev_point = get("prev_point", envir = stroke),
                     next_point = get("next_point", envir = stroke), unit_normal = get("unit_normal", envir = stroke),
                     stroke_width = drop(get("stroke_width", envir = stroke)), color = get("color", envir = stroke)),
-      tri = m$get_triangulation(), fill_uniforms = m$get_fill_uniforms(), stroke_uniforms = m$get_stroke_uniforms(),
+      tri = software_triangulation(m, opengl_quadratic_points(m), m$get_unit_normal(), m$tolerance_for_point_equality),
+      fill_uniforms = m$get_fill_uniforms(), stroke_uniforms = m$get_stroke_uniforms(),
       depth_test = isTRUE(m$depth_test), behind = isTRUE(m$draw_stroke_behind_fill)
     ))
   }
@@ -39,12 +40,25 @@ software_vmobject_data <- function(m) {
     fill = list(point = points, unit_normal = normal, color = rows(m$get_fill_rgbas()), vert_index = seq_len(n) - 1),
     stroke = list(point = points, prev_point = shift(-nppc), next_point = shift(nppc), unit_normal = normal,
                   stroke_width = drop(rows(matrix(width, ncol = 1))), color = rows(m$get_stroke_rgbas())),
-    tri = opengl_triangulation(points, unit_normal, 1e-8),
+    tri = software_triangulation(m, points, unit_normal, 1e-8),
     fill_uniforms = uniforms,
     stroke_uniforms = c(uniforms, list(joint_type = unname(LINE_JOINT_TYPE_VALUES[tolower(m$joint_type %||% "auto")]),
                                        flat_stroke = 1)),
     depth_test = isTRUE(m$depth_test), behind = isTRUE(m$draw_stroke_behind_fill)
   )
+}
+
+# Triangulations by mobject, reused while its points and normal stay the
+# same, as upstream keeps one until needs_new_triangulation is set.
+software_triangulation_cache <- new.env(parent = emptyenv())
+software_triangulation <- function(m, points, normal, atol) {
+  hit <- software_triangulation_cache[[m$mob_id]]
+  if (!is.null(hit) && identical(hit$points, points) && identical(hit$normal, normal)) return(hit$tri)
+  # ponytail: cleared whole when large; an LRU if long scenes thrash it.
+  if (length(software_triangulation_cache) > 10000) rm(list = ls(software_triangulation_cache), envir = software_triangulation_cache)
+  tri <- opengl_triangulation(points, normal, atol)
+  assign(m$mob_id, list(points = points, normal = normal, tri = tri), envir = software_triangulation_cache)
+  tri
 }
 
 # OpenGLVMobject.get_unit_normal() on quadratic points: the area vector of
@@ -201,14 +215,15 @@ bz_smoothstep <- function(e0, e1, x) {
   t * t * (3 - 2 * t)
 }
 
-# quadratic_bezier_fill: each triangle of the triangulation whose vertex
-# indices are not consecutive is drawn whole; a curve's own triangle becomes
-# a pentagon around the curve, its alpha fading over anti_alias_width
-# outside it.
-software_draw_bezier_fill <- function(fbo, data, uniforms) {
+# quadratic_bezier_fill's vertex and geometry stages: each triangle of the
+# triangulation whose vertex indices are not consecutive is drawn whole; a
+# curve's own triangle becomes a pentagon around the curve. Returns the
+# vertices (positions `gl`, `color`, `uv`), the triangles and their values
+# for the fragment stage (`prim`, one row per triangle), or NULL.
+software_bezier_fill_geometry <- function(data, uniforms) {
   P <- data$fill$point
   tri <- matrix(as.integer(data$tri) + 1L, ncol = 3, byrow = TRUE)
-  if (!nrow(P) || !nrow(tri)) return(invisible(NULL))
+  if (!nrow(P) || !nrow(tri)) return(NULL)
   u <- c(uniforms, data$fill_uniforms)
   bp <- software_frame_points(P, u)
   normal <- bz_rotate(data$fill$unit_normal, u)
@@ -289,29 +304,35 @@ software_draw_bezier_fill <- function(fbo, data, uniforms) {
            cbind(rep(curves[keep], 3), rep(1:3, each = k)), local)
     }
   }
-  if (!length(verts)) return(invisible(NULL))
+  if (!length(verts)) return(NULL)
   xyz <- do.call(rbind, lapply(verts, `[[`, "xyz"))
-  vcolor <- do.call(rbind, lapply(verts, `[[`, "color"))
-  vuv <- do.call(rbind, lapply(verts, `[[`, "uv"))
-  t3 <- do.call(rbind, tris)
   bind <- function(name) {
     parts <- lapply(prims, `[[`, name)
     if (is.matrix(parts[[1]])) do.call(rbind, parts) else unlist(parts)
   }
   order_key <- bind("order")
   o <- order(order_key[, 1], order_key[, 2])
-  t3 <- t3[o, , drop = FALSE]
   prim <- lapply(c(fill_all = "fill_all", orientation = "orientation", b2 = "b2", uv_aaw = "uv_aaw",
                    degree = "degree"), function(nm) {
     v <- bind(nm)
     if (is.matrix(v)) v[o, , drop = FALSE] else v[o]
   })
-  discard <- function(at, tri_id) at(vcolor[, 4, drop = FALSE])[, 1] == 0
-  shade <- function(at, tri_id) {
-    rgba <- at(vcolor)
+  list(gl = software_gl_position(xyz, u), tri = do.call(rbind, tris)[o, , drop = FALSE],
+       vert = list(color = do.call(rbind, lapply(verts, `[[`, "color")), uv = do.call(rbind, lapply(verts, `[[`, "uv"))),
+       prim = prim)
+}
+
+# quadratic_bezier_fill's fragment stage: a fragment of a curve's pentagon
+# fades over anti_alias_width outside the curve; vertices with alpha 0 are
+# discarded.
+software_bezier_fill_shaders <- function(g) {
+  prim <- g$prim
+  list(discard = function(at, tri_id) at(g$vert$color[, 4, drop = FALSE])[, 1] == 0,
+       shade = function(at, tri_id) {
+    rgba <- at(g$vert$color)
     curve <- prim$fill_all[tri_id] != 1
     if (any(curve)) {
-      p <- at(vuv)[curve, , drop = FALSE]
+      p <- at(g$vert$uv)[curve, , drop = FALSE]
       b2 <- prim$b2[tri_id[curve], , drop = FALSE]
       degree <- prim$degree[tri_id[curve]]
       w <- prim$uv_aaw[tri_id[curve]]
@@ -331,18 +352,18 @@ software_draw_bezier_fill <- function(fbo, data, uniforms) {
       rgba[curve, 4] <- rgba[curve, 4] * bz_smoothstep(1, 0, sdf / w)
     }
     rgba
-  }
-  software_rasterize(fbo, software_gl_position(xyz, u), t3, data$depth_test, shade, discard)
+  })
 }
 
-# quadratic_bezier_stroke: each curve becomes a quadrilateral (a line) or a
-# pentagon around it, widened by half the stroke width plus
-# anti_alias_width and joined to its neighbors; a fragment's alpha fades
-# with its distance to the curve, its ends cut, beveled or rounded.
-software_draw_bezier_stroke <- function(fbo, data, uniforms) {
+# quadratic_bezier_stroke's vertex and geometry stages: each curve becomes a
+# quadrilateral (a line) or a pentagon around it, widened by half the stroke
+# width plus anti_alias_width and joined to its neighbors. Returns the
+# vertices, triangles and per triangle values as
+# software_bezier_fill_geometry() does, or NULL.
+software_bezier_stroke_geometry <- function(data, uniforms) {
   s <- data$stroke
   n <- nrow(s$point)
-  if (n < 3) return(invisible(NULL))
+  if (n < 3) return(NULL)
   u <- c(uniforms, data$stroke_uniforms)
   aaw <- u$anti_alias_width
   fd <- u$focal_distance
@@ -358,15 +379,13 @@ software_draw_bezier_stroke <- function(fbo, data, uniforms) {
   rows3 <- function(m, j) m[i0 + j, , drop = FALSE]
   ctl <- bz_reduce(rows3(bp, 0), rows3(bp, 1), rows3(bp, 2))
   keep <- which(ctl$degree > 0)
-  if (!length(keep)) return(invisible(NULL))
+  if (!length(keep)) return(NULL)
   sub <- function(m) m[keep, , drop = FALSE]
   i0 <- i0[keep]
   degree <- ctl$degree[keep]
   C <- list(sub(ctl$p0), sub(ctl$p1), sub(ctl$p2))
-  prv <- bz_reduce(rows3(prev_bp, 0)[keep, , drop = FALSE], rows3(prev_bp, 1)[keep, , drop = FALSE],
-                   rows3(prev_bp, 2)[keep, , drop = FALSE])
-  nxt <- bz_reduce(rows3(next_bp, 0)[keep, , drop = FALSE], rows3(next_bp, 1)[keep, , drop = FALSE],
-                   rows3(next_bp, 2)[keep, , drop = FALSE])
+  prv <- bz_reduce(rows3(prev_bp, 0), rows3(prev_bp, 1), rows3(prev_bp, 2))
+  nxt <- bz_reduce(rows3(next_bp, 0), rows3(next_bp, 1), rows3(next_bp, 2))
   psf <- function(z) pmax(0, fd / (fd - z))
   scaled <- lapply(0:2, function(j) {
     sf <- psf(C[[j + 1]][, 3])
@@ -502,17 +521,24 @@ software_draw_bezier_stroke <- function(fbo, data, uniforms) {
   prim <- list(has_prev = has_prev, has_next = has_next, bevel_start = bevel_start, bevel_end = bevel_end,
                angle_from_prev = angle_from_prev, angle_to_next = angle_to_next, degree = degree, b2 = uv_b2,
                uv_aaw = aaw / sf)
-  discard <- function(at, tri_id) at(vw)[, 1] == 0
-  shade <- function(at, tri_id) {
-    cv <- curve_of[tri_id]
-    p <- at(vuv)
-    w <- at(vw)[, 1]
-    b2 <- prim$b2[cv, , drop = FALSE]
-    deg <- prim$degree[cv]
-    uaaw <- prim$uv_aaw[cv]
+  prim <- lapply(prim, function(v) if (is.matrix(v)) v[curve_of, , drop = FALSE] else v[curve_of])
+  list(gl = gl, tri = t3, vert = list(uv = vuv, w = vw, color = vcolor), prim = prim)
+}
+
+# quadratic_bezier_stroke's fragment stage: a fragment's alpha fades with
+# its distance to the curve, the curve's ends cut, beveled or rounded.
+software_bezier_stroke_shaders <- function(g) {
+  prim <- g$prim
+  list(discard = function(at, tri_id) at(g$vert$w)[, 1] == 0,
+       shade = function(at, tri_id) {
+    p <- at(g$vert$uv)
+    w <- at(g$vert$w)[, 1]
+    b2 <- prim$b2[tri_id, , drop = FALSE]
+    deg <- prim$degree[tri_id]
+    uaaw <- prim$uv_aaw[tri_id]
     # modify_distance_for_endpoints(), for the fragments in `which`.
     modify <- function(q, dist, t, which) {
-      idx <- cv[which]
+      idx <- tri_id[which]
       buff <- 0.5 * w[which] - uaaw[which]
       out <- dist
       hp <- prim$has_prev[idx]
@@ -559,27 +585,59 @@ software_draw_bezier_stroke <- function(fbo, data, uniforms) {
     }
     dist <- bz_min_dist(p, b2, deg, modify)
     signed <- abs(dist) - 0.5 * w
-    rgba <- at(vcolor)
+    rgba <- at(g$vert$color)
     rgba[, 4] <- rgba[, 4] * bz_smoothstep(0.5, -0.5, signed / uaaw)
     rgba
-  }
-  software_rasterize(fbo, gl, t3, data$depth_test, shade, discard)
+  })
+}
+
+# Joins the geometries of several mobjects into one, as upstream's
+# ShaderWrapper.combine_with() joins their vertex data.
+software_combine_geometry <- function(gs) {
+  gs <- Filter(Negate(is.null), gs)
+  if (!length(gs)) return(NULL)
+  offset <- cumsum(c(0, vapply(gs, function(g) nrow(g$gl), numeric(1))))
+  join <- function(parts) if (is.matrix(parts[[1]])) do.call(rbind, parts) else unlist(parts)
+  list(gl = do.call(rbind, lapply(gs, `[[`, "gl")),
+       tri = do.call(rbind, Map(function(g, o) g$tri + o, gs, offset[seq_along(gs)])),
+       vert = lapply(stats::setNames(nm = names(gs[[1]]$vert)), function(k) join(lapply(gs, function(g) g$vert[[k]]))),
+       prim = lapply(stats::setNames(nm = names(gs[[1]]$prim)), function(k) join(lapply(gs, function(g) g$prim[[k]]))))
 }
 
 # A VMobject as upstream's OpenGLVMobject.get_shader_wrapper_list() draws
 # it: the strokes drawn behind the fill of its family members with points,
-# then their fills, then their other strokes. The projection shaders, when
-# configured, replace them.
+# then their fills, then their other strokes, each pass one draw of the
+# members' joined data with the first member's depth test. The projection
+# shaders, when configured, replace them. Upstream's OpenGLVMobjects hold
+# only OpenGLVMobjects; manimR's may hold other mobjects, and its surfaces
+# are VMobjects holding their faces. Those submobjects are left out and
+# returned for the caller to draw.
 software_draw_vmobject <- function(fbo, mobject, uniforms) {
-  members <- Filter(function(m) is_vmobject(m) && NROW(m$points) > 0, mobject$get_family())
+  others <- list()
+  vfamily <- list()
+  collect <- function(m) {
+    vfamily[[length(vfamily) + 1]] <<- m
+    for (sm in m$submobjects) {
+      if (!is_vmobject(sm) || opengl_is_software_surface(sm)) others[[length(others) + 1]] <<- sm else collect(sm)
+    }
+  }
+  collect(mobject)
+  members <- Filter(function(m) NROW(m$points) > 0, vfamily)
   data <- lapply(members, software_vmobject_data)
   has_fill <- vapply(data, function(d) any(d$fill$color[, 4] != 0), logical(1)) &
     !isTRUE(cfg("use_projection_fill_shaders"))
   has_stroke <- vapply(data, function(d) any(d$stroke$stroke_width != 0) && any(d$stroke$color[, 4] != 0), logical(1)) &
     !isTRUE(cfg("use_projection_stroke_shaders"))
   behind <- vapply(data, `[[`, logical(1), "behind")
-  for (d in data[has_stroke & behind]) software_draw_bezier_stroke(fbo, d, uniforms)
-  for (d in data[has_fill]) software_draw_bezier_fill(fbo, d, uniforms)
-  for (d in data[has_stroke & !behind]) software_draw_bezier_stroke(fbo, d, uniforms)
-  invisible(NULL)
+  pass <- function(which, geometry, shaders) {
+    if (!any(which)) return(invisible(NULL))
+    g <- software_combine_geometry(lapply(data[which], geometry, uniforms))
+    if (is.null(g)) return(invisible(NULL))
+    sh <- shaders(g)
+    software_rasterize(fbo, g$gl, g$tri, data[which][[1]]$depth_test, sh$shade, sh$discard)
+  }
+  pass(has_stroke & behind, software_bezier_stroke_geometry, software_bezier_stroke_shaders)
+  pass(has_fill, software_bezier_fill_geometry, software_bezier_fill_shaders)
+  pass(has_stroke & !behind, software_bezier_stroke_geometry, software_bezier_stroke_shaders)
+  others
 }

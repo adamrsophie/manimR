@@ -996,7 +996,10 @@ OpenGLRendererClass <- R6::R6Class("OpenGLRenderer", inherit = RendererClass, lo
           for (sm in Filter(opengl_is_software_surface, m$submobjects)) walk(sm)
           return(invisible(NULL))
         }
-        if (is_vmobject(m)) return(software_draw_vmobject(fbo, m, u))
+        if (is_vmobject(m)) {
+          for (sm in software_draw_vmobject(fbo, m, u)) walk(sm)
+          return(invisible(NULL))
+        }
         if (inherits(m, "OpenGLPMobject")) {
           software_draw_true_dot(fbo, m, u)
         } else if (NROW(m$points) > 0) {
