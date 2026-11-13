@@ -310,8 +310,10 @@ is embedded the same way when it is printed.
   [`Intersection()`](https://adamrsophie.github.io/manimR/reference/boolean_ops.md),
   [`Difference()`](https://adamrsophie.github.io/manimR/reference/boolean_ops.md),
   [`Exclusion()`](https://adamrsophie.github.io/manimR/reference/boolean_ops.md))
-  use the `polyclip` package, so their results are made of straight
-  segments.
+  cut the input curves where they cross, as skia-pathops does, in double
+  precision rather than skia’s single precision. A contour that holds no
+  input start point can start at a different point, and an exclusion can
+  split its outline into different (equally filled) contours.
 - [`Code()`](https://adamrsophie.github.io/manimR/reference/CodeClass.md)
   highlights with Pygments, as upstream, when Python with the pygments
   module is installed; without it, a built in tokenizer highlights R and

@@ -2,10 +2,9 @@
 
 `Union()` merges two or more shapes, `Intersection()` keeps the region
 they all share, `Difference()` removes `clip` from `subject` and
-`Exclusion()` keeps the region covered by exactly one of the two. The
-inputs are flattened to polygons (curves are sampled finely) and clipped
-with the 'polyclip' package, so the result is made of straight segments.
-Install 'polyclip' to use these classes.
+`Exclusion()` keeps the region covered by exactly one of the two. As
+upstream's skia-pathops result, the outline is made of pieces of the
+input curves, cut where they cross.
 
 ## Usage
 

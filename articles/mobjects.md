@@ -84,12 +84,12 @@ eyes <- VGroup(Dot(c(-0.5, 0.4, 0)), Dot(c(0.5, 0.4, 0)))
 mouth <- Arc(radius = 0.8, start_angle = PI + 0.6, angle = PI - 1.2, color = YELLOW)
 face <- VGroup(Circle(radius = 1.5, color = YELLOW), eyes, mouth)$scale(1.5)
 print_family(face)
-#>  VGroup 46172af698d31220a0-10
-#>   Circle 46172af698d31220a0-9
-#>   VGroup 46172af698d31220a0-7
-#>       Dot 46172af698d31220a0-5
-#>       Dot 46172af698d31220a0-6
-#>   Arc 46172af698d31220a0-8
+#>  VGroup 46492af6a05016d3c0-10
+#>   Circle 46492af6a05016d3c0-9
+#>   VGroup 46492af6a05016d3c0-7
+#>       Dot 46492af6a05016d3c0-5
+#>       Dot 46492af6a05016d3c0-6
+#>   Arc 46492af6a05016d3c0-8
 length(face$submobjects)
 #> [1] 3
 length(face$get_family())
@@ -1068,9 +1068,9 @@ plot(catalog(list(
 [`Difference()`](https://adamrsophie.github.io/manimR/reference/boolean_ops.md)
 and
 [`Exclusion()`](https://adamrsophie.github.io/manimR/reference/boolean_ops.md)
-combine shapes the way a drawing program does. They need the suggested
-‘polyclip’ package. The result is a new VMobject made of straight
-segments (curves are sampled finely), and it takes the usual style
+combine shapes the way a drawing program does. As upstream’s
+skia-pathops result, the outline is made of pieces of the input curves
+cut where they cross, and the new VMobject takes the usual style
 arguments.
 
 ``` r

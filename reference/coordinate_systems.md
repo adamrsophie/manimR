@@ -130,7 +130,7 @@ CoordinateSystem(
 
 - light_source:
 
-  Light direction; stored, but the upstream axis sheen is not applied.
+  Light direction; every axis piece has a sheen of 0.2 along it.
 
 - depth, gloss:
 
