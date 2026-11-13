@@ -101,10 +101,8 @@
   shows a live preview in an R graphics device. Where the device reports
   no mouse or key events (as on macOS), the window opens in the browser
   through httpuv and reports pyglet’s events, wheel and key releases
-  included. Surface normals are computed in single precision as on the
-  GPU, so a sphere’s pole takes the shader’s fallback normal where
-  upstream’s does. Where an OpenGL class differs from its Cairo
-  counterpart, it follows upstream’s OpenGL class:
+  included. Where an OpenGL class differs from its Cairo counterpart, it
+  follows upstream’s OpenGL class:
   [`OpenGLArrow()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
   is a filled shape,
   [`OpenGLLine()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)

@@ -845,15 +845,15 @@ writeLines(c(
   '</svg>'), svg_file)
 house <- SVGMobject(svg_file, height = 4)
 print_family(house)
-#>  SVGMobject 3d062af7812517d978-523
-#>   Rectangle 3d062af7812517d978-528
-#>   Polygon 3d062af7812517d978-531
-#>   Rectangle 3d062af7812517d978-533
-#>   Circle 3d062af7812517d978-536
-#>   Circle 3d062af7812517d978-538
-#>   Line 3d062af7812517d978-540
-#>   VMobject 3d062af7812517d978-542
-#>   VMobjectFromSVGPath 3d062af7812517d978-545
+#>  SVGMobject 3d602af77db01898e0-523
+#>   Rectangle 3d602af77db01898e0-528
+#>   Polygon 3d602af77db01898e0-531
+#>   Rectangle 3d602af77db01898e0-533
+#>   Circle 3d602af77db01898e0-536
+#>   Circle 3d602af77db01898e0-538
+#>   Line 3d602af77db01898e0-540
+#>   VMobject 3d602af77db01898e0-542
+#>   VMobjectFromSVGPath 3d602af77db01898e0-545
 ```
 
 By default the result is centered and scaled to `height = 2`; pass
