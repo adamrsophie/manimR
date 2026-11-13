@@ -702,7 +702,8 @@ test_that("OpenGLTexturedSurface samples its image as the textured_surface shade
     img[1, 2, 2] <- 255
     img[2, 1, 3] <- 255
     img[2, 2, 1:3] <- 255
-    tex <- OpenGLTexturedSurface(plane, img)
+    # Upstream sets a textured surface's gloss and shadow itself.
+    tex <- OpenGLTexturedSurface(plane, img, gloss = 0, shadow = 0)
     s$add(tex)
     r$update_frame(s)
     a <- r$get_raw_frame_buffer_object_data()
@@ -782,4 +783,43 @@ test_that("an OpenGLSurface draws the colors its animations give it", {
     expect_equal(col[nrow(col), ], expected(c(1, 1, 1)), tolerance = 1e-9)
     expect_false(isTRUE(all.equal(col[1, ], col[nrow(col), ])))
   })
+})
+
+test_that("the software shaders draw the frames of upstream's OpenGL renderer", {
+  # Frames from data-raw/opengl_oracle.py (upstream on a GPU, 160 x 90).
+  oracle <- function(name) {
+    a <- png::readPNG(testthat::test_path("fixtures", paste0("opengl_", name, ".png"))) * 255
+    round(a)
+  }
+  frame <- function(mobjects) {
+    tempconfig(list(pixel_width = 160, pixel_height = 90), {
+      r <- OpenGLRenderer()
+      s <- Scene$new(renderer = r)
+      on.exit(r$close_device(), add = TRUE)
+      for (m in mobjects) s$add(m)
+      r$update_frame(s)
+      r$get_raw_frame_buffer_object_data()
+    })
+  }
+  surf <- function(f, ur, vr, res, color = GREY, gloss = 0.3, shadow = 0.4) {
+    OpenGLSurface(f, u_range = ur, v_range = vr, resolution = res, color = color, gloss = gloss, shadow = shadow)
+  }
+  far <- surf(function(u, v) c(u, v, 0), c(-1, 1), c(-1, 1), c(4, 4), GREEN, 0, 0)
+  near <- surf(function(u, v) c(u, v, 1), c(-1, 1), c(-1, 1), c(4, 4), RED, 0, 0)
+  expect_lte(max(abs(frame(list(far, near)) - oracle("planes"))), 1)
+  tilted <- surf(function(u, v) c(u, v, 0.5 * u), c(-2, 2), c(-1.5, 1.5), c(5, 5), BLUE, 0.8, 0.5)
+  expect_lte(max(abs(frame(list(tilted)) - oracle("tilted"))), 1)
+  plane <- surf(function(u, v) c(u, v, 0), c(-2, 2), c(-2, 2), c(101, 101), GREY, 0, 0)
+  textured <- OpenGLTexturedSurface(plane, testthat::test_path("fixtures", "opengl_texture.png"))
+  expect_lte(max(abs(frame(list(textured)) - oracle("textured"))), 1)
+  dot <- OpenGLPMobject(stroke_width = 40, color = RED)
+  dot$add_points(rbind(c(0, 0, 0)), color = RED)
+  cloud <- DotCloud(radius = 1.5, density = 3, color = BLUE)$make_3d()$shift(RIGHT * 3)
+  expect_lte(max(abs(frame(list(dot, cloud)) - oracle("dots"))), 1)
+  # Near the sphere's front pole the vertex normals nearly cancel, and the
+  # GPU's single precision interpolation sets their direction.
+  sphere <- surf(function(u, v) 2 * c(cos(u) * sin(v), sin(u) * sin(v), -cos(v)), c(0, TAU), c(0, PI), c(33, 17), BLUE)
+  d <- apply(abs(frame(list(sphere)) - oracle("sphere")), 1:2, max)
+  expect_lte(sum(d > 2), 40)
+  expect_lte(max(d[-(40:50), ]), 1)
 })

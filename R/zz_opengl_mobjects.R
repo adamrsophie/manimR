@@ -265,9 +265,11 @@ OpenGLTexturedSurfaceClass <- R6::R6Class("OpenGLTexturedSurface", inherit = Ope
         self$num_textures <- 2
       }
       # A surface's resolution field counts faces; OpenGLSurface() takes points.
+      # Upstream copies the surface's gloss and then OpenGLSurface's
+      # initializer sets its own defaults over it, so the gloss and shadow
+      # are 0.3 and 0.4 unless given here.
       super$initialize(uv_surface$uv_func, u_range = uv_surface$u_range, v_range = uv_surface$v_range,
-                       resolution = uv_surface$resolution + 1, gloss = uv_surface$gloss %||% 0.3,
-                       shadow = uv_surface$shadow %||% 0.4, ...)
+                       resolution = uv_surface$resolution + 1, ...)
       # The faces take the surface's current shape, then the image's colors.
       for (k in seq_along(self$list_of_faces)) {
         if (k <= length(uv_surface$list_of_faces)) {

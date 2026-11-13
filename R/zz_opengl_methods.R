@@ -700,9 +700,40 @@ opengl_surface_points <- function(surface) {
   eps <- surface$epsilon %||% 1e-5
   ur <- surface$u_range
   vr <- surface$v_range
+  # Upstream evaluates uv_func at u + epsilon and v + epsilon and moves those
+  # points with the surface. When the grid is still an affine image of
+  # uv_func's grid, the same map gives the nudged points exactly.
+  exact <- opengl_surface_uv_grids(surface, nu, nv, eps)
+  if (!is.null(exact)) {
+    X <- cbind(exact[[1]], 1)
+    Y <- flat(grid)
+    A <- qr.coef(qr(X), Y)
+    A[is.na(A)] <- 0
+    if (all(is.finite(A)) && max(abs(X %*% A - Y)) <= 1e-7 * max(1, abs(Y))) {
+      return(list(Y, cbind(exact[[2]], 1) %*% A, cbind(exact[[3]], 1) %*% A, resolution = c(nu, nv)))
+    }
+  }
   du <- grid + eps * deriv(1, (ur[2] - ur[1]) / (nu - 1))
   dv <- grid + eps * deriv(2, (vr[2] - vr[1]) / (nv - 1))
   list(flat(grid), flat(du), flat(dv), resolution = c(nu, nv))
+}
+
+# uv_func's points on the grid and nudged by epsilon along u and along v,
+# in upstream's order (v varying fastest), kept on the surface.
+opengl_surface_uv_grids <- function(surface, nu, nv, eps) {
+  f <- surface$uv_func
+  if (!is.function(f) || nu < 2 || nv < 2) return(NULL)
+  key <- c(nu, nv, eps, surface$u_range, surface$v_range)
+  cached <- surface$.uv_grids
+  if (!is.null(cached) && identical(cached$key, key)) return(cached$grids)
+  u <- rep(seq(surface$u_range[1], surface$u_range[2], length.out = nu), each = nv)
+  v <- rep(seq(surface$v_range[1], surface$v_range[2], length.out = nv), times = nu)
+  at <- function(du, dv) {
+    t(vapply(seq_along(u), function(k) as.numeric(f(u[k] + du, v[k] + dv))[1:3], numeric(3)))
+  }
+  grids <- tryCatch(list(at(0, 0), at(eps, 0), at(0, eps)), error = function(e) NULL)
+  surface$.uv_grids <- list(key = key, grids = grids)
+  grids
 }
 
 OPENGL_SURFACE_METHODS <- list(

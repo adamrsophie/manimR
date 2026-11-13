@@ -208,7 +208,7 @@ software_raster_triangle <- function(c3, W, H) {
   rows <- (r0 + 1):r1
   # Nudged as in software_fragments(), so a shared edge is drawn once.
   px <- rep(cols - 0.5 + 1e-7, each = length(rows))
-  py <- rep(rows - 0.5 + 1e-11, times = length(cols))
+  py <- rep(rows - 0.5 - 1e-11, times = length(cols))
   e <- function(i, j) ((sx[j] - sx[i]) * (py - sy[i]) - (sy[j] - sy[i]) * (px - sx[i])) / area
   l0 <- e(2, 3); l1 <- e(3, 1); l2 <- e(1, 2)
   inside <- l0 > 0 & l1 > 0 & l2 > 0
@@ -279,10 +279,10 @@ software_fragments <- function(sx, sy, tri, W, H) {
   nh <- rep(nh, n)
   col <- c0[id] + k %/% nh + 1
   row <- r0[id] + k %% nh + 1
-  # The sample point is nudged right, and much less down, so that a center
+  # The sample point is nudged right, and much less up, so that a center
   # exactly on a shared edge lies inside one triangle only.
   px <- col - 0.5 + 1e-7
-  py <- row - 0.5 + 1e-11
+  py <- row - 0.5 - 1e-11
   e <- function(i, j) {
     ((X[id, j] - X[id, i]) * (py - Y[id, i]) - (Y[id, j] - Y[id, i]) * (px - X[id, i])) / area[id]
   }
@@ -425,9 +425,12 @@ software_draw_surface <- function(fbo, mobject, uniforms) {
   tri <- matrix(as.integer(mobject$get_shader_vert_indices()) + 1L, ncol = 3, byrow = TRUE)
   if (!nrow(tri)) return(invisible(NULL))
   u <- c(uniforms, mobject$get_shader_uniforms())
+  # Vertex attributes reach the GPU as float32, which matters for the
+  # normal: the nudged points are only epsilon away.
+  P <- as_float32(P)
   xyz <- software_frame_points(P, u)
-  a <- get("du_point", envir = sd) - P
-  b <- get("dv_point", envir = sd) - P
+  a <- as_float32(get("du_point", envir = sd)) - P
+  b <- as_float32(get("dv_point", envir = sd)) - P
   cross <- function(x, y) cbind(x[, 2] * y[, 3] - x[, 3] * y[, 2], x[, 3] * y[, 1] - x[, 1] * y[, 3],
                                 x[, 1] * y[, 2] - x[, 2] * y[, 1])
   cp <- cross(a, b)
