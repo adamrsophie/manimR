@@ -39,7 +39,7 @@ UseZoomedScene <- R6::R6Class("UseZoomedScene", inherit = ZoomedScene, public = 
   }))
 # The last frame as a PNG file in the session's temporary directory.
 render(UseZoomedScene, quality = "l", format = "png", media_dir = tempdir())
-#> INFO File ready at '/tmp/RtmpIvY9sz/images/manimR/UseZoomedScene_manimR_v0.1.0.png'
+#> INFO File ready at '/tmp/Rtmp5ln2ZV/images/manimR/UseZoomedScene_manimR_v0.1.0.png'
 #> INFO Rendered UseZoomedScene
 #> Played 3 animations
 if (FALSE) { # \dontrun{
