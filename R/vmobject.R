@@ -70,6 +70,9 @@ VMobjectClass <- R6::R6Class("VMobject", inherit = MobjectClass, lock_objects = 
     shade_in_3d = FALSE,
     tolerance_for_point_equality = 1e-6,
     n_points_per_cubic_curve = 4,
+    # TRUE when made under the OpenGL renderer, whose points upstream keeps
+    # as quadratic curves; manimR stores them raised to cubic ones.
+    opengl_quadratic = FALSE,
     init_fill_color = NULL,
     init_stroke_color = NULL,
     init_background_stroke_color = NULL,
@@ -103,6 +106,7 @@ VMobjectClass <- R6::R6Class("VMobject", inherit = MobjectClass, lock_objects = 
       self$close_new_points <- close_new_points
       self$make_smooth_after_applying_functions <- make_smooth_after_applying_functions
       self$shade_in_3d <- shade_in_3d
+      self$opengl_quadratic <- identical(cfg("renderer"), RendererType$OPENGL)
       super$initialize(color = color_items(color)[[1]], ...)
     },
 

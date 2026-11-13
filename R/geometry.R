@@ -196,6 +196,12 @@ ArcClass <- R6::R6Class("Arc", inherit = TipableVMobjectClass, lock_objects = FA
     },
     init_points = function() self$generate_points(),
     set_pre_positioned_points = function() {
+      # Under the OpenGL renderer, upstream's Arc.init_points() makes
+      # num_components quadratic pieces; manimR raises them to cubic curves.
+      if (identical(cfg("renderer"), RendererType$OPENGL)) {
+        return(self$set_points(opengl_cubic_from_quadratic(
+          opengl_quadratic_arc_points(self$angle, self$start_angle, self$num_components))))
+      }
       a <- seq(self$start_angle, self$start_angle + self$angle, length.out = self$num_components)
       anchors <- cbind(cos(a), sin(a), 0)
       d_theta <- self$angle / (self$num_components - 1)

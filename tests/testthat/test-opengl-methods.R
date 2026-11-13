@@ -910,6 +910,23 @@ test_that("the software shaders draw the frames of upstream's OpenGL renderer", 
     out
   })
   expect_lte(max(abs(meshes - oracle("vmesh"))), 2)
+  # Shapes made under the OpenGL renderer have upstream's OpenGL geometry
+  # (a circle of 9 quadratic arcs), drawn without conversion.
+  native <- tempconfig(list(renderer = "opengl", pixel_width = 160, pixel_height = 90), {
+    r <- OpenGLRenderer()
+    s <- Scene$new(renderer = r)
+    on.exit(r$close_device(), add = TRUE)
+    c1 <- Circle(radius = 1.5, color = WHITE, fill_color = RED, fill_opacity = 0.7, stroke_width = 6)
+    expect_equal(nrow(opengl_quadratic_points(c1)), 27)
+    s$add(c1$shift(c(-4, 0, 0)),
+          Square(side_length = 2.5, fill_color = GREEN, fill_opacity = 1, stroke_color = YELLOW,
+                 stroke_width = 8)$rotate(PI / 7),
+          Triangle(fill_color = BLUE, fill_opacity = 0.6, stroke_width = 4)$shift(c(4, 1, 0)),
+          Arc(radius = 1.2, start_angle = 0.3, angle = 4, stroke_width = 10, color = "#FF862F")$shift(c(4, -2, 0)))
+    r$update_frame(s)
+    r$get_raw_frame_buffer_object_data()
+  })
+  expect_lte(max(abs(native - oracle("vnative"))), 2)
   # A rotated parent mesh with a child, a manim_coords mesh and a test
   # shader mesh, over a filled square with the camera turned.
   meshes2 <- tempconfig(list(pixel_width = 160, pixel_height = 90), {

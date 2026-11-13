@@ -193,6 +193,16 @@ def vmesh2(r):
     return [parent, coords, Mesh(Shader(r.context, name="test"), corner)]
 frame("vmesh2", lambda: [from_cubic(cubic_polygon(np.array([[-2.0, -2, 0], [2, -2, 0], [2, 2, 0], [-2, 2, 0]])), fill_color=BLUE, fill_opacity=1, stroke_width=0)],
       lambda cam: cam.set_euler_angles(theta=-30 * np.pi / 180, phi=50 * np.pi / 180), meshes=vmesh2)
+def vnative():
+    # Shapes built under the OpenGL renderer, with upstream's own geometry.
+    from manim.mobject.geometry.arc import Arc, Circle
+    from manim.mobject.geometry.polygram import Square, Triangle
+    c = Circle(radius=1.5, color=WHITE, fill_color=RED, fill_opacity=0.7, stroke_width=6).shift(np.array([-4.0, 0, 0]))
+    sq = Square(side_length=2.5, fill_color=GREEN, fill_opacity=1, stroke_color=YELLOW, stroke_width=8).rotate(np.pi / 7)
+    t = Triangle(fill_color=BLUE, fill_opacity=0.6, stroke_width=4).shift(np.array([4.0, 1, 0]))
+    a = Arc(radius=1.2, start_angle=0.3, angle=4.0, stroke_width=10, color="#FF862F").shift(np.array([4.0, -2, 0]))
+    return [c, sq, t, a]
+frame("vnative", vnative)
 # Each frame as a PNG, rows as OpenGL reads them (bottom row first).
 from PIL import Image
 for name, a in out.items():

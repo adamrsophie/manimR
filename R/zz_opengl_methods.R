@@ -29,9 +29,29 @@ opengl_quadratic_points <- function(vmob) {
   n <- nrow(pts) - nrow(pts) %% 4
   if (n == 0) return(matrix(0, 0, 3))
   i <- seq(1, n, by = 4)
-  q <- get_quadratic_approximation_of_cubic(pts[i, , drop = FALSE], pts[i + 1, , drop = FALSE],
-                                            pts[i + 2, , drop = FALSE], pts[i + 3, , drop = FALSE])
-  q
+  a0 <- pts[i, , drop = FALSE]
+  h0 <- pts[i + 1, , drop = FALSE]
+  h1 <- pts[i + 2, , drop = FALSE]
+  a1 <- pts[i + 3, , drop = FALSE]
+  q <- get_quadratic_approximation_of_cubic(a0, h0, h1, a1)
+  if (!isTRUE(vmob$opengl_quadratic)) return(q)
+  # Made under the OpenGL renderer: a cubic raised from a quadratic
+  # (handles two thirds of the way to the quadratic's handle) is that one
+  # quadratic, as upstream's OpenGL points hold it.
+  qa <- a0 + 1.5 * (h0 - a0)
+  qb <- a1 + 1.5 * (h1 - a1)
+  scale <- pmax(1, abs(a0), abs(a1))
+  raised <- which(apply(abs(qa - qb) <= 1e-9 * scale, 1, all))
+  if (!length(raised)) return(q)
+  keep <- rep(2L, length(i))
+  keep[raised] <- 1L
+  out <- matrix(0, 3 * sum(keep), 3)
+  start <- cumsum(c(0L, 3L * keep))[seq_along(i)]
+  for (k in seq_along(i)) {
+    rows <- start[k] + seq_len(3L * keep[k])
+    out[rows, ] <- if (keep[k] == 1L) rbind(a0[k, ], (qa[k, ] + qb[k, ]) / 2, a1[k, ]) else q[6 * (k - 1) + 1:6, ]
+  }
+  out
 }
 
 LINE_JOINT_TYPE_VALUES <- c(auto = 0, round = 1, bevel = 2, miter = 3)
