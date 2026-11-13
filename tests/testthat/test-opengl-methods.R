@@ -752,3 +752,34 @@ test_that("OpenGL point clouds run the true_dot shader", {
     expect_lte(max(abs(as.numeric(a[45, 80, 1:3]) - color_to_rgb(GREEN) * 255)), 1)
   })
 })
+
+test_that("an OpenGLSurface draws the colors its animations give it", {
+  tempconfig(list(pixel_width = 160, pixel_height = 90), {
+    r <- OpenGLRenderer()
+    s <- Scene$new(renderer = r)
+    on.exit(r$close_device(), add = TRUE)
+    p <- OpenGLSurface(function(u, v) c(u, v, 0), u_range = c(-1, 1), v_range = c(-1, 1), resolution = c(3, 3))
+    p$set_color(WHITE)
+    p$gloss <- 0
+    p$shadow <- 0
+    s$add(p)
+    anim <- FadeIn(p)
+    anim$begin()
+    anim$interpolate(0.5)
+    r$update_frame(s)
+    a <- r$get_raw_frame_buffer_object_data()
+    expect_equal(as.numeric(a[45, 80, 1]), 127.5, tolerance = 1.5)
+    # A colorscale with axes colors each vertex by its z coordinate.
+    ax <- ThreeDAxes()
+    cs <- OpenGLSurface(function(u, v) c(u, v, u), u_range = c(-1, 1), v_range = c(-1, 1), resolution = c(5, 5),
+                        axes = ax, colorscale = c(RED, BLUE))
+    col <- get("color", envir = cs$get_shader_data())
+    z <- ax$z_range
+    expected <- function(point) {
+      color_to_rgba(interpolate_color(RED, BLUE, (ax$point_to_coords(point)[3] - z[1]) / (z[2] - z[1])))
+    }
+    expect_equal(col[1, ], expected(c(-1, -1, -1)), tolerance = 1e-9)
+    expect_equal(col[nrow(col), ], expected(c(1, 1, 1)), tolerance = 1e-9)
+    expect_false(isTRUE(all.equal(col[1, ], col[nrow(col), ])))
+  })
+})

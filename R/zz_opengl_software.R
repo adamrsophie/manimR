@@ -397,6 +397,22 @@ software_rasterize <- function(fbo, gl, tri, depth_test, shade, discard = NULL) 
   layer$draw()
 }
 
+# The fill color of each vertex of a surface's grid, from the face it
+# starts (the last row and column from the faces before them). manimR's
+# animations change a surface's faces, where upstream changes its rgbas.
+software_surface_face_rgbas <- function(mobject, n) {
+  faces <- mobject$list_of_faces
+  ui <- vapply(faces, function(f) as.numeric(f$u_index %||% NA), 0)
+  vi <- vapply(faces, function(f) as.numeric(f$v_index %||% NA), 0)
+  if (!length(faces) || anyNA(ui) || anyNA(vi)) return(NULL)
+  nfu <- max(ui) + 1
+  nfv <- max(vi) + 1
+  if ((nfu + 1) * (nfv + 1) != n) return(NULL)
+  rgba <- t(vapply(faces, function(f) f$get_fill_rgbas()[1, ], numeric(4)))
+  k <- seq_len(n) - 1
+  rgba[match(pmin(k %/% (nfv + 1), nfu - 1) * nfv + pmin(k %% (nfv + 1), nfv - 1), ui * nfv + vi), , drop = FALSE]
+}
+
 # The surface and textured_surface shaders: vert.glsl places each vertex
 # and rotates the normal of its du and dv neighbors; frag.glsl lights the
 # interpolated color at the interpolated point and normal.
@@ -421,6 +437,12 @@ software_draw_surface <- function(fbo, mobject, uniforms) {
   normal <- normal / sqrt(rowSums(normal * normal))
   light <- as.numeric(u$light_source_position)
   textured <- inherits(mobject, "OpenGLTexturedSurface")
+  if (!length(mobject$colorscale) || is.null(mobject$axes) || textured) {
+    faces <- software_surface_face_rgbas(mobject, nrow(P))
+    if (!is.null(faces)) {
+      if (textured) assign("opacity", faces[, 4, drop = FALSE], envir = sd) else assign("color", faces, envir = sd)
+    }
+  }
   shade <- function(at) {
     n <- at(normal)
     n <- n / sqrt(rowSums(n * n))

@@ -773,7 +773,13 @@ OPENGL_SURFACE_METHODS <- list(
         assign("point", p[[1]], envir = sd)
         assign("du_point", p[[2]], envir = sd)
         assign("dv_point", p[[3]], envir = sd)
-        self$fill_in_shader_color_info(sd)
+        if (length(self$colorscale) && !is.null(self$axes) && !inherits(self, "OpenGLTexturedSurface")) {
+          # Computed once, as upstream keeps color_by_val.
+          if (is.null(self$color_by_val)) self$color_by_val <- opengl_color_by_value(self, p[[1]])
+          assign("color", self$color_by_val, envir = sd)
+        } else {
+          self$fill_in_shader_color_info(sd)
+        }
       }
       sd
     },
@@ -790,6 +796,32 @@ OPENGL_SURFACE_METHODS <- list(
     }
   )
 )
+
+# Upstream's OpenGLSurface._get_color_by_value(): the color of each vertex
+# from its coordinate along colorscale_axis, between pivots spread evenly
+# over the axes' z range or given with the colors as (color, pivot) pairs.
+opengl_color_by_value <- function(surface, s_points) {
+  scale <- surface$colorscale
+  if (is.list(scale) && length(scale) && length(scale[[1]]) == 2 && !inherits(scale[[1]], "ManimColor")) {
+    colors <- lapply(scale, `[[`, 1)
+    pivots <- vapply(scale, function(x) as.numeric(x[[2]]), numeric(1))
+  } else {
+    colors <- as.list(unlist(scale))
+    z <- surface$axes$z_range
+    freq <- (z[2] - z[1]) / (length(colors) - 1)
+    # numpy's arange(z[1], z[2] + freq, freq).
+    pivots <- z[1] + freq * (seq_len(ceiling((z[2] + freq - z[1]) / freq)) - 1)
+  }
+  opacity <- surface$get_fill_opacity() %||% 1
+  t(apply(s_points, 1, function(point) {
+    value <- surface$axes$point_to_coords(point)[surface$colorscale_axis + 1]
+    if (value <= pivots[1]) return(color_to_rgba(colors[[1]], opacity))
+    if (value >= pivots[length(pivots)]) return(color_to_rgba(colors[[length(colors)]], opacity))
+    i <- which(pivots > value)[1]
+    index <- min(max((value - pivots[i - 1]) / (pivots[i] - pivots[i - 1]), 0), 1)
+    color_to_rgba(interpolate_color(colors[[i - 1]], colors[[i]], index), opacity)
+  }))
+}
 
 # OpenGLTexturedSurface: image coordinates of the grid (u from 0 to 1,
 # v from 1 to 0, as upstream flips the image vertically) and the opacity.
@@ -1036,6 +1068,7 @@ OPENGL_CLASS_METHODS$OpenGLSurface <- list(public = list(
   axes = NULL,
   colorscale = NULL,
   colorscale_axis = 2,
+  color_by_val = NULL,
   # Upstream's arguments: resolution counts grid points (one more than the
   # faces along u and v), and the surface is one color without outlines.
   # ponytail: upstream's default is 101 by 101 points for the GPU; grid draws
