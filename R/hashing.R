@@ -140,15 +140,15 @@ snapshot_camera <- function(cam, memo = NULL) {
 # SHA-256 digest of the renderer backend, the segment encoder fingerprint,
 # the camera, the animations (in a stable order), the mobjects and any extra
 # renderer state.
-get_hash_from_play_call <- function(scene, camera, animations, mobjects, backend = "cairo",
+get_hash_from_play_call <- function(scene_object, camera_object, animations_list, current_mobjects_list, backend = "cairo",
                                     encoder_fingerprint = "none", renderer_state = list()) {
   if (!backend %in% c("cairo", "opengl")) stop("Unsupported cache backend: ", backend, call. = FALSE)
   if (!nzchar(encoder_fingerprint)) stop("An encoder fingerprint is required for cache identity.", call. = FALSE)
   memo <- hash_memo()
-  camera_json <- digest::digest(snapshot_camera(camera, memo), algo = "sha256")
-  anim_order <- order(vapply(animations, function(a) class(a)[1], ""), method = "radix")
-  anims <- vapply(animations[anim_order], function(a) digest::digest(hash_snapshot(a, memo = memo), algo = "sha256"), "")
-  mobs <- vapply(mobjects, function(m) digest::digest(hash_snapshot(m, memo = memo), algo = "sha256"), "")
+  camera_json <- digest::digest(snapshot_camera(camera_object, memo), algo = "sha256")
+  anim_order <- order(vapply(animations_list, function(a) class(a)[1], ""), method = "radix")
+  anims <- vapply(animations_list[anim_order], function(a) digest::digest(hash_snapshot(a, memo = memo), algo = "sha256"), "")
+  mobs <- vapply(current_mobjects_list, function(m) digest::digest(hash_snapshot(m, memo = memo), algo = "sha256"), "")
   state <- digest::digest(hash_snapshot(renderer_state, memo = memo), algo = "sha256")
   parts <- list(backend = backend, encoder = encoder_fingerprint, camera = camera_json, animations = anims,
                 mobjects = mobs, renderer = state)

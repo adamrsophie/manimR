@@ -72,7 +72,7 @@ PolyhedronClass <- R6::R6Class("Polyhedron", inherit = VGroupClass, lock_objects
       self$faces <- self$create_faces(self$face_coords)
       self$graph <- do.call(Graph, c(list(self$vertex_indices, self$edges, layout = self$layout), self$graph_config))
       self$add(self$faces, self$graph)
-      self$add_updater(function(m) m$update_faces())
+      self$add_updater(function(m) m$update_faces(m))
     },
     # Cyclic pairs of each face, as upstream: an edge shared by two faces
     # is listed once per face, and Graph() keeps one edge per direction.
@@ -84,8 +84,9 @@ PolyhedronClass <- R6::R6Class("Polyhedron", inherit = VGroupClass, lock_objects
       VGroup(lapply(face_coords, function(fc) do.call(Polygon, c(list(fc), self$faces_config))))
     },
     # Updater: keep the faces on the current vertex positions. Equivalent to
-    # upstream's match_points with freshly built polygons, without building them.
-    update_faces = function() {
+    # upstream's match_points with freshly built polygons, without building
+    # them. As upstream, the mobject `m` the updater passes is not used.
+    update_faces = function(m = NULL) {
       coords <- self$extract_face_coords()
       for (i in seq_along(coords)) {
         fc <- coords[[i]]

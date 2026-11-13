@@ -609,8 +609,11 @@ flatten_subpaths <- function(xy, split, px_per_unit, tol = 0.25, point_tol = 1e-
 # Family members of a list of mobjects, deduplicated, optionally z sorted.
 #' @rdname list_helpers
 #' @export
-extract_mobject_family_members <- function(mobject_list, use_z_index = FALSE, only_those_with_points = FALSE) {
-  fam <- unlist(lapply(mobject_list, function(m) {
+# `mobjects` is the parameter of manim.utils.family, `mobject_list` that of
+# manim.utils.family_ops.
+extract_mobject_family_members <- function(mobjects = mobject_list, use_z_index = FALSE, only_those_with_points = FALSE,
+                                           mobject_list = NULL) {
+  fam <- unlist(lapply(mobjects, function(m) {
     if (only_those_with_points) m$family_members_with_points() else m$get_family()
   }), recursive = FALSE)
   if (length(fam) == 0) return(list())

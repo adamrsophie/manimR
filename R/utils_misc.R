@@ -86,10 +86,11 @@ restore_type <- function(out, ...) {
 #' * `flatten_iterable_parameters(args)`: the elements of `args`, with those
 #'   that are themselves lists or vectors of several elements spliced in (one
 #'   level).
-#' * `extract_mobject_family_members(mobject_list, use_z_index,
+#' * `extract_mobject_family_members(mobjects, use_z_index,
 #'   only_those_with_points)`: every member of the families of the mobjects,
 #'   once each, optionally sorted by `z_index` and without the members that
-#'   have no points.
+#'   have no points. `mobject_list` (the name in `manim.utils.family_ops`)
+#'   is accepted for `mobjects`.
 #'   `restructure_list_to_exclude_certain_family_members(mobject_list,
 #'   to_remove)` drops `to_remove` and their family from the list; a group
 #'   that holds one of them is replaced by its remaining members.
@@ -98,7 +99,7 @@ restore_type <- function(out, ...) {
 #'   vector or list.
 #' @param property_func Function giving the property of an item.
 #' @param args A list.
-#' @param mobject_list,to_remove Lists of mobjects.
+#' @param mobjects,mobject_list,to_remove Lists of mobjects.
 #' @param use_z_index Sort the result by `z_index`.
 #' @param only_those_with_points Keep only mobjects that have points.
 #' @param n Window size.

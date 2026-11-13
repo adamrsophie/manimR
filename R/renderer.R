@@ -199,7 +199,7 @@ RendererClass <- R6::R6Class("Renderer", lock_objects = FALSE,
       self$close_device()
       stop(structure(class = c("manim_frame_found", "condition"), list(message = "frame", call = NULL, frame = frame)))
     },
-    render = function(scene, time, moving_mobjects) {
+    render = function(scene, time, moving_mobjects = NULL) {
       if (self$skip_animations) return(invisible(self))
       self$update_frame(scene, moving_mobjects)
       self$add_frame(self$get_frame())

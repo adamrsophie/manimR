@@ -525,3 +525,14 @@ test_that("mob[[i]] <- value with a position replaces a group member", {
   g[["name"]] <- "renamed"
   expect_identical(g$name, "renamed")
 })
+
+test_that("renamed parameters and defaults follow upstream's signatures", {
+  sq <- Square()
+  expect_length(extract_mobject_family_members(mobjects = list(sq)), 1)
+  poly <- Tetrahedron()
+  expect_identical(poly$update_faces(poly), poly)
+  expect_named(formals(get_hash_from_play_call)[1:4], c("scene_object", "camera_object", "animations_list", "current_mobjects_list"))
+  render_args <- formals(RendererClass$public_methods$render)
+  expect_true("moving_mobjects" %in% names(render_args))
+  expect_null(render_args$moving_mobjects)
+})
