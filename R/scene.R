@@ -119,6 +119,17 @@ Scene <- R6::R6Class("Scene", lock_objects = FALSE,
       extract_mobject_family_members(self$mobjects, use_z_index = self$camera$use_z_index)
     },
     add = function(...) {
+      # Meshes (Object3D) go to the meshes the OpenGL renderer draws after
+      # the mobjects, as upstream's add() does under that renderer.
+      args <- list(...)
+      is_mesh <- vapply(args, function(x) inherits(x, "Object3D"), logical(1))
+      if (any(is_mesh)) {
+        for (mesh in args[is_mesh]) {
+          self$meshes <- c(Filter(function(m) !identical(m, mesh), self$meshes), list(mesh))
+        }
+        if (all(is_mesh)) return(invisible(self))
+        return(do.call(self$add, args[!is_mesh]))
+      }
       mobs <- flatten_mobjects(list(...))
       mobs <- c(mobs, self$foreground_mobjects)
       self$restructure_mobjects(mobs)
@@ -142,6 +153,13 @@ Scene <- R6::R6Class("Scene", lock_objects = FALSE,
       invisible(self)
     },
     remove = function(...) {
+      args <- list(...)
+      is_mesh <- vapply(args, function(x) inherits(x, "Object3D"), logical(1))
+      if (any(is_mesh)) {
+        self$meshes <- Filter(function(m) !any(vapply(args[is_mesh], identical, logical(1), m)), self$meshes)
+        if (all(is_mesh)) return(invisible(self))
+        return(do.call(self$remove, args[!is_mesh]))
+      }
       mobs <- flatten_mobjects(list(...))
       for (ln in c("mobjects", "foreground_mobjects")) self$restructure_mobjects(mobs, ln, extract_families = FALSE)
       invisible(self)

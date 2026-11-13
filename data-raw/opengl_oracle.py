@@ -19,7 +19,7 @@ from manim.mobject.geometry.polygram import Square
 from manim.utils.color import RED, GREEN, BLUE, WHITE, YELLOW
 
 out = {}
-def frame(name, build, camera=None):
+def frame(name, build, camera=None, meshes=None):
     with tempconfig({"renderer": "opengl", "pixel_width": 160, "pixel_height": 90, "write_to_movie": False,
                      "preview": False, "disable_caching": True}):
         r = OpenGLRenderer()
@@ -28,6 +28,9 @@ def frame(name, build, camera=None):
             s.add(m)
         if camera is not None:
             camera(r.camera)
+        if meshes is not None:
+            for mesh in meshes(r):
+                s.add(mesh)
         r.update_frame(s)
         a = np.frombuffer(r.get_raw_frame_buffer_object_data(), dtype=np.uint8).reshape(90, 160, 4)
         out[name] = a.astype(int).tolist()
@@ -151,6 +154,18 @@ def vcode():
     plane.set_color_by_code("float t = clamp((point.x - 1.0) / 4.0, 0.0, 1.0); if (point.y > 0.0) { color.rgb = vec3(t, 0.0, 1.0 - t); } else { color.r = smoothstep(1.0, 5.0, point.x); }")
     return [sq, plane]
 frame("vcode", vcode)
+def vmesh(r):
+    from manim.renderer.shader import Mesh, Shader
+    colored = np.zeros(3, dtype=[("in_vert", np.float32, (4,)), ("in_color", np.float32, (4,))])
+    colored["in_vert"] = [[-6, -3, 0, 1], [-1, -3, 0, 1], [-3.5, 3, 0, 1]]
+    colored["in_color"] = [[1, 0, 0, 1], [0, 1, 0, 1], [0, 0, 1, 0.5]]
+    plain = np.zeros(4, dtype=[("in_vert", np.float32, (3,))])
+    plain["in_vert"] = [[1, -2, 0], [5, -2, 0], [5, 2, 0], [1, 2, 0]]
+    flat = Shader(r.context, name="default")
+    flat.set_uniform("u_color", (1.0, 0.8, 0.0, 0.75))
+    return [Mesh(Shader(r.context, name="vertex_colors"), colored),
+            Mesh(flat, plain, indices=np.array([0, 1, 2, 0, 2, 3]))]
+frame("vmesh", lambda: [], meshes=vmesh)
 # Each frame as a PNG, rows as OpenGL reads them (bottom row first).
 from PIL import Image
 for name, a in out.items():

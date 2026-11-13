@@ -535,6 +535,61 @@ software_draw_opengl_image <- function(fbo, mobject, uniforms) {
   software_rasterize(fbo, software_gl_position(xyz, u), tri, isTRUE(mobject$depth_test), shade)
 }
 
+# A Mesh whose program is one of upstream's own mesh shaders (the default,
+# manim_coords, vertex_colors and test folders), drawn as those shaders
+# draw: gl_Position from the matrix uniforms (column major, as
+# matrix_to_shader_input() gives them) and the color from u_color or the
+# in_color attribute. Returns FALSE for other programs, whose GLSL is not
+# run. Triangles only; colors are interpolated linearly in the window
+# (exact for the orthographic projection the renderer uses by default).
+software_mesh_folders <- c("default", "manim_coords", "vertex_colors", "test")
+software_mesh_folder <- function(shader) {
+  program <- shader$shader_program
+  for (folder in software_mesh_folders) {
+    dir <- file.path(SHADER_FOLDER, folder)
+    if (identical(program$vertex_shader, shader_file_code(file.path(dir, "vert.glsl"))) &&
+        identical(program$fragment_shader, shader_file_code(file.path(dir, "frag.glsl")))) {
+      return(folder)
+    }
+  }
+  NULL
+}
+software_draw_mesh <- function(fbo, mesh) {
+  folder <- software_mesh_folder(mesh$shader)
+  if (is.null(folder) || !identical(as.integer(mesh$primitive), 4L)) return(FALSE)
+  attrs <- mesh$attributes
+  get_attr <- function(name) if (exists(name, envir = attrs, inherits = FALSE)) as.matrix(get(name, envir = attrs))
+  # An attribute with fewer components than the shader reads is filled
+  # from (0, 0, 0, 1), as OpenGL does.
+  as_vec4 <- function(v) {
+    out <- matrix(c(0, 0, 0, 1), nrow(v), 4, byrow = TRUE)
+    out[, seq_len(ncol(v))] <- v
+    out
+  }
+  uniforms <- mesh$shader$uniforms
+  mat <- function(name) if (is.null(uniforms[[name]])) matrix(0, 4, 4) else matrix(as.numeric(uniforms[[name]]), 4, 4)
+  vert <- get_attr("in_vert")
+  if (is.null(vert) || !nrow(vert)) return(TRUE)
+  v <- as_vec4(vert)
+  if (folder == "default") v[, 4] <- 1
+  if (folder == "test") v[, 3:4] <- rep(c(0, 1), each = nrow(v))
+  transform <- switch(folder,
+    manim_coords = mat("u_projection_matrix") %*% mat("u_model_view_matrix"),
+    test = diag(4),
+    mat("u_projection_matrix") %*% mat("u_view_matrix") %*% mat("u_model_matrix"))
+  clip <- v %*% t(transform)
+  ndc <- clip[, 1:3, drop = FALSE] / clip[, 4]
+  color <- if (folder %in% c("vertex_colors", "test")) as_vec4(get_attr("in_color") %||% matrix(0, nrow(v), 4))
+           else matrix(as.numeric(uniforms$u_color %||% c(0, 0, 0, 0)), 1, 4)
+  idx <- if (length(mesh$indices)) as.integer(mesh$indices) + 1L else seq_len(nrow(v))
+  idx <- idx[seq_len(length(idx) - length(idx) %% 3)]
+  if (!length(idx)) return(TRUE)
+  tri <- matrix(idx, ncol = 3, byrow = TRUE)
+  shade <- function(at, ...) if (nrow(color) == 1) color[rep(1, nrow(at(ndc[, 1, drop = FALSE]))), , drop = FALSE] else at(color)
+  fbo$with_device(function() software_rasterize(fbo, ndc, tri, isTRUE(mesh$use_depth_test), shade))
+  TRUE
+}
+
 # The true_dot shader: geom.glsl puts a square of half side point_radius +
 # anti_alias_width around each point (the radius grown with the point's z),
 # and frag.glsl discards what lies more than half anti_alias_width outside
@@ -1150,7 +1205,7 @@ OpenGLRendererClass <- R6::R6Class("OpenGLRenderer", inherit = RendererClass, lo
       for (obj in scene$meshes) {
         for (mesh in obj$get_meshes()) {
           mesh$set_uniforms(self)
-          mesh$render()
+          if (isTRUE(mesh$skip_render) || !software_draw_mesh(self$frame_buffer_object, mesh)) mesh$render()
         }
       }
       self$animation_elapsed_time <- as.numeric(Sys.time()) - self$animation_start_time
