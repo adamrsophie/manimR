@@ -311,14 +311,16 @@ The shader wrappers run upstream's GLSL rules in software, in the
 order of upstream's <code>get_shader_wrapper_list()</code>: a VMobject's family
 runs the quadratic_bezier_fill and quadratic_bezier_stroke shaders
 (anti aliased fills, and strokes with upstream's joints and ends), an
-<code>OpenGLSurface</code> the surface shader, an <code>OpenGLTexturedSurface</code> the
-textured_surface shader (nearest texel), and an OpenGL point cloud the
+<code>OpenGLSurface</code> the surface shader, an <code>OpenGLTexturedSurface</code> or
+<code>OpenGLImageMobject</code> the textured_surface shader (nearest texel), and an
+OpenGL point cloud the
 true_dot shader. Points are placed as the shaders place them (rotated
 by <code>camera_rotation</code>, scaled by <code>focal_distance / (focal_distance - z)</code>, fixed in frame mobjects in the default frame); triangles are
 rasterized at pixel centers, lit per pixel by upstream's <code>add_light()</code>,
 and with <code>depth_test</code> (on by default for surfaces) tested against and
-written to the framebuffer's depth buffer. Images and other mobjects
-are drawn by a grid camera. <code>config$renderer = "opengl"</code> makes
+written to the framebuffer's depth buffer. A plain <code>ImageMobject</code>, on
+which upstream's OpenGL renderer raises, is drawn by a grid camera.
+<code>config$renderer = "opengl"</code> makes
 scenes use it. <code>get_frame()</code> gives a <code>nativeRaster</code>;
 <code>get_raw_frame_buffer_object_data()</code> the pixels bottom row first, as
 OpenGL reads them.</p></li>
