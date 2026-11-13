@@ -33,6 +33,9 @@ out["surface"] = {"triangle_indices": s.get_triangle_indices().tolist(),
 img = str(Path(tempfile.mkdtemp()) / "img.png")
 Image.fromarray(np.array([[[255, 0, 0], [0, 255, 0]], [[0, 0, 255], [255, 255, 255]]], dtype=np.uint8)).save(img)
 out["textured_im_coords"] = OpenGLTexturedSurface(s, img).get_shader_data()["im_coords"][:3].tolist()
+# The textured surface takes the surface's opacity.
+half = OpenGLSurface(lambda u, v: np.array([u, v, u * v]), u_range=(-1, 1), v_range=(-1, 1), resolution=(3, 3), opacity=0.5)
+out["textured_opacity"] = OpenGLTexturedSurface(half, img).get_shader_data()["opacity"][:, 0].tolist()
 
 out["shader_code_lengths"] = [len(get_shader_code_from_file(Path("surface/vert.glsl"))),
                               len(get_shader_code_from_file(Path("quadratic_bezier_fill/frag.glsl")))]

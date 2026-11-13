@@ -170,15 +170,15 @@ CameraClass <- R6::R6Class("Camera", lock_objects = FALSE,
       invisible(self)
     },
     display_mobject = function(m) {
-      # A face of an OpenGLTexturedSurface with a dark image takes its color
-      # from where this camera sees it.
-      if (!is.null(m$texture_rgbas) && nrow(m$texture_rgbas) > 1) opengl_texture_shade(m, self)
       if (inherits(m, "ImageMobject")) self$display_image_mobject(m)
       else if (inherits(m, "PMobject")) self$display_point_cloud(m)
       else if (is_vmobject(m)) self$display_vectorized(m)
     },
     px_per_unit = function() self$pixel_width / self$get_frame_width(),
     display_vectorized = function(vmobject, ignore_background_image = FALSE) {
+      # A face of an OpenGLTexturedSurface with a dark image takes its color
+      # from where this camera sees it.
+      if (!is.null(vmobject$texture_rgbas) && nrow(vmobject$texture_rgbas) > 1) opengl_texture_shade(vmobject, self)
       paths <- self$vmobject_paths(vmobject)
       if (is.null(paths)) return(invisible(self))
       if (!ignore_background_image && !is.null(vmobject$background_image)) {

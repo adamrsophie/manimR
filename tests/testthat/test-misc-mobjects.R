@@ -680,6 +680,20 @@ test_that("OpenGLTexturedSurface shows its dark image on faces turned from the l
   tex$rotate(PI / 2, axis = c(-1, 1, 0), about_point = ORIGIN)
   face <- manimR:::opengl_texture_shade(tex$list_of_faces[[1]])
   expect_lte(max(abs(color_to_rgb(face$get_fill_color()) * 255 - c(127.5, 0, 127.5))), 0.5)
+  # A disk around a pole: the faces at the center, whose u edge has no
+  # length, face down as the others do, away from the light.
+  disk <- OpenGLSurface(function(u, v) c(v * cos(u), v * sin(u), 1), u_range = c(0, 2 * PI), v_range = c(0, 1), resolution = 5)
+  tex <- OpenGLTexturedSurface(disk, matrix("red", 2, 2), dark_image_file = matrix("blue", 2, 2))
+  at_pole <- vapply(tex$list_of_faces, function(f) f$v1 == 0, NA)
+  expect_true(any(at_pole))
+  expect_equal(unique(toupper(vapply(tex$list_of_faces, function(f) f$get_fill_color(), ""))), "#0000FF")
+  # A 3D camera looking from below sees the lit side of each face.
+  cam <- ThreeDCamera(pixel_width = 160, pixel_height = 90)
+  cam$set_phi(PI)
+  cap2 <- ragg::agg_capture(width = 160, height = 90)
+  cam$draw_frame(list(tex))
+  grDevices::dev.off()
+  expect_equal(unique(toupper(vapply(tex$list_of_faces, function(f) f$get_fill_color(), ""))), "#FF0000")
 })
 
 test_that("Code reads its defaults from the class attributes", {

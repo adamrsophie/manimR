@@ -274,6 +274,8 @@ OpenGLTexturedSurfaceClass <- R6::R6Class("OpenGLTexturedSurface", inherit = Ope
           self$list_of_faces[[k]]$points <- uv_surface$list_of_faces[[k]]$points
         }
       }
+      # The opacity is the surface's, as upstream's init_colors() takes it.
+      self$opacity <- matrix(uv_surface$get_fill_opacity() %||% 1, ncol = 1)
       self$apply_texture()
       invisible(self)
     },
@@ -293,7 +295,7 @@ OpenGLTexturedSurfaceClass <- R6::R6Class("OpenGLTexturedSurface", inherit = Ope
         vn <- ((f$v1 + f$v2) / 2 - vr[1]) / (vr[2] - vr[1])
         f$texture_rgbas <- rbind(at(self$image, un, vn), if (!is.null(self$dark_image)) at(self$dark_image, un, vn))
         opengl_texture_shade(f)
-        f$set_fill(opacity = self$fill_opacity %||% 1)
+        f$set_fill(opacity = if (length(self$opacity)) self$opacity[1] else 1)
       }
       invisible(self)
     }
@@ -314,7 +316,12 @@ opengl_texture_shade <- function(face, camera = NULL) {
     p <- face$points
     rot <- if (!is.null(camera) && is.function(camera$get_rotation_matrix)) camera$get_rotation_matrix() else diag(3)
     center <- if (is.null(camera)) ORIGIN else camera$get_frame_center()
-    normal <- drop(rot %*% cross(p[5, ] - p[1, ], p[13, ] - p[1, ]))
+    # The face's normal from its diagonals: u x v on a regular face, and not
+    # zero on a face with a pole corner. Upstream's shader turns the normal
+    # of the pole vertex itself around (its fallback in
+    # get_rotated_surface_unit_normal_vector.glsl), so its interpolated
+    # normal nearly cancels across such a face.
+    normal <- drop(rot %*% cross(p[9, ] - p[1, ], p[13, ] - p[5, ]))
     xyz <- drop(rot %*% (face$get_center() - center))
     dp <- if (get_norm(normal) > 0) sum(normalize(c(-10, 10, 10) - xyz) * normal) / get_norm(normal) else 1
     t <- min(max((dp + 0.2) / 0.4, 0), 1)

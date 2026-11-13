@@ -114,6 +114,10 @@ test_that("OpenGLSurface gives upstream's grid, triangles and shader data", {
   td <- ts$get_shader_data()
   expect_named(td, c("point", "du_point", "dv_point", "im_coords", "opacity"))
   expect_equal(td$im_coords[1:3, ], oracle$textured_im_coords)
+  half <- OpenGLSurface(function(u, v) c(u, v, u * v), u_range = c(-1, 1), v_range = c(-1, 1), resolution = 3, opacity = 0.5)
+  th <- OpenGLTexturedSurface(half, img)
+  expect_equal(th$get_shader_data()$opacity[, 1], unlist(oracle$textured_opacity))
+  expect_equal(unique(vapply(th$list_of_faces, function(f) f$get_fill_opacity(), 0)), 0.5)
 })
 
 test_that("shader wrappers read upstream's GLSL files", {
