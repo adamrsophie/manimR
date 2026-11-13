@@ -862,7 +862,6 @@ opengl_upscale_image <- function(img, method = "bicubic") {
   if (method == "nearest") {
     return(img[rep(seq_len(hw[1]), each = scale), rep(seq_len(hw[2]), each = scale), , drop = FALSE])
   }
-  if (!method %in% c("bilinear", "bicubic")) method <- "bilinear"
   nc <- dim(img)[3]
   alpha <- nc %in% c(2, 4)
   img <- round(img)
@@ -882,16 +881,28 @@ opengl_upscale_image <- function(img, method = "bicubic") {
   out
 }
 
+# Pillow's resampling filters (Resample.c) and their supports.
+pillow_sinc <- function(x) ifelse(x == 0, 1, sin(x * pi) / (x * pi))
+PILLOW_FILTERS <- list(
+  box = list(support = 0.5, f = function(x) as.numeric(x > -0.5 & x <= 0.5)),
+  bilinear = list(support = 1, f = function(x) pmax(1 - abs(x), 0)),
+  hamming = list(support = 1, f = function(x) {
+    x <- abs(x)
+    ifelse(x == 0, 1, ifelse(x >= 1, 0, sin(x * pi) / (x * pi) * (0.54 + 0.46 * cos(x * pi))))
+  }),
+  bicubic = list(support = 2, f = function(x) {
+    x <- abs(x)
+    ifelse(x < 1, (1.5 * x - 2.5) * x * x + 1, ifelse(x < 2, (((x - 5) * x + 8) * x - 4) * -0.5, 0))
+  }),
+  lanczos = list(support = 3, f = function(x) ifelse(x >= -3 & x < 3, pillow_sinc(x) * pillow_sinc(x / 3), 0))
+)
+
 pillow_coefficients <- function(in_size, out_size, method) {
   scale <- in_size / out_size
   fs <- max(scale, 1)
-  support <- if (method == "bicubic") 2 * fs else fs
-  f <- if (method == "bicubic") {
-    function(x) {
-      x <- abs(x)
-      ifelse(x < 1, (1.5 * x - 2.5) * x * x + 1, ifelse(x < 2, (((x - 5) * x + 8) * x - 4) * -0.5, 0))
-    }
-  } else function(x) pmax(1 - abs(x), 0)
+  filter <- PILLOW_FILTERS[[method]]
+  support <- filter$support * fs
+  f <- filter$f
   w <- matrix(0, out_size, in_size)
   for (i in seq_len(out_size)) {
     center <- (i - 0.5) * scale

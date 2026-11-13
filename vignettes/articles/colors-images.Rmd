@@ -459,8 +459,10 @@ decides how the gaps are filled. The accepted names are listed in
 `RESAMPLING_ALGORITHMS`. As with Pillow's transform in Python manim,
 `"nearest"` shows sharp pixel blocks, `"bilinear"` blends neighboring pixels
 linearly and `"bicubic"` (the default) uses Pillow's bicubic filter, which
-is a little sharper; `"lanczos"`, `"box"` and `"hamming"` are drawn as
-`"bilinear"`.
+is a little sharper. Pillow's transform cannot use `"lanczos"`, `"box"` or
+`"hamming"`, so Python manim's camera raises an error for them; manimR draws
+them as `"bilinear"`. `OpenGLImageMobject()` upscales image arrays with all
+six filters, as Pillow's `resize()` does.
 
 ```{r resampling}
 RESAMPLING_ALGORITHMS

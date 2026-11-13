@@ -114,7 +114,8 @@ from PIL.Image import Resampling
 src = np.array([[[255, 0, 0, 255], [0, 255, 0, 128], [0, 0, 255, 255]],
                 [[255, 255, 0, 255], [0, 255, 255, 64], [40, 80, 120, 255]]], dtype=np.uint8)
 up = {}
-for name, alg in {"nearest": Resampling.NEAREST, "bilinear": Resampling.BILINEAR, "bicubic": Resampling.BICUBIC}.items():
+for name, alg in {"nearest": Resampling.NEAREST, "bilinear": Resampling.BILINEAR, "bicubic": Resampling.BICUBIC,
+                  "lanczos": Resampling.LANCZOS, "box": Resampling.BOX, "hamming": Resampling.HAMMING}.items():
     im = np.asarray(OpenGLImageMobject(src, resampling_algorithm=alg).get_image_from_file(src, "RGBA"), dtype=float)
     up[name] = {"dim": list(im.shape), "rows": im[[0, 300, 399]][:, list(range(0, 600, 7)) + [599], :].tolist()}
 out["image_upscaled"] = up

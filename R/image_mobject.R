@@ -7,8 +7,10 @@
 #' perspective transform has: `"nearest"` draws the pixels as blocks,
 #' `"bilinear"` interpolates linearly, and `"bicubic"` (the default) uses
 #' Pillow's bicubic filter for enlarged, sheared or perspective images. Pillow
-#' cannot transform with `"lanczos"`, `"box"` or `"hamming"`; manimR draws
-#' them as `"bilinear"`.
+#' cannot transform with `"lanczos"`, `"box"` or `"hamming"`, so upstream's
+#' camera raises for them; manimR draws them as `"bilinear"`.
+#' `OpenGLImageMobject()` upscales image arrays with all six filters, as
+#' Pillow's `resize()` does.
 #' @return A named character vector of resampling algorithm names.
 #' @export
 RESAMPLING_ALGORITHMS <- c(

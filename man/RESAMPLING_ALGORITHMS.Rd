@@ -15,6 +15,8 @@ their canonical names. Images are drawn with the filters Pillow's
 perspective transform has: \code{"nearest"} draws the pixels as blocks,
 \code{"bilinear"} interpolates linearly, and \code{"bicubic"} (the default) uses
 Pillow's bicubic filter for enlarged, sheared or perspective images. Pillow
-cannot transform with \code{"lanczos"}, \code{"box"} or \code{"hamming"}; manimR draws
-them as \code{"bilinear"}.
+cannot transform with \code{"lanczos"}, \code{"box"} or \code{"hamming"}, so upstream's
+camera raises for them; manimR draws them as \code{"bilinear"}.
+\code{OpenGLImageMobject()} upscales image arrays with all six filters, as
+Pillow's \code{resize()} does.
 }

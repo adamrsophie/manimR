@@ -342,7 +342,7 @@ test_that("OpenGLImageMobject upscales image arrays with Pillow's filters, as up
   src <- array(0, c(2, 3, 4))
   px <- list(c(255, 0, 0, 255), c(0, 255, 0, 128), c(0, 0, 255, 255), c(255, 255, 0, 255), c(0, 255, 255, 64), c(40, 80, 120, 255))
   for (k in seq_along(px)) src[(k - 1) %/% 3 + 1, (k - 1) %% 3 + 1, ] <- px[[k]]
-  for (alg in c("nearest", "bilinear", "bicubic")) {
+  for (alg in c("nearest", "bilinear", "bicubic", "lanczos", "box", "hamming")) {
     im <- OpenGLImageMobject(src, resampling_algorithm = alg)$get_image_from_file(src, "RGBA")
     expect_equal(dim(im), oracle$image_upscaled[[alg]]$dim, info = alg)
     expect_equal(im[c(1, 301, 400), c(seq(1, 600, 7), 600), , drop = FALSE], oracle$image_upscaled[[alg]]$rows, info = alg)
