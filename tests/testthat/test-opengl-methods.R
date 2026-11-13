@@ -1328,3 +1328,12 @@ test_that("shapes built under the OpenGL renderer follow upstream's quadratic co
     expect_equal(range(r$points[, 1]), c(-1.264178, 1.2), tolerance = 1e-6)
   })
 })
+
+test_that("user subclasses with locked fields work under the OpenGL renderer", {
+  Labeled <- R6::R6Class("Labeled", inherit = VGroupClass, public = list(
+    initialize = function(...) { super$initialize(...); self$add(Dot()) }))
+  tempconfig(list(renderer = "opengl"), {
+    expect_s3_class(Labeled$new()$shift(UP), "VGroup")
+    expect_equal(Labeled$new()$get_center(), c(0, 0, 0))
+  })
+})

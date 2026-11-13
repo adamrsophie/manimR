@@ -28,6 +28,7 @@ MobjectClass <- R6::R6Class("Mobject",
   lock_objects = FALSE,
   public = list(
     points = NULL,
+    opengl_empty_offset = NULL,
     submobjects = NULL,
     name = NULL,
     color = NULL,
