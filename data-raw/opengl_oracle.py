@@ -19,13 +19,15 @@ from manim.mobject.geometry.polygram import Square
 from manim.utils.color import RED, GREEN, BLUE, WHITE, YELLOW
 
 out = {}
-def frame(name, build):
+def frame(name, build, camera=None):
     with tempconfig({"renderer": "opengl", "pixel_width": 160, "pixel_height": 90, "write_to_movie": False,
                      "preview": False, "disable_caching": True}):
         r = OpenGLRenderer()
         s = Scene(renderer=r)
         for m in build():
             s.add(m)
+        if camera is not None:
+            camera(r.camera)
         r.update_frame(s)
         a = np.frombuffer(r.get_raw_frame_buffer_object_data(), dtype=np.uint8).reshape(90, 160, 4)
         out[name] = a.astype(int).tolist()
@@ -111,6 +113,24 @@ def vdup():
     corners = np.array([[-4.0, -1, 0], [-2, 1.5, 0], [-2, 1.5, 0], [0, -1, 0], [2, 1.5, 0], [4, -1, 0]])
     return [from_cubic(cubic_polygon(corners)[:-4], stroke_color=GREEN, stroke_width=10)]
 frame("vdup", vdup)
+def vcamera():
+    # The sphere's faces take the cubic points of upstream's Cairo Sphere,
+    # which manimR's Sphere keeps under the OpenGL renderer.
+    from manim.mobject.three_d.three_dimensions import Sphere
+    with tempconfig({"renderer": "cairo"}):
+        cairo_ball = Sphere(radius=1.5, resolution=(8, 6)).shift(np.array([-2.0, 0, 0]))
+        faces = [(f.points.copy(), f.get_fill_color(), f.get_fill_opacity(), f.get_stroke_color(), f.get_stroke_width(),
+                  f.get_stroke_opacity()) for f in cairo_ball.submobjects]
+    ball = OpenGLVGroup(*[from_cubic(p, fill_color=fc, fill_opacity=fo, stroke_color=sc, stroke_width=sw, stroke_opacity=so)
+                          for p, fc, fo, sc, sw, so in faces])
+    c = from_cubic(cubic_circle(1.0, np.array([2.0, 0, 0])), color=WHITE, fill_color=RED, fill_opacity=0.7, stroke_width=6)
+    return [ball, c]
+frame("vcamera", vcamera, lambda cam: cam.set_euler_angles(theta=-30 * np.pi / 180, phi=60 * np.pi / 180))
+def vhole():
+    # A ring: the inner circle runs the other way, so its inside is a hole.
+    ring = np.vstack([cubic_circle(2.0, np.zeros(3)), cubic_circle(1.0, np.zeros(3))[::-1]])
+    return [from_cubic(ring, fill_color=GREEN, fill_opacity=1, stroke_color=WHITE, stroke_width=4)]
+frame("vhole", vhole)
 # Each frame as a PNG, rows as OpenGL reads them (bottom row first).
 from PIL import Image
 for name, a in out.items():

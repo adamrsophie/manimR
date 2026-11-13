@@ -137,6 +137,15 @@ ThreeDScene <- R6::R6Class("ThreeDScene", inherit = Scene, lock_objects = FALSE,
       invisible(self)
     },
     add_fixed_in_frame_mobjects = function(...) {
+      # Under the OpenGL renderer, upstream marks each mobject's family with
+      # fix_in_frame() for the shaders instead.
+      if (inherits(self$renderer, "OpenGLRenderer")) {
+        for (mob in list(...)) {
+          for (m in mob$get_family()) m$is_fixed_in_frame <- 1
+          self$add(mob)
+        }
+        return(invisible(self))
+      }
       self$add(...)
       self$camera$add_fixed_in_frame_mobjects(...)
       invisible(self)
@@ -146,6 +155,13 @@ ThreeDScene <- R6::R6Class("ThreeDScene", inherit = Scene, lock_objects = FALSE,
       invisible(self)
     },
     remove_fixed_in_frame_mobjects = function(...) {
+      if (inherits(self$renderer, "OpenGLRenderer")) {
+        for (mob in list(...)) {
+          for (m in mob$get_family()) m$is_fixed_in_frame <- 0
+          self$remove(mob)
+        }
+        return(invisible(self))
+      }
       self$camera$remove_fixed_in_frame_mobjects(...)
       invisible(self)
     },

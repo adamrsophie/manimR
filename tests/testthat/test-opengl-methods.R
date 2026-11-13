@@ -842,6 +842,33 @@ test_that("the software shaders draw the frames of upstream's OpenGL renderer", 
   dup <- OpenGLVMobject(stroke_color = GREEN, stroke_width = 10)
   dup$set_points_as_corners(rbind(c(-4, -1, 0), c(-2, 1.5, 0), c(-2, 1.5, 0), c(0, -1, 0), c(2, 1.5, 0), c(4, -1, 0)))
   expect_lte(max(abs(frame(list(dup)) - oracle("vdup"))), 3)
+  # A turned camera, and a checkerboard sphere whose faces upstream draws in
+  # order without a depth test.
+  turned <- tempconfig(list(pixel_width = 160, pixel_height = 90), {
+    r <- OpenGLRenderer()
+    s <- Scene$new(renderer = r)
+    on.exit(r$close_device(), add = TRUE)
+    s$add(Sphere(radius = 1.5, resolution = c(8, 6))$shift(LEFT * 2),
+          Circle(radius = 1, color = WHITE, fill_color = RED, fill_opacity = 0.7, stroke_width = 6)$shift(RIGHT * 2))
+    r$camera$set_euler_angles(theta = -30 * DEGREES, phi = 60 * DEGREES)
+    r$update_frame(s)
+    r$get_raw_frame_buffer_object_data()
+  })
+  expect_lte(max(abs(turned - oracle("vcamera"))), 4)
+  # A fill with a hole: the inner circle runs the other way.
+  cubic_circle <- function(radius) {
+    a <- seq(0, TAU, length.out = 9)
+    h <- 4 / 3 * tan(PI / 16)
+    do.call(rbind, lapply(1:8, function(k) {
+      p0 <- c(cos(a[k]), sin(a[k]), 0)
+      p3 <- c(cos(a[k + 1]), sin(a[k + 1]), 0)
+      radius * rbind(p0, p0 + h * c(-sin(a[k]), cos(a[k]), 0), p3 - h * c(-sin(a[k + 1]), cos(a[k + 1]), 0), p3)
+    }))
+  }
+  ring <- OpenGLVMobject(fill_color = GREEN, fill_opacity = 1, stroke_color = WHITE, stroke_width = 4)
+  inner <- cubic_circle(1)
+  ring$set_points(unname(rbind(cubic_circle(2), inner[nrow(inner):1, ])))
+  expect_lte(max(abs(frame(list(ring)) - oracle("vhole"))), 3)
   # A VMobject holding a surface draws the surface with its own shader.
   plane <- surf(function(u, v) c(u, v, 0), c(-1, 1), c(-1, 1), c(4, 4), GREEN, 0, 0)
   expect_equal(frame(list(VGroup(plane$copy()))), frame(list(plane)))
@@ -851,4 +878,22 @@ test_that("the software shaders draw the frames of upstream's OpenGL renderer", 
   d <- apply(abs(frame(list(sphere)) - oracle("sphere")), 1:2, max)
   expect_lte(sum(d > 2), 40)
   expect_lte(max(d[-(40:50), ]), 1)
+})
+
+test_that("ThreeDScene fixes mobjects in frame through their shader uniforms under OpenGLRenderer", {
+  frame <- function(fixed, turn) tempconfig(list(pixel_width = 160, pixel_height = 90), {
+    r <- OpenGLRenderer()
+    s <- ThreeDScene$new(renderer = r)
+    on.exit(r$close_device(), add = TRUE)
+    sq <- Square(side_length = 2, fill_color = RED, fill_opacity = 1)
+    if (fixed) s$add_fixed_in_frame_mobjects(sq) else s$add(sq)
+    if (fixed) expect_equal(sq$submobjects, list())
+    if (fixed) expect_equal(sq$is_fixed_in_frame, 1)
+    if (turn) s$set_camera_orientation(phi = 70 * DEGREES, theta = -30 * DEGREES)
+    r$update_frame(s)
+    r$get_raw_frame_buffer_object_data()
+  })
+  flat <- frame(FALSE, FALSE)
+  expect_equal(frame(TRUE, TRUE), flat)
+  expect_false(isTRUE(all.equal(frame(FALSE, TRUE), flat)))
 })
