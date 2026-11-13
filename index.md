@@ -284,12 +284,14 @@ is embedded the same way when it is printed.
   `OpenGLRenderer`, a port of upstream’s OpenGL renderer that draws in
   software instead of on the GPU: shader wrappers are drawn by a grid
   camera with the OpenGL camera’s projection and lighting (lit once per
-  mobject, not per pixel), the projection shaders by their GLSL rules,
-  and a live preview `Window` is an R graphics device. GLSL code of a
-  `Mesh` is not run. The OpenGL point clouds (`DotCloud`, `TrueDot`,
-  `OpenGLPMobject`) are drawn as round dots like upstream’s shader draws
-  them, and the other OpenGL mobject classes (`OpenGLCircle`,
-  `OpenGLSurface`, …) are subclasses of their Cairo counterparts.
+  mobject, not per pixel), the surface shaders of `OpenGLSurface` and
+  `OpenGLTexturedSurface` and the projection shaders by their GLSL rules
+  (surfaces and dots lit per pixel and depth tested), and a live preview
+  `Window` is an R graphics device. GLSL code of a `Mesh` is not run.
+  The OpenGL point clouds (`DotCloud`, `TrueDot`, `OpenGLPMobject`) run
+  upstream’s true_dot shader, and the other OpenGL mobject classes
+  (`OpenGLCircle`, `OpenGLSurface`, …) are subclasses of their Cairo
+  counterparts.
 - Interactive mode (`scene$interactive_embed()`,
   [`embed()`](https://rdrr.io/r/stats/embed.html), `interact()`) opens a
   Shiny window instead of upstream’s OpenGL window: it shows the live

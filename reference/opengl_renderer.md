@@ -247,10 +247,16 @@ values of their matrix, row by row; the decorators a function.
   that places points as upstream's shaders do (rotated by
   `camera_rotation`, scaled by `focal_distance / (focal_distance - z)`,
   fixed in frame mobjects in the default frame) and lights them with
-  upstream's `add_light()`, once per mobject rather than per pixel.
-  `config$renderer = "opengl"` makes scenes use it. `get_frame()` gives
-  a `nativeRaster`; `get_raw_frame_buffer_object_data()` the pixels
-  bottom row first, as OpenGL reads them.
+  upstream's `add_light()`, once per mobject rather than per pixel. An
+  `OpenGLSurface` runs upstream's surface shader instead, and an
+  `OpenGLTexturedSurface` its textured_surface shader (nearest texel),
+  and an OpenGL point cloud its true_dot shader: their triangles are
+  rasterized at pixel centers, lit per pixel, and with `depth_test` (on
+  by default) tested against and written to the framebuffer's depth
+  buffer. `config$renderer = "opengl"` makes scenes use it.
+  `get_frame()` gives a `nativeRaster`;
+  `get_raw_frame_buffer_object_data()` the pixels bottom row first, as
+  OpenGL reads them.
 
 - `render_opengl_vectorized_mobject_fill()`,
   `render_opengl_vectorized_mobject_stroke()` and their `_with_matrix`

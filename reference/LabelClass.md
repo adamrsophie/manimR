@@ -46,8 +46,14 @@ LabeledPolygram(
 
   A string (rendered with
   [`MathTex()`](https://adamrsophie.github.io/manimR/reference/tex.md))
-  or a mobject such as
-  [`Text()`](https://adamrsophie.github.io/manimR/reference/TextClass.md).
+  or a
+  [`MathTex()`](https://adamrsophie.github.io/manimR/reference/tex.md),
+  [`Tex()`](https://adamrsophie.github.io/manimR/reference/tex.md),
+  [`Text()`](https://adamrsophie.github.io/manimR/reference/TextClass.md),
+  [`Typst()`](https://adamrsophie.github.io/manimR/reference/typst.md)
+  or
+  [`MathTypst()`](https://adamrsophie.github.io/manimR/reference/typst.md)
+  mobject, as upstream accepts.
 
 - label_config:
 
