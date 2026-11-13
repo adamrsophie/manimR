@@ -879,6 +879,14 @@ test_that("the software shaders draw the frames of upstream's OpenGL renderer", 
   image_b <- OpenGLImageMobject(img, height = 2)$rotate(PI / 5)$shift(c(3, 1, 0))
   image_b$set_opacity(0.5)
   expect_lte(max(abs(frame(list(image_a, image_b)) - oracle("vimage"))), 4)
+  # Upstream's renderer compiles shaders from their files, so the code
+  # set_color_by_code() puts into the wrappers' programs is not drawn.
+  coded <- OpenGLVMobject(fill_color = RED, fill_opacity = 1, stroke_color = WHITE, stroke_width = 8)
+  coded$set_points(Square(side_length = 4)$shift(LEFT * 3)$points)
+  coded$set_color_by_code("color.rgb = vec3(point.x > -3.0 ? 1.0 : 0.0, 0.5 + 0.2 * point.y, 1.0);")
+  coded_plane <- surf(function(u, v) c(u, v, 0), c(1, 5), c(-2, 2), c(4, 4), GREEN, 0, 0)
+  coded_plane$set_color_by_code("color.rgb = vec3(1.0, 0.0, 1.0);")
+  expect_lte(max(abs(frame(list(coded, coded_plane)) - oracle("vcode"))), 2)
   # A VMobject holding a surface draws the surface with its own shader.
   plane <- surf(function(u, v) c(u, v, 0), c(-1, 1), c(-1, 1), c(4, 4), GREEN, 0, 0)
   expect_equal(frame(list(VGroup(plane$copy()))), frame(list(plane)))

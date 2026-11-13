@@ -140,6 +140,17 @@ def vimage():
     b.set_opacity(0.5)
     return [a, b]
 frame("vimage", vimage)
+# Upstream's renderer compiles each shader from its folder's files, so the
+# code set_color_by_code() puts into the wrappers' programs is not drawn.
+def vcode():
+    sq = from_cubic(cubic_polygon(np.array([[-1.0, 2, 0], [-5, 2, 0], [-5, -2, 0], [-1, -2, 0]])), fill_color=RED,
+                    fill_opacity=1, stroke_color=WHITE, stroke_width=8)
+    sq.set_color_by_code("color.rgb = vec3(point.x > -3.0 ? 1.0 : 0.0, 0.5 + 0.2 * point.y, 1.0);")
+    plane = OpenGLSurface(lambda u, v: np.array([u, v, 0.0]), u_range=(1, 5), v_range=(-2, 2), resolution=(4, 4),
+                          color=GREEN, gloss=0, shadow=0)
+    plane.set_color_by_code("float t = clamp((point.x - 1.0) / 4.0, 0.0, 1.0); if (point.y > 0.0) { color.rgb = vec3(t, 0.0, 1.0 - t); } else { color.r = smoothstep(1.0, 5.0, point.x); }")
+    return [sq, plane]
+frame("vcode", vcode)
 # Each frame as a PNG, rows as OpenGL reads them (bottom row first).
 from PIL import Image
 for name, a in out.items():
