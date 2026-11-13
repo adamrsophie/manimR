@@ -42,7 +42,11 @@
 #' * Under `manim_config(renderer = "opengl")`, a plain [Arc()] or
 #'   [Circle()] is made of `num_components` quadratic pieces (9 by default),
 #'   as upstream's `Arc.init_points()`, and the OpenGL renderer draws the
-#'   quadratic pieces of mobjects made then as upstream stores them.
+#'   quadratic pieces of mobjects made then as upstream stores them. Such
+#'   mobjects also follow upstream's OpenGL mobjects in `apply_function()`
+#'   (it maps the quadratic curves' points), in their bounding box (all
+#'   quadratic points, handles included, so a circle is 2.064 wide) and in
+#'   animations (whole families are interpolated).
 #' * `add_tip(at_start, ...)` of OpenGL lines and arcs adds an
 #'   `OpenGLArrowTip()` made from the `tip_config` of the line and the
 #'   arguments given (white unless they say otherwise).

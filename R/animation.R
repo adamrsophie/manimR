@@ -21,6 +21,12 @@ DEFAULT_ANIMATION_LAG_RATIO <- 0
 #'   animation is cleaned up from it.
 #' @param ... Ignored.
 #' @export
+# The family members an animation interpolates: under the OpenGL renderer
+# upstream zips whole families, otherwise only members with points.
+animation_family <- function(m) {
+  if (identical(cfg("renderer"), RendererType$OPENGL)) m$get_family() else m$family_members_with_points()
+}
+
 AnimationClass <- R6::R6Class("Animation", lock_objects = FALSE,
   public = list(
     mobject = NULL,
@@ -80,7 +86,7 @@ AnimationClass <- R6::R6Class("Animation", lock_objects = FALSE,
     create_starting_mobject = function() self$mobject$copy(),
     get_all_mobjects = function() list(self$mobject, self$starting_mobject),
     get_all_families_zipped = function() {
-      fams <- lapply(self$get_all_mobjects(), function(m) m$family_members_with_points())
+      fams <- lapply(self$get_all_mobjects(), animation_family)
       n <- min(lengths(fams))
       lapply(seq_len(n), function(i) lapply(fams, `[[`, i))
     },

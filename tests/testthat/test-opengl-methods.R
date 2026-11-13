@@ -1059,3 +1059,21 @@ test_that("SVG paths under the OpenGL renderer keep upstream's quadratic curves"
   expect_equal(nrow(sharp), 45)
   expect_equal(unname(sharp[2:3, 1:2]), rbind(c(0.5, 0.75), c(1, 1.125)))
 })
+
+test_that("mobjects made under the OpenGL renderer are bounded and transformed as upstream", {
+  # Values from upstream 0.22.1 under renderer = "opengl".
+  tempconfig(list(renderer = "opengl"), {
+    c1 <- Circle()
+    expect_equal(c(c1$width, c1$height), c(2.0642, 2.096), tolerance = 1e-4)
+    expect_equal(c1$get_top(), c(-0.0321, 1.048, 0), tolerance = 1e-3)
+    g <- VGroup(Circle(), Square())$arrange(RIGHT)
+    expect_equal(g$submobjects[[2]]$get_center(), c(1.1571, 0, 0), tolerance = 1e-4)
+    a <- VGroup(Circle(), Square())
+    b <- VGroup(Square(color = RED), Circle(color = BLUE))$shift(RIGHT)
+    t1 <- Transform(a, b)
+    t1$begin()
+    t1$interpolate(0.5)
+    expect_equal(round(a$submobjects[[1]]$get_center(), 3), c(0.484, 0, 0))
+    expect_equal(round(unname(opengl_quadratic_points(a$submobjects[[1]])[2, ]), 3), c(1.333, 0.682, 0))
+  })
+})

@@ -703,7 +703,21 @@ VMobjectClass <- R6::R6Class("VMobject", inherit = MobjectClass, lock_objects = 
       out[seq(2, 2 * k, by = 2), ] <- e[seq_len(k), , drop = FALSE]
       out
     },
+    # Under the OpenGL renderer upstream bounds a mobject by all its points,
+    # the quadratic curves' handles included.
+    get_all_points = function() {
+      if (!isTRUE(self$opengl_quadratic)) return(super$get_all_points())
+      pts <- lapply(self$get_family(), function(m) if (is_vmobject(m)) opengl_quadratic_points(m) else m$points)
+      out <- do.call(rbind, pts)
+      if (is.null(out)) matrix(0, 0, 3) else out
+    },
+    length_over_dim = function(dim) {
+      if (!isTRUE(self$opengl_quadratic)) return(super$length_over_dim(dim))
+      v <- self$get_all_points()[, dim]
+      if (length(v)) max(v) - min(v) else 0
+    },
     get_points_defining_boundary = function() {
+      if (isTRUE(self$opengl_quadratic)) return(self$get_all_points())
       pts <- lapply(self$get_family(), function(m) if (is_vmobject(m)) m$get_anchors() else m$points)
       out <- do.call(rbind, pts)
       if (is.null(out)) matrix(0, 0, 3) else out

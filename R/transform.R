@@ -58,7 +58,7 @@ TransformClass <- R6::R6Class("Transform", inherit = AnimationClass, lock_object
     },
     get_all_mobjects = function() list(self$mobject, self$starting_mobject, self$target_mobject, self$target_copy),
     get_all_families_zipped = function() {
-      fams <- lapply(list(self$mobject, self$starting_mobject, self$target_copy), function(m) m$family_members_with_points())
+      fams <- lapply(list(self$mobject, self$starting_mobject, self$target_copy), animation_family)
       n <- min(lengths(fams))
       lapply(seq_len(n), function(i) lapply(fams, `[[`, i))
     },
@@ -389,7 +389,7 @@ FadeTransformClass <- R6::R6Class("FadeTransform", inherit = TransformClass, loc
     },
     get_all_mobjects = function() list(self$mobject, self$starting_mobject, self$ending_mobject),
     get_all_families_zipped = function() {
-      fams <- lapply(self$get_all_mobjects(), function(m) m$family_members_with_points())
+      fams <- lapply(self$get_all_mobjects(), animation_family)
       n <- min(lengths(fams))
       lapply(seq_len(n), function(i) lapply(fams, `[[`, i))
     },
