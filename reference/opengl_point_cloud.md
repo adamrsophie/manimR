@@ -62,9 +62,10 @@ these functions call.
 - `OpenGLPMPoint()` is a single point at `location`.
 
 - `DotCloud()` fills a disk of the given `radius` with concentric rings
-  of dots spaced `1 / density` apart. `$make_3d()` stores the gloss and
-  shadow that upstream's shader uses; they do not change manimR's
-  drawing.
+  of dots spaced `1 / density` apart. `$make_3d()` sets the gloss and
+  shadow that upstream's shader lights the dots with and turns on the
+  depth test; the OpenGL renderer uses them, the Cairo renderer does
+  not.
 
 - `TrueDot()` is a `DotCloud`. Note that upstream overwrites its
   `center` and radius in `DotCloud`'s initializer, so a `TrueDot` is the
