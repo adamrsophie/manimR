@@ -112,7 +112,17 @@
   and others take upstream’s arguments in upstream’s order, and
   [`OpenGLImageMobject()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
   upscales an image array with Pillow’s resampling filters as upstream
-  does.
+  does. Shapes built under `manim_config(renderer = "opengl")` follow
+  upstream’s OpenGL constructions: a line is one straight quadratic, a
+  cubic (from an SVG path, `add_cubic_bezier_curve_to()` or
+  `make_smooth()`) is two quadratics,
+  [`MathTex()`](https://adamrsophie.github.io/manimR/reference/tex.md)
+  and
+  [`Typst()`](https://adamrsophie.github.io/manimR/reference/typst.md)
+  split sharp curves and drop null ones,
+  [`ThreeDAxes()`](https://adamrsophie.github.io/manimR/reference/coordinate_systems.md)
+  adds no shaded pieces, group bounds use the quadratic curves, and an
+  empty group keeps track of its shifts.
 - Images are drawn through the homography of their corners with Pillow’s
   nearest, bilinear and bicubic filters, and an image seen edge on is
   skipped as upstream.
