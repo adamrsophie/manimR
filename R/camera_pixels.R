@@ -123,10 +123,11 @@ CameraClass$set("public", "draw_on_pixel_array", function(draw, pixel_array = NU
     self$reset()
     pa <- self$pixel_array
   }
+  prev <- grDevices::dev.cur()
   dev <- ragg::agg_capture(width = self$pixel_width, height = self$pixel_height, units = "px", res = 96,
                            background = "transparent")
   dev_index <- grDevices::dev.cur()
-  on.exit(grDevices::dev.off(dev_index), add = TRUE)
+  on.exit(close_capture_device(dev_index, prev), add = TRUE)
   grid::grid.newpage(recording = FALSE)
   grid::grid.raster(pmin(pmax(pa, 0), 255) / 255, width = grid::unit(1, "npc"), height = grid::unit(1, "npc"),
                     interpolate = FALSE)
@@ -135,6 +136,14 @@ CameraClass$set("public", "draw_on_pixel_array", function(draw, pixel_array = NU
   grid::popViewport()
   native_raster_to_array(dev(native = TRUE))
 })
+
+# Closes an off-screen capture device and makes the device that was current
+# before it current again (dev.off() alone moves to the next open device).
+close_capture_device <- function(dev_index, prev) {
+  grDevices::dev.off(dev_index)
+  if (prev > 1 && prev %in% grDevices::dev.list()) grDevices::dev.set(prev)
+  invisible(NULL)
+}
 
 # Upstream's capture: draws the mobjects into the pixel array.
 CameraClass$set("public", "capture_mobjects", function(mobjects, include_submobjects = TRUE, excluded_mobjects = NULL) {

@@ -325,6 +325,31 @@ test_that("mirrored camera displays are drawn mirrored", {
   expect_equal(draw(), before[c(2, 1, 4, 3)])
 })
 
+test_that("sheared camera displays are drawn sheared", {
+  subcam <- MovingCamera(frame = Rectangle(width = 4, height = 4), pixel_width = 180, pixel_height = 180)
+  im <- ImageMobjectFromCamera(subcam)$stretch_to_fit_width(3)$stretch_to_fit_height(3)$move_to(4 * RIGHT)
+  cam <- MultiCamera(image_mobjects_from_cameras = list(im), pixel_width = 320, pixel_height = 180)
+  colors <- c(RED, BLUE, GREEN, YELLOW)
+  pos <- list(LEFT + UP, RIGHT + UP, LEFT + DOWN, RIGHT + DOWN)
+  mobs <- c(lapply(1:4, function(i) {
+    Square(side_length = 1, fill_color = colors[i], fill_opacity = 1, stroke_width = 0)$move_to(pos[[i]])
+  }), list(im))
+  # x + y: the quadrant centers move right above the display's center and
+  # left below it.
+  im$apply_matrix(rbind(c(1, 1, 0), c(0, 1, 0), c(0, 0, 1)))
+  cap <- ragg::agg_capture(width = 320, height = 180, background = "black")
+  on.exit(grDevices::dev.off())
+  cam$draw_frame(mobs)
+  a <- manimR:::native_raster_to_array(cap(native = TRUE))
+  got <- vapply(list(c(4, 0.75), c(5.5, 0.75), c(2.5, -0.75), c(4, -0.75)), function(p) {
+    row <- floor((4 - p[2]) / 8 * 180) + 1
+    col <- floor((p[1] + cam$get_frame_width() / 2) / cam$get_frame_width() * 320) + 1
+    a[row, col, 1:3]
+  }, numeric(3))
+  want <- vapply(colors, function(cl) color_to_rgb(cl) * 255, numeric(3))
+  expect_lte(max(abs(got - want)), 3)
+})
+
 test_that("split screen cameras keep still mobjects under moving ones", {
   cam <- SplitScreenCamera(Camera(), Camera(), pixel_width = 320, pixel_height = 90)
   still <- Circle(radius = 1, fill_color = RED, fill_opacity = 1, stroke_width = 0)$shift(2 * LEFT)

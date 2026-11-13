@@ -142,8 +142,11 @@ MovingCameraScene <- R6::R6Class("MovingCameraScene", inherit = Scene, lock_obje
 
 #' @title MultiCamera
 #' @description A [MovingCameraClass] that also draws the views of other
-#'   cameras into [ImageMobjectFromCamera()] mobjects. Each view is drawn as
-#'   vector graphics clipped to the display rectangle, so it stays sharp.
+#'   cameras into [ImageMobjectFromCamera()] mobjects. A view in a
+#'   rectangular display (rotated or mirrored too) is drawn as vector graphics
+#'   clipped to the display, so it stays sharp; a sheared or perspective
+#'   display gets the sub camera's pixels mapped through its corners, as
+#'   upstream draws every display.
 #' @param image_mobjects_from_cameras List of [ImageMobjectFromCamera()]
 #'   mobjects whose cameras' views are drawn.
 #' @param allow_cameras_to_capture_their_own_display Let each camera's view
@@ -203,15 +206,31 @@ MultiCameraClass <- R6::R6Class("MultiCamera", inherit = MovingCameraClass, lock
       # and the angle of the top edge come from the corners UL, UR, DL, so a
       # rotated display stays rotated, and a mirrored one (e1 x e2 > 0 with y
       # pointing up) is drawn mirrored by turning the y scale around.
-      # Limitation: a sheared or perspective display is drawn as its rectangle;
-      # capturing the sub camera as pixels would be needed to warp it.
+      # A sheared or perspective display is drawn as upstream draws it: the
+      # sub camera captures its view as pixels, which are mapped through the
+      # display's corners.
       corners <- self$project_points(imfc$points, imfc)
-      ul <- corners[1, ]
-      ur <- corners[2, ]
-      dl <- corners[3, ]
+      ul <- corners[1, 1:2]
+      ur <- corners[2, 1:2]
+      dl <- corners[3, 1:2]
+      dr <- if (nrow(corners) >= 4) corners[4, 1:2] else ur + dl - ul
       w <- get_norm(ur - ul)
       h <- get_norm(dl - ul)
       if (w <= 0 || h <= 0) return(invisible(self))
+      mobs <- self$captured_mobjects %||% list()
+      if (!self$allow_cameras_to_capture_their_own_display) {
+        own <- vapply(imfc$get_family(), function(x) x$mob_id, "")
+        mobs <- Filter(function(x) !x$mob_id %in% own, extract_mobject_family_members(mobs))
+      }
+      rectangle <- get_norm(dr - (ur + dl - ul)) < 1e-6 * max(w, h) && abs(sum((ur - ul) * (dl - ul))) < 1e-6 * w * h
+      if (!rectangle) {
+        cam$init_background()
+        cam$reset()
+        cam$capture_mobjects(mobs)
+        method <- imfc$resampling_algorithm %||% "bicubic"
+        if (!method %in% c("nearest", "bilinear", "bicubic")) method <- "bilinear"
+        return(self$display_image_resampled(pmin(pmax(cam$pixel_array / 255, 0), 1), ul, ur, dl, dr, method))
+      }
       angle <- atan2(ur[2] - ul[2], ur[1] - ul[1]) * 180 / pi
       mirrored <- (ur[1] - ul[1]) * (dl[2] - ul[2]) - (ur[2] - ul[2]) * (dl[1] - ul[1]) > 0
       center <- (ur + dl) / 2
@@ -225,11 +244,6 @@ MultiCameraClass <- R6::R6Class("MultiCamera", inherit = MovingCameraClass, lock
                                         clip = if (angle == 0) "on" else grid::rectGrob()))
       on.exit(grid::popViewport(), add = TRUE)
       cam$draw_background()
-      mobs <- self$captured_mobjects %||% list()
-      if (!self$allow_cameras_to_capture_their_own_display) {
-        own <- vapply(imfc$get_family(), function(x) x$mob_id, "")
-        mobs <- Filter(function(x) !x$mob_id %in% own, extract_mobject_family_members(mobs))
-      }
       for (x in cam$get_mobjects_to_display(mobs)) cam$display_mobject(x)
       invisible(self)
     },

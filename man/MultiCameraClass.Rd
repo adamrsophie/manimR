@@ -27,6 +27,9 @@ these functions call.
 }
 \description{
 A \link{MovingCameraClass} that also draws the views of other
-cameras into \code{\link[=ImageMobjectFromCamera]{ImageMobjectFromCamera()}} mobjects. Each view is drawn as
-vector graphics clipped to the display rectangle, so it stays sharp.
+cameras into \code{\link[=ImageMobjectFromCamera]{ImageMobjectFromCamera()}} mobjects. A view in a
+rectangular display (rotated or mirrored too) is drawn as vector graphics
+clipped to the display, so it stays sharp; a sheared or perspective
+display gets the sub camera's pixels mapped through its corners, as
+upstream draws every display.
 }

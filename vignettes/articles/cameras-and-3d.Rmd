@@ -275,7 +275,9 @@ PictureInPicture <- R6::R6Class("PictureInPicture", inherit = MovingCameraScene,
 
 `MultiCameraClass$new(image_mobjects_from_cameras, allow_cameras_to_capture_their_own_display)`
 is the camera; `add_image_mobject_from_camera()` registers more displays
-later.
+later. A display that stays a rectangle (also rotated or flipped) shows the
+view as sharp vector graphics; a sheared display shows the sub camera's
+pixels mapped onto its shape, as in Python manim.
 
 ## 3D scenes
 

@@ -45,10 +45,11 @@ BackgroundColoredVMobjectDisplayerClass <- R6::R6Class("BackgroundColoredVMobjec
     },
     resize_background_array = function(background_array, new_width, new_height, mode = "RGBA") {
       img <- change_to_rgba_array(background_array)
+      prev <- grDevices::dev.cur()
       dev <- ragg::agg_capture(width = new_width, height = new_height, units = "px", res = 96,
                                background = "transparent")
       dev_index <- grDevices::dev.cur()
-      on.exit(grDevices::dev.off(dev_index), add = TRUE)
+      on.exit(close_capture_device(dev_index, prev), add = TRUE)
       grid::grid.newpage(recording = FALSE)
       grid::grid.raster(img / 255, width = grid::unit(1, "npc"), height = grid::unit(1, "npc"), interpolate = TRUE)
       out <- native_raster_to_array(dev(native = TRUE))
@@ -95,10 +96,11 @@ BackgroundColoredVMobjectDisplayerClass <- R6::R6Class("BackgroundColoredVMobjec
     # The batch drawn with its own colors, as an array of values 0 to 255.
     draw_batch = function(batch) {
       cam <- self$camera
+      prev <- grDevices::dev.cur()
       dev <- ragg::agg_capture(width = cam$pixel_width, height = cam$pixel_height, units = "px", res = 96,
                                background = "transparent")
       dev_index <- grDevices::dev.cur()
-      on.exit(grDevices::dev.off(dev_index), add = TRUE)
+      on.exit(close_capture_device(dev_index, prev), add = TRUE)
       grid::grid.newpage(recording = FALSE)
       cam$push_view()
       for (m in batch) cam$display_vectorized(m, ignore_background_image = TRUE)

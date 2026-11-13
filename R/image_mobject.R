@@ -279,7 +279,8 @@ ImageMobjectFromCameraClass <- R6::R6Class("ImageMobjectFromCamera", inherit = A
         list(stroke_width = 3, stroke_color = WHITE, buff = 0)
       super$initialize(scale_to_resolution = FALSE, ...)
     },
-    # The camera draws vector graphics straight into this mobject's area (see
+    # The camera draws vector graphics straight into this mobject's area, or
+    # warps the sub camera's pixels when the area is sheared (see
     # MultiCameraClass$display_camera_image), so there is no stored raster.
     pixel_shape = function() c(self$camera$pixel_height, self$camera$pixel_width),
     get_pixel_array = function() NULL,
