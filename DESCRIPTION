@@ -38,6 +38,7 @@ Suggests:
     igraph,
     ggplot2,
     shiny,
+    httpuv,
     miniUI,
     knitr,
     rmarkdown,

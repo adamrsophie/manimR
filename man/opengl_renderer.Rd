@@ -263,8 +263,11 @@ stroke the points within \code{0.004 * width} of its curve.
 \item \code{Window(renderer)} is the window of a live preview: an R graphics
 device (an interactive session is needed) that shows the renderer's frame
 on \code{swap_buffers()}; \code{handle_event()} waits for a mouse or key event
-in it and passes it to the scene's handlers, on devices that report
-events (X11 and Windows). Its size follows \code{config$window_size} and its position
+in it and passes it to the scene's handlers. On a device that reports
+no events (the macOS quartz device, RStudio's) it opens the window as a
+page in the browser (\code{open_browser()}, with the httpuv and jsonlite
+packages), which reports pyglet's mouse, wheel and key events with
+pyglet's key codes and modifier bits. Its size follows \code{config$window_size} and its position
 \code{config$window_position} on the monitor, which is
 \code{getOption("manimR.monitor")} (a list of \code{x}, \code{y}, \code{width} and \code{height})
 or 1920 by 1080 pixels at the origin.

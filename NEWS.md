@@ -55,7 +55,9 @@
   (`OpenGLSoftwareContext()`) whose framebuffers are ragg devices, the
   `render_opengl_vectorized_mobject_fill()` and `_stroke()` functions draw
   upstream's projection shaders by their GLSL rules, and `Window()` shows a
-  live preview in an R graphics device.
+  live preview in an R graphics device. Where the device reports no mouse
+  or key events (as on macOS), the window opens in the browser through
+  httpuv and reports pyglet's events, wheel and key releases included.
   Where an OpenGL class differs from its Cairo counterpart, it follows
   upstream's OpenGL class: `OpenGLArrow()` is a filled shape,
   `OpenGLLine()` applies `buff` twice, arcs are made of quadratic pieces,

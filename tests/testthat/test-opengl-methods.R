@@ -1403,3 +1403,39 @@ test_that("only the classes upstream converts become OpenGL classes", {
     expect_length(gg$submobjects, 2)
   })
 })
+
+test_that("a Window passes browser events to the scene as pyglet would", {
+  tempconfig(list(pixel_width = 160, pixel_height = 90), {
+    log <- character()
+    Logged <- R6::R6Class("Logged", inherit = Scene, public = list(
+      on_mouse_press = function(point, button, modifiers = 0) log <<- c(log, sprintf("press %s %d %.2f %.2f", button, modifiers, point[1], point[2])),
+      on_mouse_motion = function(point, d_point) log <<- c(log, sprintf("motion %.2f %.2f", d_point[1], d_point[2])),
+      on_mouse_drag = function(point, d_point, buttons, modifiers = 0) log <<- c(log, sprintf("drag %d", buttons)),
+      on_mouse_scroll = function(point, offset) log <<- c(log, sprintf("scroll %.2f", offset[2])),
+      on_key_press = function(symbol, modifiers = 0) log <<- c(log, sprintf("key %d %d", symbol, modifiers)),
+      on_key_release = function(symbol, modifiers = 0) log <<- c(log, sprintf("release %d", symbol))
+    ))
+    r <- OpenGLRenderer()
+    on.exit(r$close_device(), add = TRUE)
+    s <- Logged$new(renderer = r)
+    r$update_frame(s)
+    w <- Window(r, window_size = c(320, 180), open = FALSE)
+    # Positions are fractions of the window from its bottom left; the middle
+    # is the origin, the top right corner the frame's corner.
+    w$dispatch_event(list(type = "press", x = 0.5, y = 0.5, button = 4, modifiers = 1))
+    w$dispatch_event(list(type = "press", x = 1, y = 1, button = 1, modifiers = 0))
+    w$dispatch_event(list(type = "motion", x = 0.5, y = 0.5, dx = 0.1, dy = 0))
+    w$dispatch_event(list(type = "drag", x = 0.5, y = 0.5, dx = 0, dy = 0.1, buttons = 1))
+    w$dispatch_event(list(type = "scroll", x = 0.5, y = 0.5, sx = 0, sy = 1))
+    w$dispatch_event(list(type = "key_press", symbol = SHIFT_VALUE, modifiers = 1))
+    expect_equal(r$pressed_keys, SHIFT_VALUE)
+    w$dispatch_event(list(type = "key_release", symbol = SHIFT_VALUE, modifiers = 1))
+    expect_length(r$pressed_keys, 0)
+    expect_equal(log, c("press RIGHT 1 0.00 0.00", sprintf("press LEFT 0 %.2f 4.00", 4 * 16 / 9), "motion 0.20 0.00",
+                        "drag 1", sprintf("scroll %.2f", 2 / 90), "key 65505 1", "release 65505"))
+  })
+  page <- opengl_window_page("Manim <1>", c(320, 180))
+  expect_match(page, "Manim &lt;1>", fixed = TRUE)
+  expect_match(page, "new WebSocket", fixed = TRUE)
+  expect_match(page, "width:320px;height:180px", fixed = TRUE)
+})

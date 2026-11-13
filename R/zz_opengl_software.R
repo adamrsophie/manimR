@@ -1536,6 +1536,7 @@ WindowClass <- R6::R6Class("Window", lock_objects = FALSE,
     renderer = NULL,
     device = NULL,
     last_mouse = NULL,
+    browser = NULL,
     # The monitor is the one of `getOption("manimR.monitor")` (a monitor, a
     # list with x, y, width and height, or a list of them) that
     # config$window_monitor picks, else 1920 by 1080 pixels at the origin: R
@@ -1559,6 +1560,7 @@ WindowClass <- R6::R6Class("Window", lock_objects = FALSE,
     },
     # Shows the renderer's frame in the window.
     swap_buffers = function() {
+      if (!is.null(self$browser) && !is.null(self$renderer$frame_buffer_object)) self$send_frame()
       if (is.null(self$device) || !self$device %in% grDevices::dev.list()) return(invisible(self))
       if (is.null(self$renderer$frame_buffer_object)) return(invisible(self))
       frame <- self$renderer$get_frame()
@@ -1573,18 +1575,21 @@ WindowClass <- R6::R6Class("Window", lock_objects = FALSE,
     # Waits for one mouse or key event in the window and passes it to the
     # handlers below, as pyglet's event loop does. Positions are in pixels
     # from the bottom left corner; R's buttons 0, 1 and 2 are pyglet's 1, 2
-    # and 4. Only devices that report events (X11 with the Xlib type, and
-    # Windows) can do this.
+    # and 4. A device that reports no events (the macOS quartz device,
+    # RStudio's) hands the window to a browser page (open_browser()), which
+    # reports pyglet's events, scrolling and key releases included.
     handle_event = function() {
+      if (!is.null(self$browser)) return(self$handle_browser_event())
       if (is.null(self$device) || !self$device %in% grDevices::dev.list()) return(invisible(self))
       prev <- grDevices::dev.cur()
       grDevices::dev.set(self$device)
       on.exit(if (prev > 1 && prev != self$device && prev %in% grDevices::dev.list()) grDevices::dev.set(prev),
               add = TRUE)
       if (!length(grDevices::dev.capabilities("events")$events)) {
-        stop("This graphics device does not report mouse and key events.", call. = FALSE)
+        self$open_browser()
+        return(self$handle_browser_event())
       }
-      px <- function(x, y) c(x * self$size[1], y * self$size[2])
+      px <- function(x, y) self$frame_pixels(x, y)
       moved <- function(p) {
         d <- if (is.null(self$last_mouse)) c(0, 0) else p - self$last_mouse
         self$last_mouse <- p
@@ -1617,7 +1622,95 @@ WindowClass <- R6::R6Class("Window", lock_objects = FALSE,
     close = function() {
       if (!is.null(self$device) && self$device %in% grDevices::dev.list()) grDevices::dev.off(self$device)
       self$device <- NULL
+      if (!is.null(self$browser$server)) self$browser$server$stop()
+      self$browser <- NULL
       invisible(NULL)
+    },
+    # Serves the window as a page on 127.0.0.1 (needs the httpuv package)
+    # and opens it with browseURL(), or `launch` if given. The page shows
+    # the frame and sends the mouse, wheel and key events over a WebSocket.
+    open_browser = function(launch = utils::browseURL) {
+      if (!is.null(self$browser)) return(invisible(self))
+      if (!requireNamespace("httpuv", quietly = TRUE) || !requireNamespace("jsonlite", quietly = TRUE)) {
+        stop("This graphics device does not report mouse and key events; install the httpuv and jsonlite ",
+             "packages to use the window in a browser.", call. = FALSE)
+      }
+      b <- new.env(parent = emptyenv())
+      b$events <- list()
+      b$sockets <- list()
+      b$page <- opengl_window_page(self$title, self$size)
+      self$browser <- b
+      self$send_frame(notify = FALSE)
+      app <- list(
+        call = function(req) {
+          if (startsWith(req$PATH_INFO, "/frame.png")) {
+            return(list(status = 200L, headers = list(`Content-Type` = "image/png", `Cache-Control` = "no-store"),
+                        body = b$frame))
+          }
+          list(status = 200L, headers = list(`Content-Type` = "text/html; charset=utf-8"), body = b$page)
+        },
+        onWSOpen = function(ws) {
+          b$sockets[[length(b$sockets) + 1]] <- ws
+          ws$onMessage(function(binary, message) {
+            b$events[[length(b$events) + 1]] <- jsonlite::fromJSON(message)
+          })
+        }
+      )
+      port <- httpuv::randomPort()
+      b$server <- httpuv::startServer("127.0.0.1", port, app)
+      b$url <- sprintf("http://127.0.0.1:%d/", port)
+      launch(b$url)
+      invisible(self)
+    },
+    # Puts the renderer's frame on the page and tells the page to reload it.
+    send_frame = function(notify = TRUE) {
+      b <- self$browser
+      frame <- if (!is.null(self$renderer$frame_buffer_object)) self$renderer$get_frame()
+      b$frame <- if (is.null(frame)) {
+        png::writePNG(array(0, c(1, 1, 3)))
+      } else {
+        png::writePNG(native_raster_to_array(frame) / 255)
+      }
+      if (notify) for (ws in b$sockets) try(ws$send("frame"), silent = TRUE)
+      invisible(self)
+    },
+    # Waits for the next event from the browser page and handles it.
+    handle_browser_event = function() {
+      b <- self$browser
+      while (!length(b$events)) {
+        if (!b$server$isRunning()) stop("The window's server has stopped.", call. = FALSE)
+        httpuv::service(50)
+      }
+      ev <- b$events[[1]]
+      b$events <- b$events[-1]
+      self$dispatch_event(ev)
+      invisible(self)
+    },
+    # Pixels of the renderer's frame (which upstream's window shares) at
+    # fractions x and y of the window's width and height from its bottom left.
+    frame_pixels = function(x, y) {
+      shape <- self$renderer$get_pixel_shape() %||% self$size
+      c(x * shape[1], y * shape[2])
+    },
+    # Passes one event of the browser page to the handler pyglet would call:
+    # a list with `type`, positions and moves as fractions of the window from
+    # its bottom left, buttons 1, 2 and 4, pyglet's key symbols and modifier
+    # bits, and wheel steps.
+    dispatch_event = function(ev) {
+      mods <- ev$modifiers %||% 0
+      p <- if (!is.null(ev$x)) self$frame_pixels(ev$x, ev$y)
+      d <- if (!is.null(ev$dx)) self$frame_pixels(ev$dx, ev$dy)
+      switch(ev$type,
+        press = self$on_mouse_press(p[1], p[2], ev$button, mods),
+        motion = self$on_mouse_motion(p[1], p[2], d[1], d[2]),
+        drag = self$on_mouse_drag(p[1], p[2], d[1], d[2], ev$buttons, mods),
+        scroll = self$on_mouse_scroll(p[1], p[2], ev$sx, ev$sy),
+        key_press = self$on_key_press(ev$symbol, mods),
+        key_release = self$on_key_release(ev$symbol, mods),
+        NULL
+      )
+      self$swap_buffers()
+      invisible(self)
     },
     on_mouse_motion = function(x, y, dx, dy) {
       point <- self$renderer$pixel_coords_to_space_coords(x, y)
@@ -1678,3 +1771,57 @@ WindowClass <- R6::R6Class("Window", lock_objects = FALSE,
 #' @rdname opengl_renderer
 #' @export
 Window <- build_constructor(WindowClass)
+
+# The page of a Window shown in a browser: the frame at the window's size,
+# with mouse, wheel and key events sent as pyglet reports them, positions as
+# fractions of the window (symbols of
+# pyglet.window.key, modifier bits MOD_SHIFT 1, MOD_CTRL 2, MOD_ALT 4,
+# MOD_WINDOWS 32, MOD_COMMAND 64 and MOD_OPTION 128).
+opengl_window_page <- function(title, size) {
+  js <- "
+const img = document.getElementById('f');
+const ws = new WebSocket('ws://' + location.host + '/');
+ws.onmessage = () => { img.src = 'frame.png?' + Date.now(); };
+const mac = /Mac/.test(navigator.platform);
+const mods = e => (e.shiftKey ? 1 : 0) | (e.ctrlKey ? 2 : 0) | (e.altKey ? (mac ? 132 : 4) : 0) |
+  (e.metaKey ? (mac ? 64 : 32) : 0);
+const pos = e => { const r = img.getBoundingClientRect();
+  return [(e.clientX - r.left) / r.width, 1 - (e.clientY - r.top) / r.height]; };
+const send = o => { if (ws.readyState === 1) ws.send(JSON.stringify(o)); };
+const bmap = [1, 2, 4];
+let last = null, buttons = 0;
+img.addEventListener('mousedown', e => { e.preventDefault(); img.focus(); const p = pos(e); last = p;
+  buttons |= bmap[e.button] || 0;
+  send({type: 'press', x: p[0], y: p[1], button: bmap[e.button] || 1, modifiers: mods(e)}); });
+addEventListener('mouseup', e => { buttons &= ~(bmap[e.button] || 0); });
+img.addEventListener('mousemove', e => { const p = pos(e);
+  const d = last ? [p[0] - last[0], p[1] - last[1]] : [0, 0]; last = p;
+  send({type: buttons ? 'drag' : 'motion', x: p[0], y: p[1], dx: d[0], dy: d[1], buttons: buttons,
+        modifiers: mods(e)}); });
+img.addEventListener('wheel', e => { e.preventDefault(); const p = pos(e);
+  send({type: 'scroll', x: p[0], y: p[1], sx: -e.deltaX / 100, sy: -e.deltaY / 100}); }, {passive: false});
+img.addEventListener('contextmenu', e => e.preventDefault());
+const special = {Shift: [65505, 65506], Control: [65507, 65508], Alt: mac ? [65519, 65520] : [65513, 65514],
+  Meta: mac ? [65517, 65518] : [65515, 65516], CapsLock: 65509, Enter: 65293, Escape: 65307,
+  Backspace: 65288, Tab: 65289, Delete: 65535, ArrowLeft: 65361, ArrowRight: 65363, ArrowUp: 65362,
+  ArrowDown: 65364, Home: 65360, End: 65367, PageUp: 65365, PageDown: 65366, Insert: 65379};
+const sym = e => { const s = special[e.key];
+  if (Array.isArray(s)) return e.location === 2 ? s[1] : s[0];
+  if (s) return s;
+  if (/^F([1-9]|1[0-2])$/.test(e.key)) return 65469 + parseInt(e.key.slice(1));
+  if (/^Key[A-Z]$/.test(e.code)) return e.code.toLowerCase().charCodeAt(3);
+  if (/^Digit[0-9]$/.test(e.code)) return e.code.charCodeAt(5);
+  if (e.key.length === 1) return e.key.toLowerCase().codePointAt(0);
+  return null; };
+addEventListener('keydown', e => { const s = sym(e); if (s === null) return; e.preventDefault();
+  if (!e.repeat) send({type: 'key_press', symbol: s, modifiers: mods(e)}); });
+addEventListener('keyup', e => { const s = sym(e); if (s === null) return;
+  send({type: 'key_release', symbol: s, modifiers: mods(e)}); });
+"
+  esc <- function(x) gsub("<", "&lt;", gsub("&", "&amp;", x, fixed = TRUE), fixed = TRUE)
+  paste0("<!doctype html><html><head><meta charset='utf-8'><title>", esc(title), "</title>",
+         "<style>body{margin:0;background:#000}img{display:block;width:", size[1], "px;height:", size[2],
+         "px;outline:none;user-select:none}</style></head><body>",
+         "<img id='f' src='frame.png' draggable='false' tabindex='0' alt=''>",
+         "<script>", js, "</script></body></html>")
+}

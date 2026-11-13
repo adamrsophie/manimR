@@ -95,8 +95,11 @@
 #' * `Window(renderer)` is the window of a live preview: an R graphics
 #'   device (an interactive session is needed) that shows the renderer's frame
 #'   on `swap_buffers()`; `handle_event()` waits for a mouse or key event
-#'   in it and passes it to the scene's handlers, on devices that report
-#'   events (X11 and Windows). Its size follows `config$window_size` and its position
+#'   in it and passes it to the scene's handlers. On a device that reports
+#'   no events (the macOS quartz device, RStudio's) it opens the window as a
+#'   page in the browser (`open_browser()`, with the httpuv and jsonlite
+#'   packages), which reports pyglet's mouse, wheel and key events with
+#'   pyglet's key codes and modifier bits. Its size follows `config$window_size` and its position
 #'   `config$window_position` on the monitor, which is
 #'   `getOption("manimR.monitor")` (a list of `x`, `y`, `width` and `height`)
 #'   or 1920 by 1080 pixels at the origin.
