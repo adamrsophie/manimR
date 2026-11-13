@@ -424,7 +424,10 @@ that uses a <code>MultiCameraClass</code> camera:</p>
 <span><span class="op">)</span></span></code></pre></div>
 <video src="cameras-and-3d_files/figure-html/picture-in-picture-PictureInPicture.mp4" controls autoplay muted loop playsinline style="width:100%"></video><p><code>MultiCameraClass$new(image_mobjects_from_cameras, allow_cameras_to_capture_their_own_display)</code>
 is the camera; <code>add_image_mobject_from_camera()</code> registers
-more displays later.</p>
+more displays later. A display that stays a rectangle (also rotated or
+flipped) shows the view as sharp vector graphics; a sheared display
+shows the sub camera’s pixels mapped onto its shape, as in Python
+manim.</p>
 </div>
 <div class="section level2">
 <h2 id="d-scenes">3D scenes<a class="anchor" aria-label="anchor" href="#d-scenes"></a>

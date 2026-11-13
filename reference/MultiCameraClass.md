@@ -4,8 +4,10 @@ A
 [MovingCameraClass](https://adamrsophie.github.io/manimR/reference/MovingCameraClass.md)
 that also draws the views of other cameras into
 [`ImageMobjectFromCamera()`](https://adamrsophie.github.io/manimR/reference/image_mobject.md)
-mobjects. Each view is drawn as vector graphics clipped to the display
-rectangle, so it stays sharp.
+mobjects. A view in a rectangular display (rotated or mirrored too) is
+drawn as vector graphics clipped to the display, so it stays sharp; a
+sheared or perspective display gets the sub camera's pixels mapped
+through its corners, as upstream draws every display.
 
 ## Usage
 
