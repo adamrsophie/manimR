@@ -32,8 +32,11 @@
 #'   a triangle strip out) between the two stages. A `sampler2D` uniform
 #'   holds a texture unit: `context$texture(size, components, data)` makes
 #'   a texture (bytes, the row at v = 0 first) and its `use(location)` binds
-#'   it, sampled linearly and repeated as moderngl does. Other samplers and
-#'   arrays inside structs raise an error, and
+#'   it, sampled linearly and repeated as moderngl does; `texture()`,
+#'   `textureLod()`, `texelFetch()` and `textureSize()` read it. Other
+#'   sampler types, and units with no texture, read (0, 0, 0, 1), as
+#'   OpenGL's default texture does, since upstream binds only 2D textures.
+#'   Arrays inside structs raise an error, and
 #'   `Mesh$render()` of a mesh it cannot run needs an OpenGL context and
 #'   stops.
 #' * `Shader(context, name, source)` reads the GLSL code of a shader folder

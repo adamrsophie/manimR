@@ -1333,6 +1333,10 @@ OpenGLRendererClass <- R6::R6Class("OpenGLRenderer", inherit = RendererClass, lo
       img <- if (is.character(source)) ImageMobject(source)$pixel_array else change_to_rgba_array(source)
       tid <- length(self$path_to_texture_id)
       texture <- self$context$texture(size = dim(img)[2:1], components = 4, data = img)
+      # As upstream: clamped to the edge and sampled at the nearest texel.
+      texture$repeat_x <- FALSE
+      texture$repeat_y <- FALSE
+      texture$filter <- c("NEAREST", "NEAREST")
       texture$use(location = tid)
       self$path_to_texture_id[[key]] <- tid
       tid

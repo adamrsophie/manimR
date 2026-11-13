@@ -14,8 +14,10 @@
 # fields side by side (a "glsl_struct" attribute names the struct).
 # Geometry shaders run with one row per input primitive: EmitVertex() and
 # EndPrimitive() record the outputs of the rows under the mask. A sampler2D
-# uniform holds a texture unit, which texture() samples as the software
-# context's texture bound there does. Arrays inside structs raise an error.
+# uniform holds a texture unit, which texture(), textureLod(), texelFetch()
+# and textureSize() read as the software context's texture bound there; other
+# sampler types, and units with no texture, read (0, 0, 0, 1) as OpenGL's
+# default texture. Arrays inside structs raise an error.
 
 glsl_tokenize <- function(code) {
   code <- gsub("/\\*.*?\\*/", " ", code, perl = TRUE)
@@ -31,6 +33,17 @@ GLSL_TYPES <- c(float = 1, int = 1, uint = 1, bool = 1, double = 1,
                 vec2 = 2, vec3 = 3, vec4 = 4, ivec2 = 2, ivec3 = 3, ivec4 = 4, uvec2 = 2, uvec3 = 3, uvec4 = 4,
                 bvec2 = 2, bvec3 = 3, bvec4 = 4, dvec2 = 2, dvec3 = 3, dvec4 = 4,
                 mat2 = 4, mat3 = 9, mat4 = 16, mat2x2 = 4, mat3x3 = 9, mat4x4 = 16, sampler2D = 1)
+# Sampler types besides sampler2D. Upstream's renderer binds only 2D
+# textures, so these read OpenGL's default (incomplete) texture of their
+# target, which gives (0, 0, 0, 1).
+GLSL_OTHER_SAMPLERS <- c(outer(c("", "i", "u"), c("sampler1D", "sampler3D", "samplerCube", "sampler1DArray",
+                                                   "sampler2DArray", "sampler2DRect", "samplerBuffer",
+                                                   "sampler2DMS", "sampler2DMSArray", "samplerCubeArray"),
+                               paste0),
+                         "isampler2D", "usampler2D", "sampler1DShadow", "sampler2DShadow", "samplerCubeShadow",
+                         "sampler2DRectShadow", "sampler1DArrayShadow", "sampler2DArrayShadow",
+                         "samplerCubeArrayShadow")
+GLSL_TYPES[GLSL_OTHER_SAMPLERS] <- 1
 GLSL_QUALIFIERS <- c("in", "out", "inout", "uniform", "const", "flat", "smooth", "noperspective", "centroid",
                      "highp", "mediump", "lowp", "attribute", "varying", "invariant")
 
@@ -359,7 +372,6 @@ glsl_parse <- function(tokens) {
       take(";")
       next
     }
-    if (grepl("sampler", peek()) && peek() != "sampler2D") glsl_error("only sampler2D textures are supported by manimR's GLSL interpreter.")
     if (!is_type(peek())) glsl_error(sprintf("unexpected '%s'.", peek()))
     type <- take()
     globals <- c(globals, declarations(type, quals))
@@ -379,6 +391,7 @@ glsl_typed <- function(x, type, st) {
   if (is.list(x)) return(x)
   attr(x, "glsl_dim") <- glsl_type_dim(type)
   attr(x, "glsl_struct") <- if (!is.null(st$program$structs[[type]])) type
+  attr(x, "glsl_sampler") <- if (grepl("sampler", type, fixed = TRUE)) type
   x
 }
 # A field of a struct value.
@@ -573,8 +586,6 @@ glsl_builtin <- function(name, args) {
       matrix(apply(args[[1]], 1, function(r) det(matrix(r, d[2], d[1]))), ncol = 1)
     },
     float_to_color = glsl_float_to_color(args[[1]], args[[2]], args[[3]], args[[4]]),
-    texture = , texture2D = , textureLod = , texelFetch =
-      glsl_error("textures are not supported by manimR's GLSL interpreter."),
     glsl_error("the function '", name, "' is not supported by manimR's GLSL interpreter.")
   )
 }
@@ -783,12 +794,35 @@ glsl_call <- function(name, arg_exprs, env, st, mask) {
     st$emits[[length(st$emits) + 1]] <- event
     return(matrix(0, 1, 1))
   }
-  if (is.null(fns) && name %in% c("texture", "texture2D")) {
-    unit <- glsl_eval(arg_exprs[[1]], env, st, mask)[1, 1]
-    tex <- if (unit + 1 <= length(st$textures)) st$textures[[unit + 1]]
-    if (is.null(tex)) glsl_error("no texture is bound to unit ", unit, ".")
-    uv <- glsl_rows(glsl_eval(arg_exprs[[2]], env, st, mask), st$n)
-    return(tex$sample(uv[, 1:2, drop = FALSE]))
+  if (is.null(fns) && name %in% c("texture", "texture2D", "textureLod", "texelFetch", "textureSize")) {
+    sampler <- glsl_eval(arg_exprs[[1]], env, st, mask)
+    unit <- sampler[1, 1]
+    stype <- attr(sampler, "glsl_sampler") %||% "sampler2D"
+    tex <- if (stype == "sampler2D" && unit + 1 <= length(st$textures)) {
+      st$textures[[unit + 1]]
+    }
+    if (name == "textureSize") {
+      # The base level's size; 0 for the default texture.
+      size <- if (is.null(tex)) c(0, 0) else as.numeric(tex$size)
+      return(glsl_typed(matrix(size, 1, 2), "ivec2", st))
+    }
+    # A texture that is not bound reads as (0, 0, 0, 1), as OpenGL's default
+    # texture does.
+    if (is.null(tex)) return(glsl_typed(matrix(c(0, 0, 0, 1), st$n, 4, byrow = TRUE), "vec4", st))
+    p <- glsl_rows(glsl_eval(arg_exprs[[2]], env, st, mask), st$n)
+    if (name == "texelFetch") {
+      # The texel at integer coordinates; outside the texture, 0.
+      img <- tex$data
+      h <- dim(img)[1]; w <- dim(img)[2]; k <- dim(img)[3]
+      x <- trunc(p[, 1]); y <- trunc(p[, 2])
+      ok <- x >= 0 & x < w & y >= 0 & y < h
+      out <- matrix(c(0, 0, 0, 1), st$n, 4, byrow = TRUE)
+      out[, seq_len(k)] <- 0
+      for (j in seq_len(k)) out[ok, j] <- img[cbind(y[ok] + 1, x[ok] + 1, j)]
+      return(glsl_typed(out, "vec4", st))
+    }
+    # Textures here have no mipmaps, so textureLod() samples the base level.
+    return(tex$sample(p[, 1:2, drop = FALSE]))
   }
   if (is.null(fns)) {
     args <- lapply(arg_exprs, glsl_eval, env, st, mask)
@@ -968,6 +1002,15 @@ glsl_run <- function(program, n, inputs = list(), uniforms = list(), builtins = 
       value <- matrix(0, n, k)
     }
     glsl_declare(s, g, st, mask, value)
+  }
+  # OpenGL refuses to draw when samplers of different types share a unit.
+  samplers <- Filter(function(s) "uniform" %in% s$quals && grepl("sampler", s$type, fixed = TRUE), program$globals)
+  if (length(samplers) > 1) {
+    units <- vapply(samplers, function(s) as.numeric(uniforms[[s$name]] %||% 0)[1], 0)
+    types <- vapply(samplers, function(s) s$type, "")
+    clash <- vapply(split(types, units), function(t) length(unique(t)) > 1, TRUE)
+    if (any(clash)) glsl_error("samplers of different types use texture unit ", names(clash)[clash][1],
+                               "; OpenGL does not draw then.")
   }
   main <- program$functions$main
   if (is.null(main)) glsl_error("the shader has no main().")

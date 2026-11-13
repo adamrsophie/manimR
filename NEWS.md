@@ -45,8 +45,12 @@
   upstream's default, manim_coords, vertex_colors or test folders in
   software, and runs the vertex and fragment shaders of other meshes
   (and `FullScreenQuad()`) in a GLSL interpreter, structs, geometry
-  shaders and `sampler2D` textures of the software context included;
-  other samplers need an OpenGL context and stop with a message. `OpenGLRenderer()` renders scenes (also with
+  shaders and `sampler2D` textures of the software context included
+  (`texture()`, `textureLod()`, `texelFetch()`, `textureSize()`); other
+  sampler types and units with no texture read (0, 0, 0, 1), as a GPU's
+  default texture, since upstream binds only 2D textures. Textures that
+  the renderer makes from images are clamped and sampled at the nearest
+  texel, as upstream's. `OpenGLRenderer()` renders scenes (also with
   `manim_config(renderer = "opengl")`) through a software context
   (`OpenGLSoftwareContext()`) whose framebuffers are ragg devices, the
   `render_opengl_vectorized_mobject_fill()` and `_stroke()` functions draw

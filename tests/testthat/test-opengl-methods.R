@@ -1293,9 +1293,25 @@ void main() { if (v_pos.x > 5.0) discard; mat2 r = mat2(0.0, 1.0, -1.0, 0.0);
   st <- glsl_run(glsl_program(fs), 2, inputs = list(v_pos = rbind(c(3, 4, 0), c(9, 0, 0))))
   expect_equal(st$discarded, c(FALSE, TRUE))
   expect_equal(unname(get("frag_color", st$globals)[1, ]), c(0, 1, 5, 1))
-  expect_error(glsl_run(glsl_program("uniform sampler2D t; void main() { gl_FragColor = texture(t, vec2(0.0)); }"), 1),
-               "no texture is bound")
-  expect_error(glsl_program("uniform samplerCube t; void main() { }"), "only sampler2D")
+  # Values a GPU gives through moderngl: a unit with no texture and samplers
+  # other than sampler2D read (0, 0, 0, 1); texelFetch() and textureSize()
+  # read the bound texture.
+  ctx <- OpenGLSoftwareContextClass$new()
+  tex <- OpenGLSoftwareTextureClass$new(ctx, c(3, 2), 4, data = as.raw(seq(0, 230, 10)))
+  tex$filter <- c("NEAREST", "NEAREST")
+  fs <- "uniform sampler2D t; uniform samplerCube c; uniform sampler2D none; uniform sampler3D d;
+in vec2 uv; out vec4 a; out vec4 b; out vec4 f; out vec4 g; out vec4 e; out vec4 h;
+void main() { a = texture(t, uv); b = texture(c, vec3(uv, 1.0)); f = texelFetch(t, ivec2(2, 1), 0);
+  g = vec4(vec2(textureSize(t, 0)), 0.0, 0.0); e = texture(none, uv); h = textureLod(d, vec3(0.3), 0.0); }"
+  st <- glsl_run(glsl_program(fs), 1, list(uv = rbind(c(0.9, 0.9))), list(t = 0, c = 6, none = 5, d = 7),
+                 textures = list(tex))
+  got <- function(v) round(as.vector(unclass(get(v, st$globals))) * 255)
+  expect_equal(got("a"), c(200, 210, 220, 230))
+  expect_equal(got("f"), c(200, 210, 220, 230))
+  expect_equal(got("g") / 255, c(3, 2, 0, 0))
+  for (v in c("b", "e", "h")) expect_equal(got(v), c(0, 0, 0, 255))
+  expect_error(glsl_run(glsl_program("uniform sampler2D t; uniform samplerCube c; void main() { }"), 1),
+               "different types use texture unit 0")
   # Indices are per row: a loop counter under a mask, and indices that
   # differ between rows, for reads and writes.
   run <- function(fs, x) get("c", glsl_run(glsl_program(fs), length(x), list(x = x))$globals)
