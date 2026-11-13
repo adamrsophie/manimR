@@ -816,6 +816,16 @@ test_that("the software shaders draw the frames of upstream's OpenGL renderer", 
   dot$add_points(rbind(c(0, 0, 0)), color = RED)
   cloud <- DotCloud(radius = 1.5, density = 3, color = BLUE)$make_3d()$shift(RIGHT * 3)
   expect_lte(max(abs(frame(list(dot, cloud)) - oracle("dots"))), 1)
+  # VMobjects run the quadratic_bezier_fill and quadratic_bezier_stroke
+  # shaders.
+  circle <- Circle(radius = 1.5, color = WHITE, fill_color = RED, fill_opacity = 1, stroke_width = 4)$shift(LEFT * 2)
+  square <- Square(side_length = 2, color = YELLOW, fill_color = BLUE, fill_opacity = 0.5, stroke_width = 8)$shift(RIGHT * 2)
+  expect_lte(max(abs(frame(list(circle, square)) - oracle("vfill"))), 1)
+  zig <- OpenGLVMobject(stroke_color = GREEN, stroke_width = 10)
+  zig$set_points_as_corners(rbind(c(-4, -1, 0), c(-2, 1.5, 0), c(0, -1, 0), c(2, 1.5, 0), c(4, -1, 0)))
+  arc <- OpenGLVMobject(stroke_color = WHITE, stroke_width = 6)
+  arc$set_points(rbind(c(-3, -2.5, 0), c(-1, -0.5, 0), c(1, -0.5, 0), c(3, -2.5, 0)))
+  expect_lte(max(abs(frame(list(zig, arc)) - oracle("vstroke"))), 2)
   # Near the sphere's front pole the vertex normals nearly cancel, and the
   # GPU's single precision interpolation sets their direction.
   sphere <- surf(function(u, v) 2 * c(cos(u) * sin(v), sin(u) * sin(v), -cos(v)), c(0, TAU), c(0, PI), c(33, 17), BLUE)

@@ -225,12 +225,12 @@ embedded the same way when it is printed.
   draws with grid on a ragg device instead of pycairo, so the camera's
   Cairo context helpers have no counterpart. With `manim_config(renderer =
   "opengl")`, scenes render with `OpenGLRenderer`, a port of upstream's
-  OpenGL renderer that draws in software instead of on the GPU: shader
-  wrappers are drawn by a grid camera with the OpenGL camera's projection
-  and lighting (lit once per mobject, not per pixel), the surface shaders
-  of `OpenGLSurface` and `OpenGLTexturedSurface` and the projection
-  shaders by their GLSL rules
-  (surfaces and dots lit per pixel and depth tested), and a live preview `Window` is an R graphics
+  OpenGL renderer that draws in software instead of on the GPU. Its shader
+  wrappers run upstream's GLSL rules: VMobjects the quadratic Bezier fill
+  and stroke shaders, `OpenGLSurface` and `OpenGLTexturedSurface` the
+  surface shaders, and the projection shaders when configured, rasterized
+  at pixel centers, lit per pixel and depth tested. Images are drawn by a
+  grid camera, and a live preview `Window` is an R graphics
   device. GLSL code of a `Mesh` is not run. The OpenGL point clouds
   (`DotCloud`, `TrueDot`, `OpenGLPMobject`) run upstream's true_dot
   shader, and the other OpenGL mobject classes

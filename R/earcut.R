@@ -96,9 +96,10 @@ earclip_triangulation <- function(verts, ring_ends) {
 # vertex row I, and links P (previous) and N (next). Removing a node keeps
 # its own links, as earcut relies on. Returns 1 based rows of `xy`, three per
 # triangle.
-# Limitation: earcut's z-order hash only speeds up the ear test for rings above
-# 80 points (the result is the same), so it is skipped; the ear test is
-# O(n) per candidate, O(n^2) per polygon.
+# earcut's z-order hash only speeds up the ear test for rings above 80
+# points (the result is the same), so it is skipped. The ear test instead
+# checks all points of the ring at once: each node carries the number of
+# the ring it is in (A, 0 once removed), as split_polygon() starts new rings.
 earcut_ring <- function(xy) {
   n <- nrow(xy)
   if (n < 3) return(integer())
@@ -108,6 +109,8 @@ earcut_ring <- function(xy) {
   I <- integer(cap)
   P <- integer(cap)
   N <- integer(cap)
+  A <- integer(cap)
+  rings <- 1L
   used <- 0L
   tris <- integer(0)
 
@@ -115,7 +118,7 @@ earcut_ring <- function(xy) {
     used <<- used + 1L
     if (used > length(X)) {
       X <<- c(X, numeric(cap)); Y <<- c(Y, numeric(cap)); I <<- c(I, integer(cap))
-      P <<- c(P, integer(cap)); N <<- c(N, integer(cap))
+      P <<- c(P, integer(cap)); N <<- c(N, integer(cap)); A <<- c(A, integer(cap))
     }
     X[used] <<- x
     Y[used] <<- y
@@ -138,14 +141,10 @@ earcut_ring <- function(xy) {
   remove_node <- function(p) {
     P[N[p]] <<- P[p]
     N[P[p]] <<- N[p]
+    A[p] <<- 0L
   }
   area <- function(p, q, r) (Y[q] - Y[p]) * (X[r] - X[q]) - (X[q] - X[p]) * (Y[r] - Y[q])
   equals <- function(p, q) X[p] == X[q] && Y[p] == Y[q]
-  point_in_triangle <- function(a, b, c, p) {
-    (X[c] - X[p]) * (Y[a] - Y[p]) >= (X[a] - X[p]) * (Y[c] - Y[p]) &&
-      (X[a] - X[p]) * (Y[b] - Y[p]) >= (X[b] - X[p]) * (Y[a] - Y[p]) &&
-      (X[b] - X[p]) * (Y[c] - Y[p]) >= (X[c] - X[p]) * (Y[b] - Y[p])
-  }
   on_segment <- function(p, q, r) {
     X[q] <= max(X[p], X[r]) && X[q] >= min(X[p], X[r]) && Y[q] <= max(Y[p], Y[r]) && Y[q] >= min(Y[p], Y[r])
   }
@@ -204,6 +203,15 @@ earcut_ring <- function(xy) {
     P[a2] <<- b2
     N[bp] <<- b2
     P[b2] <<- bp
+    rings <<- rings + 1L
+    A[a2] <<- A[a]
+    A[b2] <<- A[a]
+    q <- b2
+    repeat {
+      A[q] <<- rings
+      q <- N[q]
+      if (q == b2) break
+    }
     b2
   }
   filter_points <- function(start, end = start) {
@@ -226,12 +234,15 @@ earcut_ring <- function(xy) {
     a <- P[ear]
     c <- N[ear]
     if (area(a, ear, c) >= 0) return(FALSE)
-    p <- N[c]
-    while (p != a) {
-      if (point_in_triangle(a, ear, c, p) && area(P[p], p, N[p]) >= 0) return(FALSE)
-      p <- N[p]
-    }
-    TRUE
+    p <- which(A[seq_len(used)] == A[ear])
+    p <- p[p != a & p != ear & p != c]
+    xs <- X[p]
+    ys <- Y[p]
+    inside <- (X[c] - xs) * (Y[a] - ys) >= (X[a] - xs) * (Y[c] - ys) &
+      (X[a] - xs) * (Y[ear] - ys) >= (X[ear] - xs) * (Y[a] - ys) &
+      (X[ear] - xs) * (Y[c] - ys) >= (X[c] - xs) * (Y[ear] - ys)
+    p <- p[inside]
+    !any(area(P[p], p, N[p]) >= 0)
   }
   cure_local_intersections <- function(start) {
     p <- start
@@ -300,6 +311,7 @@ earcut_ring <- function(xy) {
   s <- sum((xy[j, 1] - xy[, 1]) * (xy[, 2] + xy[j, 2]))
   last <- NULL
   for (i in if (s > 0) seq_len(n) else rev(seq_len(n))) last <- insert_node(i, last)
+  A[seq_len(used)] <- 1L
   if (equals(last, N[last])) {
     remove_node(last)
     last <- N[last]

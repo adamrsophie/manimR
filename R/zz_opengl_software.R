@@ -336,11 +336,12 @@ software_gl_position <- function(xyz, u) {
 
 # Draws triangles (rows of 1 based indices into the rows of gl, positions
 # from get_gl_Position()) into the framebuffer. Fragments outside the depth
-# range are clipped and those `discard(at)` flags are dropped; with
+# range are clipped and those `discard(at, tri_id)` flags are dropped; with
 # `depth_test`, a fragment is kept where its depth is less than the
 # framebuffer's (GL_LESS, moderngl's default) and then writes its depth.
-# The kept fragments take the colors `shade(at)` gives (rows of RGBA), and
-# blend in triangle order. `at(v)` interpolates per vertex rows `v` at the
+# The kept fragments take the colors `shade(at, tri_id)` gives (rows of
+# RGBA; tri_id is the row of `tri` of each fragment) and blend in triangle
+# order. `at(v)` interpolates per vertex rows `v` at the
 # fragments.
 software_rasterize <- function(fbo, gl, tri, depth_test, shade, discard = NULL) {
   W <- fbo$viewport[3]
@@ -361,7 +362,7 @@ software_rasterize <- function(fbo, gl, tri, depth_test, shade, discard = NULL) 
   subset(keep)
   z <- z[keep]
   if (!is.null(discard) && length(z)) {
-    keep <- !discard(at)
+    keep <- !discard(at, f$tri)
     subset(keep)
     z <- z[keep]
   }
@@ -386,7 +387,7 @@ software_rasterize <- function(fbo, gl, tri, depth_test, shade, discard = NULL) 
     if (!length(pix)) return(invisible(NULL))
     start <- c(TRUE, pix[-1] != pix[-length(pix)])
   }
-  rgba <- shade(at)
+  rgba <- shade(at, f$tri)
   rgba[is.na(rgba)] <- 0
   layer <- software_layer(W, H)
   rank <- seq_along(pix) - which(start)[cumsum(start)] + 1
@@ -446,7 +447,7 @@ software_draw_surface <- function(fbo, mobject, uniforms) {
       if (textured) assign("opacity", faces[, 4, drop = FALSE], envir = sd) else assign("color", faces, envir = sd)
     }
   }
-  shade <- function(at) {
+  shade <- function(at, ...) {
     n <- at(normal)
     n <- n / sqrt(rowSums(n * n))
     point <- at(xyz)
@@ -513,12 +514,12 @@ software_draw_true_dot <- function(fbo, mobject, uniforms) {
     r <- drop(at(rad))
     list(d = d, r = r, dist = sqrt(rowSums(d * d)))
   }
-  discard <- function(at) {
+  discard <- function(at, ...) {
     g <- geometry(at)
     g$dist - g$r > 0.5 * aaw
   }
   light <- as.numeric(u$light_source_position)
-  shade <- function(at) {
+  shade <- function(at, ...) {
     g <- geometry(at)
     normal <- cbind(g$d / g$r, suppressWarnings(sqrt(1 - g$dist^2 / g$r^2)))
     color <- at(col)
@@ -978,42 +979,36 @@ OpenGLRendererClass <- R6::R6Class("OpenGLRenderer", inherit = RendererClass, lo
         if (isTRUE(cfg("use_projection_fill_shaders"))) render_opengl_vectorized_mobject_fill(self, mobject)
         if (isTRUE(cfg("use_projection_stroke_shaders"))) render_opengl_vectorized_mobject_stroke(self, mobject)
       }
-      # The shader wrappers: the mobject's family drawn by the grid camera.
+      # The shader wrappers, in the order of upstream's
+      # get_shader_wrapper_list(): a mobject before its submobjects, and a
+      # VMobject's whole family through the quadratic_bezier shaders.
       fbo <- self$frame_buffer_object
       pixel_shape <- self$get_pixel_shape()
       cam <- OpenGLGridCameraClass$new(pixel_width = pixel_shape[1], pixel_height = pixel_shape[2],
                                        should_apply_shading = FALSE)
       cam$set_uniforms(self$perspective_uniforms)
-      # An OpenGLSurface runs the surface shader. manimR's surfaces also hold
-      # their faces as submobjects, which upstream's do not, so those are left
-      # out. A surface is drawn before the first other mobject that follows
-      # it in the family.
-      family <- mobject$get_family()
-      surfaces <- Filter(opengl_is_software_surface, family)
-      faces <- unlist(lapply(surfaces, function(sf) {
-        Filter(function(sm) inherits(sm, "ThreeDVMobject") && !inherits(sm, "OpenGLSurface"), sf$submobjects)
-      }), recursive = FALSE)
-      pos <- stats::setNames(seq_along(family), vapply(family, function(m) m$mob_id, ""))
-      surface_pos <- unname(pos[vapply(surfaces, function(m) m$mob_id, "")])
-      done <- logical(length(surfaces))
+      u <- self$perspective_uniforms
+      walk <- function(m) {
+        if (opengl_is_software_surface(m)) {
+          # manimR's surfaces also hold their faces as submobjects, which
+          # upstream's do not; only the surfaces among them are drawn.
+          software_draw_surface(fbo, m, u)
+          for (sm in Filter(opengl_is_software_surface, m$submobjects)) walk(sm)
+          return(invisible(NULL))
+        }
+        if (is_vmobject(m)) return(software_draw_vmobject(fbo, m, u))
+        if (inherits(m, "OpenGLPMobject")) {
+          software_draw_true_dot(fbo, m, u)
+        } else if (NROW(m$points) > 0) {
+          # Images and other mobjects are drawn by the grid camera.
+          cam$display_mobject(m)
+        }
+        for (sm in m$submobjects) walk(sm)
+      }
       fbo$with_device(function() {
         cam$push_view()
         on.exit(grid::popViewport(), add = TRUE)
-        for (m in cam$get_mobjects_to_display(list(mobject), excluded_mobjects = faces)) {
-          at <- pos[m$mob_id]
-          if (is.na(at)) at <- Inf
-          for (i in which(!done & surface_pos < at)) {
-            done[i] <- TRUE
-            software_draw_surface(fbo, surfaces[[i]], self$perspective_uniforms)
-          }
-          # An OpenGL point cloud runs the true_dot shader.
-          if (inherits(m, "OpenGLPMobject")) {
-            software_draw_true_dot(fbo, m, self$perspective_uniforms)
-          } else {
-            cam$display_mobject(m)
-          }
-        }
-        for (i in which(!done)) software_draw_surface(fbo, surfaces[[i]], self$perspective_uniforms)
+        walk(mobject)
       })
       invisible(self)
     },

@@ -231,29 +231,32 @@ opengl_vmobject_shader_methods <- list(
   # vertex indices, every curve's own triangle followed by the ear clipped
   # triangles of the inner polygon.
   get_triangulation = function(normal_vector = NULL) {
-    normal_vector <- normal_vector %||% self$get_unit_normal()
-    points <- opengl_quadratic_points(self)
-    if (nrow(points) <= 1) return(integer())
-    if (!isTRUE(all(abs(normal_vector - OUT) < 1e-8))) points <- points %*% z_to_vector(normal_vector)
-    n <- nrow(points)
-    indices <- seq_len(n) - 1L
-    i0 <- seq(1, n, by = 3)
-    b0 <- points[i0, , drop = FALSE]
-    b1 <- points[i0 + 1, , drop = FALSE]
-    b2 <- points[i0 + 2, , drop = FALSE]
-    convexities <- sign(cross2d(b1 - b0, b2 - b1))
-    atol <- self$tolerance_for_point_equality
-    k <- nrow(b0)
-    end_of_loop <- logical(k)
-    if (k > 1) end_of_loop[-k] <- apply(abs(b2[-k, , drop = FALSE] - b0[-1, , drop = FALSE]) > atol, 1, any)
-    end_of_loop[k] <- TRUE
-    inner <- sort(c(indices[i0], indices[i0 + 1][convexities < 0], indices[i0 + 2][end_of_loop]))
-    rings <- seq_along(inner)[inner %% 3 == 2]
-    tri <- earclip_triangulation(points[inner + 1, , drop = FALSE], rings)
-    c(indices, inner[tri])
+    opengl_triangulation(opengl_quadratic_points(self), normal_vector %||% self$get_unit_normal(),
+                         self$tolerance_for_point_equality)
   }
 )
 
+
+# Upstream's OpenGLVMobject.get_triangulation() on quadratic points.
+opengl_triangulation <- function(points, normal_vector, atol) {
+  if (nrow(points) <= 1) return(integer())
+  if (!isTRUE(all(abs(normal_vector - OUT) < 1e-8))) points <- points %*% z_to_vector(normal_vector)
+  n <- nrow(points)
+  indices <- seq_len(n) - 1L
+  i0 <- seq(1, n, by = 3)
+  b0 <- points[i0, , drop = FALSE]
+  b1 <- points[i0 + 1, , drop = FALSE]
+  b2 <- points[i0 + 2, , drop = FALSE]
+  convexities <- sign(cross2d(b1 - b0, b2 - b1))
+  k <- nrow(b0)
+  end_of_loop <- logical(k)
+  if (k > 1) end_of_loop[-k] <- apply(abs(b2[-k, , drop = FALSE] - b0[-1, , drop = FALSE]) > atol, 1, any)
+  end_of_loop[k] <- TRUE
+  inner <- sort(c(indices[i0], indices[i0 + 1][convexities < 0], indices[i0 + 2][end_of_loop]))
+  rings <- seq_along(inner)[inner %% 3 == 2]
+  tri <- earclip_triangulation(points[inner + 1, , drop = FALSE], rings)
+  c(indices, inner[tri])
+}
 
 opengl_bounding_box <- function(points) {
   if (!nrow(points)) return(matrix(0, 3, 3))

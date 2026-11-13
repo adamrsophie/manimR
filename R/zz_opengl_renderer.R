@@ -35,16 +35,19 @@
 #' * `OpenGLRenderer()` renders scenes as upstream's renderer: it clears its
 #'   framebuffer to the background color, sets the perspective uniforms from
 #'   the camera (`refresh_perspective_uniforms()`) and draws each mobject.
-#'   The shader wrappers of a mobject are drawn by a grid camera that places
-#'   points as upstream's shaders do (rotated by `camera_rotation`, scaled
-#'   by `focal_distance / (focal_distance - z)`, fixed in frame mobjects in
-#'   the default frame) and lights them with upstream's `add_light()`, once
-#'   per mobject rather than per pixel. An `OpenGLSurface` runs upstream's
-#'   surface shader instead, and an `OpenGLTexturedSurface` its
-#'   textured_surface shader (nearest texel), and an OpenGL point cloud its
-#'   true_dot shader: their triangles are rasterized at pixel centers,
-#'   lit per pixel, and with `depth_test` (on by default) tested against and
-#'   written to the framebuffer's depth buffer. `config$renderer = "opengl"` makes
+#'   The shader wrappers run upstream's GLSL rules in software, in the
+#'   order of upstream's `get_shader_wrapper_list()`: a VMobject's family
+#'   runs the quadratic_bezier_fill and quadratic_bezier_stroke shaders
+#'   (anti aliased fills, and strokes with upstream's joints and ends), an
+#'   `OpenGLSurface` the surface shader, an `OpenGLTexturedSurface` the
+#'   textured_surface shader (nearest texel), and an OpenGL point cloud the
+#'   true_dot shader. Points are placed as the shaders place them (rotated
+#'   by `camera_rotation`, scaled by `focal_distance / (focal_distance -
+#'   z)`, fixed in frame mobjects in the default frame); triangles are
+#'   rasterized at pixel centers, lit per pixel by upstream's `add_light()`,
+#'   and with `depth_test` (on by default for surfaces) tested against and
+#'   written to the framebuffer's depth buffer. Images and other mobjects
+#'   are drawn by a grid camera. `config$renderer = "opengl"` makes
 #'   scenes use it. `get_frame()` gives a `nativeRaster`;
 #'   `get_raw_frame_buffer_object_data()` the pixels bottom row first, as
 #'   OpenGL reads them.
