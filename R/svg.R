@@ -703,8 +703,10 @@ SVGMobject <- constructor(SVGMobjectClass)
 #' @rdname SVGMobjectClass
 #' @param path_string SVG path data, as in the `d` attribute of a `<path>`.
 #' @param long_lines,should_subdivide_sharp_curves,should_remove_null_curves
-#'   Upstream's options for the OpenGL renderer's triangulation; kept for
-#'   compatibility.
+#'   Upstream's options for the OpenGL renderer: under
+#'   `manim_config(renderer = "opengl")` the path's quadratic curves are
+#'   split where they turn more than 30 degrees, or curves of length 0
+#'   dropped, when asked. `long_lines` is kept for compatibility.
 #' @format NULL
 #' @export
 VMobjectFromSVGPathClass <- R6::R6Class("VMobjectFromSVGPath", inherit = VMobjectClass, lock_objects = FALSE,
@@ -723,6 +725,24 @@ VMobjectFromSVGPathClass <- R6::R6Class("VMobjectFromSVGPath", inherit = VMobjec
     },
     generate_points = function() {
       self$handle_commands()
+      # Under the OpenGL renderer upstream subdivides sharp curves and drops
+      # null ones on its quadratic curves when asked.
+      if (isTRUE(self$opengl_quadratic) && (self$should_subdivide_sharp_curves || self$should_remove_null_curves)) {
+        q <- opengl_quadratic_points(self)
+        tuples <- lapply(seq_len(nrow(q) %/% 3), function(i) q[3 * i - 2:0, , drop = FALSE])
+        if (self$should_subdivide_sharp_curves) {
+          tuples <- unlist(lapply(tuples, function(tup) {
+            angle <- angle_between_vectors(tup[2, ] - tup[1, ], tup[3, ] - tup[2, ])
+            if (angle <= 30 * DEGREES) return(list(tup))
+            alphas <- seq(0, 1, length.out = ceiling(angle / (30 * DEGREES)) + 1)
+            lapply(seq_len(length(alphas) - 1), function(i) partial_bezier_points(tup, alphas[i], alphas[i + 1]))
+          }), recursive = FALSE)
+        }
+        if (self$should_remove_null_curves) {
+          tuples <- Filter(function(tup) any(abs(tup[2:3, ] - tup[c(1, 1), ]) > 1e-9), tuples)
+        }
+        self$points <- opengl_cubic_from_quadratic(do.call(rbind, c(list(matrix(0, 0, 3)), tuples)))
+      }
       invisible(self)
     },
     init_points = function() self$generate_points(),

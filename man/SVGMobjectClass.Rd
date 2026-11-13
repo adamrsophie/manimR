@@ -54,8 +54,10 @@ list with \code{color}, \code{opacity}, \code{fill_color}, \code{fill_opacity},
 
 \item{path_string}{SVG path data, as in the \code{d} attribute of a \verb{<path>}.}
 
-\item{long_lines, should_subdivide_sharp_curves, should_remove_null_curves}{Upstream's options for the OpenGL renderer's triangulation; kept for
-compatibility.}
+\item{long_lines, should_subdivide_sharp_curves, should_remove_null_curves}{Upstream's options for the OpenGL renderer: under
+\code{manim_config(renderer = "opengl")} the path's quadratic curves are
+split where they turn more than 30 degrees, or curves of length 0
+dropped, when asked. \code{long_lines} is kept for compatibility.}
 }
 \value{
 A mobject: an R6 object of the class named by the function called.

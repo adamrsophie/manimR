@@ -488,7 +488,9 @@ CylinderClass <- R6::R6Class("Cylinder", inherit = SurfaceClass, lock_objects = 
     func = function(u, v) c(self$radius * cos(v), self$radius * sin(v), u),
     add_bases = function() {
       color <- self$get_fill_color()
-      opacity <- self$fill_opacity
+      # Upstream's OpenGL branch takes the mobject's opacity, which a
+      # Cylinder leaves at 1, not its fill opacity.
+      opacity <- if (identical(cfg("renderer"), RendererType$OPENGL)) self$opacity %||% 1 else self$fill_opacity
       self$base_top <- Circle(radius = self$radius, color = color, fill_opacity = opacity, shade_in_3d = TRUE,
                               stroke_width = 0)
       self$base_top$shift(self$u_range[2] * IN)

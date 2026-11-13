@@ -1039,3 +1039,23 @@ test_that("StreamLines color each point by the field's norm under the OpenGL ren
   expect_equal(l$stroke_rgbas[1, ], s$get_vectorized_rgba_gradient_function(0, 2, s$colors)(norm, 1)[1, ],
                ignore_attr = TRUE)
 })
+
+test_that("Cylinder bases take opacity 1 under the OpenGL renderer, as upstream", {
+  c1 <- tempconfig(list(renderer = "opengl"), Cylinder(fill_color = "#FF0000", fill_opacity = 0.5))
+  expect_equal(c1$base_top$get_fill_opacity(), 1)
+  expect_equal(c1$base_top$get_fill_color(), "#FF0000")
+  expect_equal(Cylinder(fill_opacity = 0.5)$base_top$get_fill_opacity(), 0.5)
+})
+
+test_that("SVG paths under the OpenGL renderer keep upstream's quadratic curves", {
+  # Points from upstream 0.22.1 under renderer = "opengl".
+  path <- "M 0 0 L 0 0 Q 2 3 4 0 C 5 2 6 -2 7 0 L 7 0 Z"
+  q <- function(...) tempconfig(list(renderer = "opengl"), opengl_quadratic_points(VMobjectFromSVGPath(path, ...)))
+  expect_equal(unname(q(should_remove_null_curves = TRUE)[, 1:2]),
+               matrix(c(0, 0, 2, 3, 4, 0, 4, 0, 4.75, 1.5, 5.5, 0, 5.5, 0, 6.25, -1.5, 7, 0, 7, 0, 3.5, 0, 0, 0),
+                      ncol = 2, byrow = TRUE))
+  expect_equal(nrow(q()), 18)
+  sharp <- q(should_subdivide_sharp_curves = TRUE, should_remove_null_curves = TRUE)
+  expect_equal(nrow(sharp), 45)
+  expect_equal(unname(sharp[2:3, 1:2]), rbind(c(0.5, 0.75), c(1, 1.125)))
+})
