@@ -338,7 +338,14 @@ and with <code>depth_test</code> (on by default for surfaces) tested against and
 written to the framebuffer's depth buffer. A plain <code>ImageMobject</code>, on
 which upstream's OpenGL renderer raises, is drawn by a grid camera.
 <code>config$renderer = "opengl"</code> makes
-scenes use it. <code>get_frame()</code> gives a <code>nativeRaster</code>;
+scenes use it. Mobjects made under that setting follow upstream's
+OpenGL classes: they get the OpenGL mobject methods
+(<code>get_triangulation()</code>, <code>get_shader_data()</code>, <code>set_gloss()</code> and the rest)
+and upstream's OpenGL geometry. Each quadratic curve is stored raised
+to a cubic, so <code>$points</code>, <code>get_num_points()</code>, <code>get_subpaths()</code>,
+<code>get_nth_curve_points()</code> and <code>get_bezier_tuples()</code> give 4 points per
+curve where upstream gives 3; curve counts, anchors, bounds and drawn
+frames match upstream. <code>get_frame()</code> gives a <code>nativeRaster</code>;
 <code>get_raw_frame_buffer_object_data()</code> the pixels bottom row first, as
 OpenGL reads them.</p></li>
 <li><p><code>render_opengl_vectorized_mobject_fill()</code>,
