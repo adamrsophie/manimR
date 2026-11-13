@@ -633,3 +633,57 @@ test_that("an OpenGLCamera hashes the same in every run", {
   expect_identical(digest::digest(manimR:::snapshot_camera(OpenGLCamera())),
                    digest::digest(manimR:::snapshot_camera(OpenGLCamera())))
 })
+
+test_that("OpenGLSurface runs the surface shader with the depth test", {
+  tempconfig(list(pixel_width = 160, pixel_height = 90), {
+    r <- OpenGLRenderer()
+    s <- Scene$new(renderer = r)
+    on.exit(r$close_device(), add = TRUE)
+    plane <- function(z, color) {
+      p <- OpenGLSurface(function(u, v) c(u, v, z), u_range = c(-1, 1), v_range = c(-1, 1), resolution = c(4, 4))
+      p$set_color(color)
+      p$gloss <- 0
+      p$shadow <- 0
+      p
+    }
+    center <- function() {
+      r$update_frame(s)
+      a <- r$get_raw_frame_buffer_object_data()
+      as.numeric(a[45, 80, 1:3])
+    }
+    red <- color_to_rgb(RED) * 255
+    green <- color_to_rgb(GREEN) * 255
+    near <- plane(1, RED)
+    far <- plane(0, GREEN)
+    # The nearer plane covers the center whichever is drawn last.
+    s$add(near, far)
+    expect_lte(max(abs(center() - red)), 1)
+    s$clear()
+    s$add(far, near)
+    expect_lte(max(abs(center() - red)), 1)
+    # Without the depth test the last one drawn covers it.
+    near$deactivate_depth_test()
+    far$deactivate_depth_test()
+    s$clear()
+    s$add(near, far)
+    expect_lte(max(abs(center() - green)), 1)
+    # Lighting per pixel: each pixel of a glossy plane is add_light() at
+    # the point under that pixel.
+    s$clear()
+    shiny <- plane(0, BLUE)
+    shiny$gloss <- 0.8
+    shiny$shadow <- 0.5
+    s$add(shiny)
+    r$update_frame(s)
+    a <- r$get_raw_frame_buffer_object_data()
+    light <- r$perspective_uniforms$light_source_position
+    at <- function(row, col) {
+      xy <- c((col - 0.5) / 160 * 2 - 1, (row - 0.5) / 90 * 2 - 1) * c(8 * 16 / 9, 8) / 2
+      opengl_add_light(c(color_to_rgb(BLUE), 1), c(xy, 0), c(0, 0, 1), light, 0.8, 0.5)[1:3] * 255
+    }
+    for (rc in list(c(40, 72), c(50, 88), c(45, 80))) {
+      expect_lte(max(abs(as.numeric(a[rc[1], rc[2], 1:3]) - at(rc[1], rc[2]))), 1)
+    }
+    expect_gt(max(abs(as.numeric(a[40, 72, 1:3]) - as.numeric(a[50, 88, 1:3]))), 2)
+  })
+})

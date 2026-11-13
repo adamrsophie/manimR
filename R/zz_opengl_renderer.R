@@ -39,7 +39,10 @@
 #'   points as upstream's shaders do (rotated by `camera_rotation`, scaled
 #'   by `focal_distance / (focal_distance - z)`, fixed in frame mobjects in
 #'   the default frame) and lights them with upstream's `add_light()`, once
-#'   per mobject rather than per pixel. `config$renderer = "opengl"` makes
+#'   per mobject rather than per pixel. An `OpenGLSurface` runs upstream's
+#'   surface shader instead: its triangles are rasterized at pixel centers,
+#'   lit per pixel, and with `depth_test` (on by default) tested against and
+#'   written to the framebuffer's depth buffer. `config$renderer = "opengl"` makes
 #'   scenes use it. `get_frame()` gives a `nativeRaster`;
 #'   `get_raw_frame_buffer_object_data()` the pixels bottom row first, as
 #'   OpenGL reads them.

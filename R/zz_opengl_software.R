@@ -45,7 +45,10 @@ OpenGLSoftwareFramebufferClass <- R6::R6Class("OpenGLSoftwareFramebuffer", lock_
       self$context$target <- self
       invisible(self)
     },
-    clear = function(red = 0, green = 0, blue = 0, alpha = 0, ...) {
+    # The depth attachment: window depth of each pixel, rows from the top.
+    depth = NULL,
+    clear = function(red = 0, green = 0, blue = 0, alpha = 0, depth = 1, ...) {
+      self$depth <- matrix(depth, self$viewport[4], self$viewport[3])
       self$with_device(function() {
         grid::grid.newpage(recording = FALSE)
         grid::grid.rect(gp = grid::gpar(fill = grDevices::rgb(red, green, blue, alpha), col = NA))
@@ -203,11 +206,12 @@ software_raster_triangle <- function(c3, W, H) {
   if (c1 <= c0 || r1 <= r0) return(NULL)
   cols <- (c0 + 1):c1
   rows <- (r0 + 1):r1
-  px <- rep(cols - 0.5, each = length(rows))
-  py <- rep(rows - 0.5, times = length(cols))
+  # Nudged as in software_fragments(), so a shared edge is drawn once.
+  px <- rep(cols - 0.5 + 1e-7, each = length(rows))
+  py <- rep(rows - 0.5 + 1e-11, times = length(cols))
   e <- function(i, j) ((sx[j] - sx[i]) * (py - sy[i]) - (sy[j] - sy[i]) * (px - sx[i])) / area
   l0 <- e(2, 3); l1 <- e(3, 1); l2 <- e(1, 2)
-  inside <- l0 >= 0 & l1 >= 0 & l2 >= 0
+  inside <- l0 > 0 & l1 > 0 & l2 > 0
   if (!any(inside)) return(NULL)
   b <- cbind(l0[inside] / w[1], l1[inside] / w[2], l2[inside] / w[3])
   b <- b / rowSums(b)
@@ -250,6 +254,150 @@ software_layer <- function(W, H) {
       invisible(NULL)
     }
   )
+}
+
+# The pixels covered by many triangles at once, for vertices at window
+# coordinates sx, sy (y down) and triangles as rows of 1 based vertex indices.
+# A pixel is covered when its center is inside the triangle; a center on an
+# edge goes to one of the two triangles sharing it, as a GPU's fill rule does.
+# Returns the triangle, row (from the top) and column of each fragment and
+# the weights of the triangle's vertices there (linear: w is 1).
+software_fragments <- function(sx, sy, tri, W, H) {
+  X <- matrix(sx[tri], ncol = 3)
+  Y <- matrix(sy[tri], ncol = 3)
+  area <- (X[, 2] - X[, 1]) * (Y[, 3] - Y[, 1]) - (X[, 3] - X[, 1]) * (Y[, 2] - Y[, 1])
+  c0 <- pmax(floor(pmin(X[, 1], X[, 2], X[, 3])), 0)
+  c1 <- pmin(ceiling(pmax(X[, 1], X[, 2], X[, 3])), W)
+  r0 <- pmax(floor(pmin(Y[, 1], Y[, 2], Y[, 3])), 0)
+  r1 <- pmin(ceiling(pmax(Y[, 1], Y[, 2], Y[, 3])), H)
+  ok <- which(is.finite(area) & abs(area) > 1e-12 & c1 > c0 & r1 > r0)
+  if (!length(ok)) return(NULL)
+  nh <- (r1 - r0)[ok]
+  n <- (c1 - c0)[ok] * nh
+  id <- rep(ok, n)
+  k <- sequence(n) - 1
+  nh <- rep(nh, n)
+  col <- c0[id] + k %/% nh + 1
+  row <- r0[id] + k %% nh + 1
+  # The sample point is nudged right, and much less down, so that a center
+  # exactly on a shared edge lies inside one triangle only.
+  px <- col - 0.5 + 1e-7
+  py <- row - 0.5 + 1e-11
+  e <- function(i, j) {
+    ((X[id, j] - X[id, i]) * (py - Y[id, i]) - (Y[id, j] - Y[id, i]) * (px - X[id, i])) / area[id]
+  }
+  b <- cbind(e(2, 3), e(3, 1), e(1, 2))
+  inside <- b[, 1] > 0 & b[, 2] > 0 & b[, 3] > 0
+  if (!any(inside)) return(NULL)
+  list(tri = id[inside], row = row[inside], col = col[inside], b = b[inside, , drop = FALSE])
+}
+
+# add_light() of finalize_color.glsl for rows of colors, points and normals.
+software_add_light <- function(rgb, point, normal, light, gloss, shadow) {
+  if (gloss == 0 && shadow == 0) return(rgb)
+  flip <- normal[, 3] < 0
+  normal[flip, ] <- -normal[flip, ]
+  unit <- function(v) v / sqrt(rowSums(v * v))
+  to_camera <- cbind(-point[, 1], -point[, 2], 6 - point[, 3])
+  to_light <- sweep(-point, 2, light, "+")
+  reflection <- -to_light + 2 * normal * rowSums(to_light * normal)
+  shine <- gloss * exp(-3 * (1 - rowSums(unit(reflection) * unit(to_camera)))^2)
+  darkening <- 1 + (pmax(rowSums(unit(to_light) * normal), 0) - 1) * shadow
+  darkening * (rgb + (1 - rgb) * shine)
+}
+
+# The surface shader: vert.glsl places each vertex with
+# position_point_into_frame() and get_gl_Position() (w is 1) and rotates the
+# normal of its du and dv neighbors; frag.glsl lights the interpolated
+# color at the interpolated point and normal. With depth_test on, a
+# fragment is kept where its depth is less than the framebuffer's (GL_LESS,
+# moderngl's default) and then writes its depth.
+software_draw_surface <- function(fbo, mobject, uniforms) {
+  sd <- mobject$get_shader_data()
+  P <- get("point", envir = sd)
+  if (!nrow(P)) return(invisible(NULL))
+  tri <- matrix(as.integer(mobject$get_shader_vert_indices()) + 1L, ncol = 3, byrow = TRUE)
+  if (!nrow(tri)) return(invisible(NULL))
+  u <- c(uniforms, mobject$get_shader_uniforms())
+  fixed <- isTRUE(as.logical(u$is_fixed_in_frame))
+  fixed_orientation <- isTRUE(as.logical(u$is_fixed_orientation))
+  rot <- matrix(u$camera_rotation, 3, 3)
+  rotate <- function(v) if (fixed) v else v %*% t(rot)
+  xyz <- if (fixed) {
+    P
+  } else if (fixed_orientation) {
+    foc <- as.numeric(u$fixed_orientation_center)
+    sweep(P, 2, drop(rot %*% foc) - foc, "+")
+  } else {
+    sweep(P, 2, as.numeric(u$camera_center)) %*% t(rot)
+  }
+  a <- get("du_point", envir = sd) - P
+  b <- get("dv_point", envir = sd) - P
+  cross <- function(x, y) cbind(x[, 2] * y[, 3] - x[, 3] * y[, 2], x[, 3] * y[, 1] - x[, 1] * y[, 3],
+                                x[, 1] * y[, 2] - x[, 2] * y[, 1])
+  cp <- cross(a, b)
+  flat <- rowSums(cp * cp) == 0
+  if (any(flat)) cp[flat, ] <- cross(cross(b[flat, , drop = FALSE], P[flat, , drop = FALSE]), b[flat, , drop = FALSE])
+  normal <- rotate(cp)
+  normal <- normal / sqrt(rowSums(normal * normal))
+  gl <- xyz
+  frame <- if (!fixed || fixed_orientation) u$frame_shape else DEFAULT_OPENGL_FRAME_SHAPE
+  gl[, 1] <- gl[, 1] * 2 / frame[1]
+  gl[, 2] <- gl[, 2] * 2 / frame[2]
+  if (!fixed) {
+    psf <- pmax(0, u$focal_distance / (u$focal_distance - gl[, 3]))
+    on <- psf > 0
+    gl[on, 1:2] <- gl[on, 1:2] * psf[on]
+    gl[on, 3] <- gl[on, 3] * 0.01
+  }
+  gl[, 3] <- -gl[, 3]
+  W <- fbo$viewport[3]
+  H <- fbo$viewport[4]
+  f <- software_fragments((gl[, 1] + 1) / 2 * W, (1 - gl[, 2]) / 2 * H, tri, W, H)
+  if (is.null(f)) return(invisible(NULL))
+  lerp <- function(v) {
+    out <- 0
+    for (j in 1:3) out <- out + f$b[, j] * v[tri[f$tri, j], , drop = FALSE]
+    out
+  }
+  z <- drop(lerp(gl[, 3, drop = FALSE]))
+  keep <- z >= -1 & z <= 1
+  pix <- (f$col - 1) * H + f$row
+  depth <- (z + 1) / 2
+  if (is.null(fbo$depth)) fbo$depth <- matrix(1, H, W)
+  ord <- order(pix, f$tri)
+  ord <- ord[keep[ord]]
+  if (!length(ord)) return(invisible(NULL))
+  pix <- pix[ord]
+  depth <- depth[ord]
+  if (isTRUE(mobject$depth_test)) {
+    # Each fragment is tested against the depth left by the fragments
+    # before it at its pixel.
+    start <- c(TRUE, pix[-1] != pix[-length(pix)])
+    group <- cumsum(start)
+    before <- c(Inf, stats::ave(depth, group, FUN = cummin)[-length(depth)])
+    before[start] <- Inf
+    pass <- depth < pmin(fbo$depth[pix], before)
+    fbo$depth[pix] <- pmin(fbo$depth[pix], stats::ave(depth, group, FUN = min))
+    ord <- ord[pass]
+    pix <- pix[pass]
+    if (!length(ord)) return(invisible(NULL))
+  }
+  f <- list(tri = f$tri[ord], row = f$row[ord], col = f$col[ord], b = f$b[ord, , drop = FALSE])
+  color <- lerp(get("color", envir = sd))
+  n <- lerp(normal)
+  n <- n / sqrt(rowSums(n * n))
+  rgb <- software_add_light(color[, 1:3, drop = FALSE], lerp(xyz), n, as.numeric(u$light_source_position),
+                            u$gloss %||% 0, u$shadow %||% 0)
+  layer <- software_layer(W, H)
+  # Fragments at one pixel blend in triangle order.
+  start <- c(TRUE, pix[-1] != pix[-length(pix)])
+  rank <- seq_along(pix) - which(start)[cumsum(start)] + 1
+  for (r in seq_len(max(rank))) {
+    at <- rank == r
+    layer$add(f$row[at], f$col[at], cbind(rgb[at, , drop = FALSE], color[at, 4]))
+  }
+  layer$draw()
 }
 
 # vectorized_mobject_fill: a fragment of a triangle is drawn where
@@ -540,6 +688,11 @@ opengl_is_vmobject <- function(m) {
 
 DEFAULT_OPENGL_FRAME_SHAPE <- c(8 * 16 / 9, 8)
 
+# The mobjects drawn with upstream's surface shader.
+opengl_is_software_surface <- function(m) {
+  inherits(m, "OpenGLSurface") && identical(m$shader_folder, "surface")
+}
+
 # Draws OpenGL mobjects as upstream's shaders place them: points rotated by
 # camera_rotation about camera_center, scaled by focal_distance /
 # (focal_distance - z), and lit by add_light() with the light at
@@ -703,10 +856,29 @@ OpenGLRendererClass <- R6::R6Class("OpenGLRenderer", inherit = RendererClass, lo
       cam <- OpenGLGridCameraClass$new(pixel_width = pixel_shape[1], pixel_height = pixel_shape[2],
                                        should_apply_shading = FALSE)
       cam$set_uniforms(self$perspective_uniforms)
+      # An OpenGLSurface runs the surface shader. manimR's surfaces also hold
+      # their faces as submobjects, which upstream's do not, so those are left
+      # out. A surface is drawn before the first other mobject that follows
+      # it in the family.
+      family <- mobject$get_family()
+      surfaces <- Filter(opengl_is_software_surface, family)
+      faces <- unlist(lapply(surfaces, function(sf) sf$submobjects), recursive = FALSE)
+      pos <- stats::setNames(seq_along(family), vapply(family, function(m) m$mob_id, ""))
+      surface_pos <- unname(pos[vapply(surfaces, function(m) m$mob_id, "")])
+      done <- logical(length(surfaces))
       fbo$with_device(function() {
         cam$push_view()
         on.exit(grid::popViewport(), add = TRUE)
-        for (m in cam$get_mobjects_to_display(list(mobject))) cam$display_mobject(m)
+        for (m in cam$get_mobjects_to_display(list(mobject), excluded_mobjects = faces)) {
+          at <- pos[m$mob_id]
+          if (is.na(at)) at <- Inf
+          for (i in which(!done & surface_pos < at)) {
+            done[i] <- TRUE
+            software_draw_surface(fbo, surfaces[[i]], self$perspective_uniforms)
+          }
+          cam$display_mobject(m)
+        }
+        for (i in which(!done)) software_draw_surface(fbo, surfaces[[i]], self$perspective_uniforms)
       })
       invisible(self)
     },

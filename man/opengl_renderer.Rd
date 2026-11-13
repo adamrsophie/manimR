@@ -208,7 +208,10 @@ The shader wrappers of a mobject are drawn by a grid camera that places
 points as upstream's shaders do (rotated by \code{camera_rotation}, scaled
 by \code{focal_distance / (focal_distance - z)}, fixed in frame mobjects in
 the default frame) and lights them with upstream's \code{add_light()}, once
-per mobject rather than per pixel. \code{config$renderer = "opengl"} makes
+per mobject rather than per pixel. An \code{OpenGLSurface} runs upstream's
+surface shader instead: its triangles are rasterized at pixel centers,
+lit per pixel, and with \code{depth_test} (on by default) tested against and
+written to the framebuffer's depth buffer. \code{config$renderer = "opengl"} makes
 scenes use it. \code{get_frame()} gives a \code{nativeRaster};
 \code{get_raw_frame_buffer_object_data()} the pixels bottom row first, as
 OpenGL reads them.
