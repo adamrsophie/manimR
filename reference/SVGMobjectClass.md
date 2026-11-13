@@ -97,8 +97,10 @@ VMobjectFromSVGPath(
 
 - long_lines, should_subdivide_sharp_curves, should_remove_null_curves:
 
-  Upstream's options for the OpenGL renderer's triangulation; kept for
-  compatibility.
+  Upstream's options for the OpenGL renderer: under
+  `manim_config(renderer = "opengl")` the path's quadratic curves are
+  split where they turn more than 30 degrees, or curves of length 0
+  dropped, when asked. `long_lines` is kept for compatibility.
 
 ## Value
 
