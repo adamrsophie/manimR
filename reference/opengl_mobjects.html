@@ -162,6 +162,10 @@ upstream's arguments in upstream's order.</p></li>
 <li><p>Arcs, circles, dots, ellipses, sectors and annuli are made of
 <code>n_components</code> quadratic pieces (8 by default), as upstream, stored as
 cubic curves.</p></li>
+<li><p>Under <code>manim_config(renderer = "opengl")</code>, a plain <code><a href="geometry.html">Arc()</a></code> or
+<code><a href="geometry.html">Circle()</a></code> is made of <code>num_components</code> quadratic pieces (9 by default),
+as upstream's <code>Arc.init_points()</code>, and the OpenGL renderer draws the
+quadratic pieces of mobjects made then as upstream stores them.</p></li>
 <li><p><code>add_tip(at_start, ...)</code> of OpenGL lines and arcs adds an
 <code>OpenGLArrowTip()</code> made from the <code>tip_config</code> of the line and the
 arguments given (white unless they say otherwise).

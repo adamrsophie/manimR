@@ -96,6 +96,14 @@ follows the OpenGL class:
   `n_components` quadratic pieces (8 by default), as upstream, stored as
   cubic curves.
 
+- Under `manim_config(renderer = "opengl")`, a plain
+  [`Arc()`](https://adamrsophie.github.io/manimR/reference/geometry.md)
+  or
+  [`Circle()`](https://adamrsophie.github.io/manimR/reference/geometry.md)
+  is made of `num_components` quadratic pieces (9 by default), as
+  upstream's `Arc.init_points()`, and the OpenGL renderer draws the
+  quadratic pieces of mobjects made then as upstream stores them.
+
 - `add_tip(at_start, ...)` of OpenGL lines and arcs adds an
   `OpenGLArrowTip()` made from the `tip_config` of the line and the
   arguments given (white unless they say otherwise).
