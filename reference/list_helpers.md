@@ -8,9 +8,10 @@ other environments by identity, everything else by value.
 
 ``` r
 extract_mobject_family_members(
-  mobject_list,
+  mobjects = mobject_list,
   use_z_index = FALSE,
-  only_those_with_points = FALSE
+  only_those_with_points = FALSE,
+  mobject_list = NULL
 )
 
 stretch_array_to_length(nparray, length)
@@ -58,7 +59,7 @@ hash_obj(obj)
 
 ## Arguments
 
-- mobject_list, to_remove:
+- mobjects, mobject_list, to_remove:
 
   Lists of mobjects.
 
@@ -167,9 +168,11 @@ A list or a vector, as described above for each function.
   those that are themselves lists or vectors of several elements spliced
   in (one level).
 
-- `extract_mobject_family_members(mobject_list, use_z_index, only_those_with_points)`:
+- `extract_mobject_family_members(mobjects, use_z_index, only_those_with_points)`:
   every member of the families of the mobjects, once each, optionally
   sorted by `z_index` and without the members that have no points.
+  `mobject_list` (the name in `manim.utils.family_ops`) is accepted for
+  `mobjects`.
   `restructure_list_to_exclude_certain_family_members(mobject_list, to_remove)`
   drops `to_remove` and their family from the list; a group that holds
   one of them is replaced by its remaining members.

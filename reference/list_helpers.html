@@ -72,9 +72,10 @@ other environments by identity, everything else by value.</p>
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">extract_mobject_family_members</span><span class="op">(</span></span>
-<span>  <span class="va">mobject_list</span>,</span>
+<span>  mobjects <span class="op">=</span> <span class="va">mobject_list</span>,</span>
 <span>  use_z_index <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  only_those_with_points <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  only_those_with_points <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  mobject_list <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">stretch_array_to_length</span><span class="op">(</span><span class="va">nparray</span>, <span class="va">length</span><span class="op">)</span></span>
@@ -124,7 +125,7 @@ other environments by identity, everything else by value.</p>
     <h2 id="arguments">Arguments<a class="anchor" aria-label="anchor" href="#arguments"></a></h2>
 
 
-<dl><dt id="arg-mobject-list-to-remove">mobject_list, to_remove<a class="anchor" aria-label="anchor" href="#arg-mobject-list-to-remove"></a></dt>
+<dl><dt id="arg-mobjects-mobject-list-to-remove">mobjects, mobject_list, to_remove<a class="anchor" aria-label="anchor" href="#arg-mobjects-mobject-list-to-remove"></a></dt>
 <dd><p>Lists of mobjects.</p></dd>
 
 
@@ -219,9 +220,10 @@ on the order of the entries of named lists.</p></li>
 <li><p><code>flatten_iterable_parameters(args)</code>: the elements of <code>args</code>, with those
 that are themselves lists or vectors of several elements spliced in (one
 level).</p></li>
-<li><p><code>extract_mobject_family_members(mobject_list, use_z_index, only_those_with_points)</code>: every member of the families of the mobjects,
+<li><p><code>extract_mobject_family_members(mobjects, use_z_index, only_those_with_points)</code>: every member of the families of the mobjects,
 once each, optionally sorted by <code>z_index</code> and without the members that
-have no points.
+have no points. <code>mobject_list</code> (the name in <code>manim.utils.family_ops</code>)
+is accepted for <code>mobjects</code>.
 <code>restructure_list_to_exclude_certain_family_members(mobject_list, to_remove)</code> drops <code>to_remove</code> and their family from the list; a group
 that holds one of them is replaced by its remaining members.</p></li>
 </ul></div>
