@@ -192,9 +192,16 @@ and a shader, and \code{FullScreenQuad()} is a mesh covering the frame.
 A scene takes meshes with \code{add()}, and \code{OpenGLRenderer} draws them
 after the mobjects: a mesh whose shader is one of upstream's mesh
 shaders (the \code{default}, \code{manim_coords}, \code{vertex_colors} and \code{test}
-folders) is rasterized by their rules; \code{Mesh$render()} of other GLSL
-code needs an OpenGL context and stops, as does a \code{FullScreenQuad}
-(whose vertex shader upstream's GLSL compiler rejects).
+folders) is rasterized by their rules, and other GLSL code (a
+\code{FullScreenQuad}'s too) runs in manimR's GLSL interpreter: the vertex
+shader on the vertices and the fragment shader on the fragments, with
+perspective-correct varyings, depth test and alpha blending. The
+interpreter takes the scalar, vector and square matrix types, in, out,
+uniform and const globals, user functions, \code{if}, \code{for}, \code{while},
+\code{break}, \code{continue}, \code{return}, \code{discard} and the common built-in
+functions; structs, textures and geometry shaders raise an error, and
+\code{Mesh$render()} of a mesh it cannot run needs an OpenGL context and
+stops.
 \item \code{Shader(context, name, source)} reads the GLSL code of a shader folder
 under \code{SHADER_FOLDER} (or takes \code{source}, a list of
 \code{vertex_shader}, \code{fragment_shader} and \code{geometry_shader} code) and keeps
@@ -236,7 +243,6 @@ stroke the points within \code{0.004 * width} of its curve.
 \item \code{OpenGLSoftwareContext()} stands for moderngl's context: \code{framebuffer()},
 \code{buffer()} and \code{simple_vertex_array()}, whose \code{render()} draws the
 \code{vectorized_mobject_fill} and \code{vectorized_mobject_stroke} shaders.
-GLSL code written for a \code{Mesh} is not run.
 \item \code{Window(renderer)} is the window of a live preview: an R graphics
 device (an interactive session is needed) that shows the renderer's frame
 on \code{swap_buffers()}; \code{handle_event()} waits for a mouse or key event

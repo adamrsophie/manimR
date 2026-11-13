@@ -554,9 +554,76 @@ software_mesh_folder <- function(shader) {
   }
   NULL
 }
+# The triangles of a mesh's primitive (TRIANGLES, TRIANGLE_STRIP or
+# TRIANGLE_FAN) over its vertex order, as rows of 1-based indices.
+software_mesh_triangles <- function(idx, primitive) {
+  n <- length(idx)
+  if (n < 3) return(NULL)
+  switch(as.character(primitive),
+    `4` = matrix(idx[seq_len(n - n %% 3)], ncol = 3, byrow = TRUE),
+    `5` = {
+      k <- seq_len(n - 2)
+      # Every other triangle of a strip is turned to keep its winding.
+      cbind(idx[k], idx[ifelse(k %% 2 == 1, k + 1, k + 2)], idx[ifelse(k %% 2 == 1, k + 2, k + 1)])
+    },
+    `6` = cbind(idx[1], idx[2:(n - 1)], idx[3:n]),
+    NULL)
+}
+
+# A mesh with other GLSL code: its vertex shader runs on the vertices and
+# its fragment shader on the fragments, with the varyings interpolated
+# with perspective correction, as OpenGL does.
+software_draw_mesh_glsl <- function(fbo, mesh) {
+  program <- mesh$shader$shader_program
+  vs <- program$vertex_shader
+  fs <- program$fragment_shader
+  if (!is.character(vs) || !is.character(fs) || !is.null(program$geometry_shader)) return(FALSE)
+  vprog <- glsl_program(vs)
+  fprog <- glsl_program(fs)
+  attrs <- mesh$attributes
+  names_in <- if (is.environment(attrs)) ls(attrs) else names(attrs)
+  inputs <- stats::setNames(lapply(names_in, function(nm) as.matrix(get(nm, envir = as.environment(attrs)))), names_in)
+  n <- max(0L, vapply(inputs, nrow, 1L))
+  if (!n) return(TRUE)
+  uniforms <- mesh$shader$uniforms
+  vst <- glsl_run(vprog, n, inputs, uniforms)
+  clip <- glsl_rows(get("gl_Position", envir = vst$globals), n)
+  w <- clip[, 4]
+  ndc <- clip[, 1:3, drop = FALSE] / w
+  idx <- if (length(mesh$indices)) as.integer(mesh$indices) + 1L else seq_len(n)
+  tri <- software_mesh_triangles(idx, as.integer(mesh$primitive))
+  if (is.null(tri)) return(as.integer(mesh$primitive) %in% c(4L, 5L, 6L))
+  # Triangles behind the camera are left out (no near-plane clipping).
+  tri <- tri[rowSums(matrix(w[tri] > 0, ncol = 3)) == 3, , drop = FALSE]
+  if (!nrow(tri)) return(TRUE)
+  varyings <- lapply(glsl_outputs(vprog), function(s) glsl_rows(get(s$name, envir = vst$globals), n))
+  names(varyings) <- vapply(glsl_outputs(vprog), function(s) s$name, "")
+  outs <- Filter(function(s) GLSL_TYPES[[s$type]] == 4, glsl_outputs(fprog))
+  W <- fbo$viewport[3]
+  H <- fbo$viewport[4]
+  run <- function(at) {
+    inv <- drop(at(1 / w))
+    persp <- function(v) at(v / w) / inv
+    p <- at(ndc)
+    nf <- nrow(p)
+    builtins <- list(gl_FragCoord = cbind((p[, 1] + 1) / 2 * W, (p[, 2] + 1) / 2 * H, (p[, 3] + 1) / 2, inv))
+    glsl_run(fprog, nf, lapply(varyings, persp), uniforms, builtins)
+  }
+  color_of <- function(st) {
+    out <- if (length(outs)) get(outs[[1]]$name, envir = st$globals) else get("gl_FragColor", envir = st$globals)
+    pmin(pmax(glsl_rows(out, st$n), 0), 1)
+  }
+  has_discard <- any(grepl("\\bdiscard\\b", fs))
+  discard <- if (has_discard) function(at, ...) run(at)$discarded
+  shade <- function(at, ...) color_of(run(at))
+  fbo$with_device(function() software_rasterize(fbo, ndc, tri, isTRUE(mesh$use_depth_test), shade, discard))
+  TRUE
+}
+
 software_draw_mesh <- function(fbo, mesh) {
   folder <- software_mesh_folder(mesh$shader)
-  if (is.null(folder) || !identical(as.integer(mesh$primitive), 4L)) return(FALSE)
+  if (is.null(folder)) return(software_draw_mesh_glsl(fbo, mesh))
+  if (!identical(as.integer(mesh$primitive), 4L)) return(FALSE)
   attrs <- mesh$attributes
   get_attr <- function(name) if (exists(name, envir = attrs, inherits = FALSE)) as.matrix(get(name, envir = attrs))
   # An attribute with fewer components than the shader reads is filled

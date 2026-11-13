@@ -21,12 +21,6 @@ DEFAULT_ANIMATION_LAG_RATIO <- 0
 #'   animation is cleaned up from it.
 #' @param ... Ignored.
 #' @export
-# The family members an animation interpolates: under the OpenGL renderer
-# upstream zips whole families, otherwise only members with points.
-animation_family <- function(m) {
-  if (identical(cfg("renderer"), RendererType$OPENGL)) m$get_family() else m$family_members_with_points()
-}
-
 AnimationClass <- R6::R6Class("Animation", lock_objects = FALSE,
   public = list(
     mobject = NULL,
@@ -376,4 +370,10 @@ assert_is_mobject_method <- function(method) {
   self <- if (is.function(method)) get0("self", envir = environment(method), inherits = FALSE)
   if (!is_mobject(self)) stop("Expected a method of a mobject, such as sq$shift", call. = FALSE)
   invisible(method)
+}
+
+# The family members an animation interpolates: under the OpenGL renderer
+# upstream zips whole families, otherwise only members with points.
+animation_family <- function(m) {
+  if (identical(cfg("renderer"), RendererType$OPENGL)) m$get_family() else m$family_members_with_points()
 }

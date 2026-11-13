@@ -209,6 +209,61 @@ def vsphere():
     from manim.mobject.three_d.three_dimensions import Sphere
     return [Sphere(radius=1.5, resolution=(8, 6)).shift(np.array([-2.0, 0, 0]))]
 frame("vsphere", vsphere, lambda cam: cam.set_euler_angles(theta=-30 * np.pi / 180, phi=60 * np.pi / 180))
+GLSL_VS = """#version 330
+in vec3 in_vert;
+in vec2 in_uv;
+uniform mat4 u_model_matrix;
+uniform mat4 u_view_matrix;
+uniform mat4 u_projection_matrix;
+out vec2 v_uv;
+out float v_height;
+void main() {
+    vec4 world = u_model_matrix * vec4(in_vert, 1.0);
+    v_uv = in_uv;
+    v_height = world.z;
+    gl_Position = u_projection_matrix * u_view_matrix * world;
+}
+"""
+GLSL_FS = """#version 330
+in vec2 v_uv;
+in float v_height;
+uniform vec3 u_tint;
+out vec4 frag_color;
+float bands(float x) {
+    float s = 0.0;
+    for (int i = 1; i <= 3; i++) {
+        s += sin(x * float(i) * 6.2831853) / float(i);
+    }
+    return s;
+}
+void main() {
+    vec2 cell = floor(v_uv * 4.0);
+    if (mod(cell.x + cell.y, 2.0) > 0.5 && v_uv.y > 0.5) discard;
+    float b = 0.5 + 0.25 * bands(v_uv.x);
+    frag_color = vec4(mix(u_tint, vec3(v_uv, b), 0.6), 0.9);
+}
+"""
+def vglsl(r):
+    # A mesh with its own GLSL code: a quad tilted away from the camera.
+    from manim.renderer.shader import Mesh, Shader
+    quad = np.zeros(4, dtype=[("in_vert", np.float32, (3,)), ("in_uv", np.float32, (2,))])
+    quad["in_vert"] = [[-4, -3, -2], [4, -3, -2], [4, 3, 2], [-4, 3, 2]]
+    quad["in_uv"] = [[0, 0], [1, 0], [1, 1], [0, 1]]
+    sh = Shader(r.context, source={"vertex_shader": GLSL_VS, "fragment_shader": GLSL_FS})
+    sh.set_uniform("u_tint", (1.0, 0.3, 0.1))
+    return [Mesh(sh, quad, indices=np.array([0, 1, 2, 0, 2, 3]))]
+frame("vglsl", lambda: [], lambda cam: cam.set_euler_angles(theta=-20 * np.pi / 180, phi=40 * np.pi / 180), meshes=vglsl)
+def vquad(r):
+    from manim.renderer.shader import FullScreenQuad
+    return [FullScreenQuad(r.context, fragment_shader_source="""
+        #version 330
+        out vec4 frag_color;
+        void main() {
+            vec2 p = gl_FragCoord.xy / vec2(160.0, 90.0);
+            frag_color = vec4(p.x, p.y, 0.5 + 0.5 * sin(20.0 * length(p - 0.5)), 1.0);
+        }
+        """)]
+frame("vquad", lambda: [], meshes=vquad)
 # Each frame as a PNG, rows as OpenGL reads them (bottom row first).
 from PIL import Image
 for name, a in out.items():

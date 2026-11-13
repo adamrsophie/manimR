@@ -910,6 +910,72 @@ test_that("the software shaders draw the frames of upstream's OpenGL renderer", 
     out
   })
   expect_lte(max(abs(meshes - oracle("vmesh"))), 2)
+  # A mesh with its own GLSL code: its shaders run in the interpreter, with
+  # perspective-correct varyings, a user function, a loop and discard.
+  glsl_vs <- "#version 330
+in vec3 in_vert;
+in vec2 in_uv;
+uniform mat4 u_model_matrix;
+uniform mat4 u_view_matrix;
+uniform mat4 u_projection_matrix;
+out vec2 v_uv;
+out float v_height;
+void main() {
+    vec4 world = u_model_matrix * vec4(in_vert, 1.0);
+    v_uv = in_uv;
+    v_height = world.z;
+    gl_Position = u_projection_matrix * u_view_matrix * world;
+}"
+  glsl_fs <- "#version 330
+in vec2 v_uv;
+in float v_height;
+uniform vec3 u_tint;
+out vec4 frag_color;
+float bands(float x) {
+    float s = 0.0;
+    for (int i = 1; i <= 3; i++) {
+        s += sin(x * float(i) * 6.2831853) / float(i);
+    }
+    return s;
+}
+void main() {
+    vec2 cell = floor(v_uv * 4.0);
+    if (mod(cell.x + cell.y, 2.0) > 0.5 && v_uv.y > 0.5) discard;
+    float b = 0.5 + 0.25 * bands(v_uv.x);
+    frag_color = vec4(mix(u_tint, vec3(v_uv, b), 0.6), 0.9);
+}"
+  custom <- tempconfig(list(pixel_width = 160, pixel_height = 90), {
+    r <- OpenGLRenderer()
+    s <- Scene$new(renderer = r)
+    on.exit(r$close_device(), add = TRUE)
+    r$camera$set_euler_angles(theta = -20 * DEGREES, phi = 40 * DEGREES)
+    quad <- shader_data(c(in_vert = 3, in_uv = 2), 4)
+    assign("in_vert", rbind(c(-4, -3, -2), c(4, -3, -2), c(4, 3, 2), c(-4, 3, 2)), envir = quad)
+    assign("in_uv", rbind(c(0, 0), c(1, 0), c(1, 1), c(0, 1)), envir = quad)
+    sh <- Shader(r$context, source = list(vertex_shader = glsl_vs, fragment_shader = glsl_fs))
+    sh$set_uniform("u_tint", c(1, 0.3, 0.1))
+    s$add(Mesh(sh, quad, indices = c(0, 1, 2, 0, 2, 3)))
+    r$update_frame(s)
+    r$get_raw_frame_buffer_object_data()
+  })
+  expect_lte(max(abs(custom - oracle("vglsl"))), 2)
+  # A FullScreenQuad runs its fragment shader over the frame.
+  quad <- tempconfig(list(pixel_width = 160, pixel_height = 90), {
+    r <- OpenGLRenderer()
+    s <- Scene$new(renderer = r)
+    on.exit(r$close_device(), add = TRUE)
+    s$add(FullScreenQuad(r$context, fragment_shader_source = "
+        #version 330
+        out vec4 frag_color;
+        void main() {
+            vec2 p = gl_FragCoord.xy / vec2(160.0, 90.0);
+            frag_color = vec4(p.x, p.y, 0.5 + 0.5 * sin(20.0 * length(p - 0.5)), 1.0);
+        }
+        "))
+    r$update_frame(s)
+    r$get_raw_frame_buffer_object_data()
+  })
+  expect_lte(max(abs(quad - oracle("vquad"))), 2)
   # Shapes made under the OpenGL renderer have upstream's OpenGL geometry
   # (a circle of 9 quadratic arcs), drawn without conversion.
   native <- tempconfig(list(renderer = "opengl", pixel_width = 160, pixel_height = 90), {
@@ -972,8 +1038,9 @@ test_that("the software shaders draw the frames of upstream's OpenGL renderer", 
     s$add(parent, coords, Mesh(Shader(r$context, name = "test"), corner))
     r$update_frame(s)
     out <- r$get_raw_frame_buffer_object_data()
-    # A mesh with other GLSL code is not run.
-    s$add(Mesh(Shader(r$context, source = list(vertex_shader = "void main() {}", fragment_shader = "void main() {}")),
+    # A mesh with a geometry shader is not run.
+    s$add(Mesh(Shader(r$context, source = list(vertex_shader = "void main() {}", fragment_shader = "void main() {}",
+                                               geometry_shader = "void main() {}")),
                tri(rbind(c(0, 0, 0), c(1, 0, 0), c(0, 1, 0)))))
     expect_error(r$update_frame(s), "OpenGL")
     out
@@ -1090,4 +1157,36 @@ test_that("OpenGL-made mobjects keep upstream's quadratic curve counts in transf
     expect_equal(nrow(q), 27)
     expect_equal(round(unname(q[c(2, 5, 6), 1:2]), 4), rbind(c(0.3355, 0.4845), c(0.7252, 1.2126), c(0.9058, 1.4412)))
   })
+})
+
+test_that("the GLSL interpreter runs functions, loops, matrices and discard", {
+  vs <- "#version 330
+in vec3 in_vert;
+uniform mat4 u_m;
+uniform float u_k;
+out vec3 v_pos;
+float twice(float x) { return 2.0 * x; }
+void scale(inout vec3 p, float s) { p *= s; }
+void main() {
+  vec3 p = in_vert;
+  scale(p, u_k);
+  float acc = 0.0;
+  for (int i = 0; i < 4; i++) { if (i == 2) continue; acc += float(i); }
+  v_pos = p + vec3(acc, twice(1.5), 0.0);
+  gl_Position = u_m * vec4(p, 1.0);
+}"
+  m <- diag(4)
+  m[1, 4] <- 10
+  st <- glsl_run(glsl_program(vs), 2, inputs = list(in_vert = rbind(c(1, 2, 3), c(4, 5, 6))),
+                 uniforms = list(u_m = as.vector(m), u_k = 2))
+  expect_equal(unname(get("gl_Position", st$globals)), rbind(c(12, 4, 6, 1), c(18, 10, 12, 1)))
+  expect_equal(unname(get("v_pos", st$globals)), rbind(c(6, 7, 6), c(12, 13, 12)))
+  fs <- "in vec3 v_pos; out vec4 frag_color;
+void main() { if (v_pos.x > 5.0) discard; mat2 r = mat2(0.0, 1.0, -1.0, 0.0);
+  frag_color = vec4(r * vec2(1.0, 0.0), length(v_pos.xy), 1.0); }"
+  st <- glsl_run(glsl_program(fs), 2, inputs = list(v_pos = rbind(c(3, 4, 0), c(9, 0, 0))))
+  expect_equal(st$discarded, c(FALSE, TRUE))
+  expect_equal(unname(get("frag_color", st$globals)[1, ]), c(0, 1, 5, 1))
+  expect_error(glsl_run(glsl_program("uniform sampler2D t; void main() { gl_FragColor = texture(t, vec2(0.0)); }"), 1),
+               "not supported")
 })

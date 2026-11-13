@@ -21,9 +21,16 @@
 #'   A scene takes meshes with `add()`, and `OpenGLRenderer` draws them
 #'   after the mobjects: a mesh whose shader is one of upstream's mesh
 #'   shaders (the `default`, `manim_coords`, `vertex_colors` and `test`
-#'   folders) is rasterized by their rules; `Mesh$render()` of other GLSL
-#'   code needs an OpenGL context and stops, as does a `FullScreenQuad`
-#'   (whose vertex shader upstream's GLSL compiler rejects).
+#'   folders) is rasterized by their rules, and other GLSL code (a
+#'   `FullScreenQuad`'s too) runs in manimR's GLSL interpreter: the vertex
+#'   shader on the vertices and the fragment shader on the fragments, with
+#'   perspective-correct varyings, depth test and alpha blending. The
+#'   interpreter takes the scalar, vector and square matrix types, in, out,
+#'   uniform and const globals, user functions, `if`, `for`, `while`,
+#'   `break`, `continue`, `return`, `discard` and the common built-in
+#'   functions; structs, textures and geometry shaders raise an error, and
+#'   `Mesh$render()` of a mesh it cannot run needs an OpenGL context and
+#'   stops.
 #' * `Shader(context, name, source)` reads the GLSL code of a shader folder
 #'   under `SHADER_FOLDER` (or takes `source`, a list of
 #'   `vertex_shader`, `fragment_shader` and `geometry_shader` code) and keeps
@@ -68,7 +75,6 @@
 #' * `OpenGLSoftwareContext()` stands for moderngl's context: `framebuffer()`,
 #'   `buffer()` and `simple_vertex_array()`, whose `render()` draws the
 #'   `vectorized_mobject_fill` and `vectorized_mobject_stroke` shaders.
-#'   GLSL code written for a `Mesh` is not run.
 #' * `Window(renderer)` is the window of a live preview: an R graphics
 #'   device (an interactive session is needed) that shows the renderer's frame
 #'   on `swap_buffers()`; `handle_event()` waits for a mouse or key event

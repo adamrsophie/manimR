@@ -43,8 +43,9 @@
   `Mesh()`), `Shader()`, `triangulate_mobject()` and
   `build_matrix_lists()`. A scene draws meshes whose shader is one of
   upstream's default, manim_coords, vertex_colors or test folders in
-  software; a mesh with other GLSL code needs an OpenGL context and stops
-  with a message. `OpenGLRenderer()` renders scenes (also with
+  software, and runs the vertex and fragment shaders of other meshes
+  (and `FullScreenQuad()`) in a GLSL interpreter; structs, textures and
+  geometry shaders need an OpenGL context and stop with a message. `OpenGLRenderer()` renders scenes (also with
   `manim_config(renderer = "opengl")`) through a software context
   (`OpenGLSoftwareContext()`) whose framebuffers are ragg devices, the
   `render_opengl_vectorized_mobject_fill()` and `_stroke()` functions draw

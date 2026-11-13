@@ -232,8 +232,9 @@ embedded the same way when it is printed.
   at pixel centers, lit per pixel and depth tested. `OpenGLImageMobject`
   runs the textured surface shader, a plain `ImageMobject` is drawn by a
   grid camera, and a live preview `Window` is an R graphics
-  device. Meshes with upstream's own mesh shaders are drawn; other GLSL
-  code of a `Mesh` is not run. The OpenGL point clouds
+  device. Meshes are drawn too: upstream's own mesh shaders by their
+  rules, and other GLSL code of a `Mesh` or `FullScreenQuad` in a GLSL
+  interpreter (no structs, textures or geometry shaders). The OpenGL point clouds
   (`DotCloud`, `TrueDot`, `OpenGLPMobject`) run upstream's true_dot
   shader, and the other OpenGL mobject classes
   (`OpenGLCircle`, `OpenGLSurface`, ...) are subclasses of their Cairo
