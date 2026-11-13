@@ -263,7 +263,10 @@ call.</p>
     <p>As upstream, stream lines in the plane are colored through a
 background image of the field's colors (<code>get_colored_background_image()</code>,
 so a line's color changes along it with the field), and 3D stream lines
-get a stroke gradient from the colors at their anchors.</p>
+get a stroke gradient from the colors at their anchors. Under
+<code>manim_config(renderer = "opengl")</code>, as upstream, each point of a line
+takes the color of the field's norm there and the stroke is a quarter
+of <code>stroke_width</code> wide.</p>
     </div>
 
     <div class="section level2">

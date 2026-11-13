@@ -230,6 +230,10 @@ coordinates returns an n x 3 matrix of points; `c2p(xs, ys)` with
 vectors returns a 3 x n matrix (rows x, y, z). `p2c()` returns a vector
 for one point and an n x d matrix for an n x 3 matrix of points.
 
+Under `manim_config(renderer = "opengl")`, `plot_surface()` returns an
+[`OpenGLSurface()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md),
+as upstream, colored by value through its `axes`.
+
 Differences from Python: the point function of a graph is `graph$func`
 (`function` is reserved in R); axis indices and `colorscale_axis` are 1
 based; dictionaries become lists named by the numeric positions, for

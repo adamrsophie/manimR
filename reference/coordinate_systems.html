@@ -289,6 +289,8 @@ returns one point; <code>c2p(m)</code> with an n x k matrix whose rows are
 coordinates returns an n x 3 matrix of points; <code>c2p(xs, ys)</code> with vectors
 returns a 3 x n matrix (rows x, y, z). <code>p2c()</code> returns a vector for one
 point and an n x d matrix for an n x 3 matrix of points.</p>
+<p>Under <code>manim_config(renderer = "opengl")</code>, <code>plot_surface()</code> returns an
+<code><a href="opengl_mobjects.html">OpenGLSurface()</a></code>, as upstream, colored by value through its <code>axes</code>.</p>
 <p>Differences from Python: the point function of a graph is <code>graph$func</code>
 (<code>function</code> is reserved in R); axis indices and <code>colorscale_axis</code> are 1
 based; dictionaries become lists named by the numeric positions, for
