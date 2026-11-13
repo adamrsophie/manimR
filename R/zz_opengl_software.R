@@ -111,6 +111,80 @@ OpenGLSoftwareVertexArrayClass <- R6::R6Class("OpenGLSoftwareVertexArray", lock_
   )
 )
 
+# A texture of the software context, as moderngl's: data are bytes (or
+# numbers from 0 to 255) with the row at texture coordinate v = 0 first,
+# sampled with linear filtering and repeated outside 0 to 1 unless
+# repeat_x or repeat_y is FALSE. use(location) binds it to a texture unit.
+OpenGLSoftwareTextureClass <- R6::R6Class("OpenGLSoftwareTexture", lock_objects = FALSE,
+  public = list(
+    ctx = NULL,
+    size = NULL,
+    components = 4,
+    samples = 0,
+    data = NULL,
+    filter = c("LINEAR", "LINEAR"),
+    repeat_x = TRUE,
+    repeat_y = TRUE,
+    initialize = function(ctx, size, components = 4, data = NULL, samples = 0) {
+      self$ctx <- ctx
+      self$size <- as.integer(size)
+      self$components <- components
+      self$samples <- samples
+      if (!is.null(data)) self$write(data)
+    },
+    write = function(data, ...) {
+      v <- if (is.raw(data)) as.integer(data) else as.numeric(data)
+      w <- self$size[1]
+      h <- self$size[2]
+      k <- self$components
+      if (is.array(data) && length(dim(data)) == 3) {
+        # An image array, rows first: its first row is v = 0.
+        v <- as.numeric(aperm(data, c(3, 2, 1)))
+      }
+      if (length(v) < w * h * k) stop("The texture data are too short.", call. = FALSE)
+      # texels[row, column, component], row 1 at v = 0, in 0 to 1.
+      self$data <- aperm(array(v[seq_len(w * h * k)] / 255, c(k, w, h)), c(3, 2, 1))
+      invisible(self)
+    },
+    use = function(location = 0) {
+      self$ctx$texture_units[[location + 1]] <- self
+      invisible(self)
+    },
+    build_mipmaps = function(...) invisible(self),
+    release = function() invisible(NULL),
+    # The texture at coordinates uv (one row each), as moderngl samples it.
+    sample = function(uv) {
+      img <- self$data
+      h <- dim(img)[1]
+      w <- dim(img)[2]
+      k <- dim(img)[3]
+      wrap <- function(i, n, rep) if (rep) i %% n else pmin(pmax(i, 0), n - 1)
+      nearest <- identical(self$filter[[1]], "NEAREST")
+      x <- uv[, 1] * w - 0.5
+      y <- uv[, 2] * h - 0.5
+      if (nearest) {
+        x <- floor(uv[, 1] * w)
+        y <- floor(uv[, 2] * h)
+      }
+      x0 <- floor(x)
+      y0 <- floor(y)
+      fx <- if (nearest) 0 else x - x0
+      fy <- if (nearest) 0 else y - y0
+      c0 <- wrap(x0, w, self$repeat_x)
+      c1 <- wrap(x0 + 1, w, self$repeat_x)
+      r0 <- wrap(y0, h, self$repeat_y)
+      r1 <- wrap(y0 + 1, h, self$repeat_y)
+      at <- function(r, c, j) img[cbind(r + 1, c + 1, j)]
+      out <- vapply(seq_len(k), function(j) {
+        (at(r0, c0, j) * (1 - fx) + at(r0, c1, j) * fx) * (1 - fy) + (at(r1, c0, j) * (1 - fx) + at(r1, c1, j) * fx) * fy
+      }, numeric(nrow(uv)))
+      out <- matrix(out, nrow(uv), k)
+      if (k < 4) out <- cbind(out, matrix(c(0, 0, 0, 1)[(k + 1):4], nrow(uv), 4 - k, byrow = TRUE))
+      out
+    }
+  )
+)
+
 #' @rdname opengl_renderer
 #' @format NULL
 #' @usage NULL
@@ -133,8 +207,9 @@ OpenGLSoftwareContextClass <- R6::R6Class("OpenGLSoftwareContext", lock_objects 
       if (identical(flag, "DEPTH_TEST")) self$depth_test <- FALSE
       invisible(self)
     },
+    texture_units = NULL,
     texture = function(size, components = 4, data = NULL, samples = 0, ...) {
-      list(size = as.integer(size), components = components, data = data, samples = samples)
+      OpenGLSoftwareTextureClass$new(self, size, components, data, samples)
     },
     depth_renderbuffer = function(size, samples = 0) list(size = as.integer(size), samples = samples),
     framebuffer = function(color_attachments = NULL, depth_attachment = NULL) {
@@ -619,7 +694,8 @@ software_draw_mesh_glsl <- function(fbo, mesh) {
   n <- max(0L, vapply(inputs, nrow, 1L))
   if (!n) return(TRUE)
   uniforms <- mesh$shader$uniforms
-  vst <- glsl_run(vprog, n, inputs, uniforms)
+  textures <- mesh$shader$context$texture_units
+  vst <- glsl_run(vprog, n, inputs, uniforms, textures = textures)
   clip <- glsl_rows(get("gl_Position", envir = vst$globals), n)
   varyings <- lapply(glsl_outputs(vprog), function(s) glsl_rows(get(s$name, envir = vst$globals), n))
   names(varyings) <- vapply(glsl_outputs(vprog), function(s) s$name, "")
@@ -637,7 +713,7 @@ software_draw_mesh_glsl <- function(fbo, mesh) {
     if (!nrow(prims)) return(TRUE)
     k <- ncol(prims)
     gin <- lapply(varyings, function(v) lapply(seq_len(k), function(j) v[prims[, j], , drop = FALSE]))
-    gst <- glsl_run(gprog, nrow(prims), gin, uniforms,
+    gst <- glsl_run(gprog, nrow(prims), gin, uniforms, textures = textures,
                     geometry = lapply(seq_len(k), function(j) clip[prims[, j], , drop = FALSE]))
     emitted <- software_gs_strips(gst$emits, nrow(prims))
     if (is.null(emitted) || !nrow(emitted$tri)) return(TRUE)
@@ -662,7 +738,7 @@ software_draw_mesh_glsl <- function(fbo, mesh) {
     p <- at(ndc)
     nf <- nrow(p)
     builtins <- list(gl_FragCoord = cbind((p[, 1] + 1) / 2 * W, (p[, 2] + 1) / 2 * H, (p[, 3] + 1) / 2, inv))
-    glsl_run(fprog, nf, lapply(varyings, persp), uniforms, builtins)
+    glsl_run(fprog, nf, lapply(varyings, persp), uniforms, builtins, textures = textures)
   }
   color_of <- function(st) {
     out <- if (length(outs)) get(outs[[1]]$name, envir = st$globals) else get("gl_FragColor", envir = st$globals)
@@ -1256,7 +1332,8 @@ OpenGLRendererClass <- R6::R6Class("OpenGLRenderer", inherit = RendererClass, lo
     create_texture = function(source, key) {
       img <- if (is.character(source)) ImageMobject(source)$pixel_array else change_to_rgba_array(source)
       tid <- length(self$path_to_texture_id)
-      self$context$texture(size = dim(img)[2:1], components = 4, data = img)
+      texture <- self$context$texture(size = dim(img)[2:1], components = 4, data = img)
+      texture$use(location = tid)
       self$path_to_texture_id[[key]] <- tid
       tid
     },

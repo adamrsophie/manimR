@@ -29,8 +29,11 @@
 #'   uniform and const globals, user functions, `if`, `for`, `while`,
 #'   `break`, `continue`, `return`, `discard`, structs and the common
 #'   built-in functions, and runs a geometry shader (points or triangles in,
-#'   a triangle strip out) between the two stages; textures and arrays
-#'   inside structs raise an error, and
+#'   a triangle strip out) between the two stages. A `sampler2D` uniform
+#'   holds a texture unit: `context$texture(size, components, data)` makes
+#'   a texture (bytes, the row at v = 0 first) and its `use(location)` binds
+#'   it, sampled linearly and repeated as moderngl does. Other samplers and
+#'   arrays inside structs raise an error, and
 #'   `Mesh$render()` of a mesh it cannot run needs an OpenGL context and
 #'   stops.
 #' * `Shader(context, name, source)` reads the GLSL code of a shader folder

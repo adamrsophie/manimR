@@ -1007,6 +1007,33 @@ void main() {
     r$get_raw_frame_buffer_object_data()
   })
   expect_lte(max(abs(geom - oracle("vgeom"))), 2)
+  # A texture bound to a unit, sampled by a sampler2D (linear, repeated).
+  glsl_tfs <- "#version 330
+in vec2 v_uv;
+uniform sampler2D u_tex;
+out vec4 frag_color;
+void main() {
+    vec4 t = texture(u_tex, v_uv * 2.0 - 0.25);
+    frag_color = vec4(t.rgb, t.a);
+}
+"
+  textured <- tempconfig(list(pixel_width = 160, pixel_height = 90), {
+    r <- OpenGLRenderer()
+    s <- Scene$new(renderer = r)
+    on.exit(r$close_device(), add = TRUE)
+    r$camera$set_euler_angles(theta = -20 * DEGREES, phi = 40 * DEGREES)
+    quad <- shader_data(c(in_vert = 3, in_uv = 2), 4)
+    assign("in_vert", rbind(c(-4, -3, -2), c(4, -3, -2), c(4, 3, 2), c(-4, 3, 2)), envir = quad)
+    assign("in_uv", rbind(c(0, 0), c(1, 0), c(1, 1), c(0, 1)), envir = quad)
+    tex <- r$context$texture(c(4, 3), 3, as.raw(c(255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 255, 0, 0, 255, 255, 255, 0, 255, 255, 255, 255, 0, 0, 0, 128, 64, 32, 32, 64, 128, 200, 200, 50, 50, 100, 200)))
+    tex$use(location = 1)
+    sh <- Shader(r$context, source = list(vertex_shader = glsl_vs, fragment_shader = glsl_tfs))
+    sh$set_uniform("u_tex", 1)
+    s$add(Mesh(sh, quad, indices = c(0, 1, 2, 0, 2, 3)))
+    r$update_frame(s)
+    r$get_raw_frame_buffer_object_data()
+  })
+  expect_lte(max(abs(textured - oracle("vtex"))), 2)
   # A FullScreenQuad runs its fragment shader over the frame.
   quad <- tempconfig(list(pixel_width = 160, pixel_height = 90), {
     r <- OpenGLRenderer()
@@ -1267,5 +1294,6 @@ void main() { if (v_pos.x > 5.0) discard; mat2 r = mat2(0.0, 1.0, -1.0, 0.0);
   expect_equal(st$discarded, c(FALSE, TRUE))
   expect_equal(unname(get("frag_color", st$globals)[1, ]), c(0, 1, 5, 1))
   expect_error(glsl_run(glsl_program("uniform sampler2D t; void main() { gl_FragColor = texture(t, vec2(0.0)); }"), 1),
-               "not supported")
+               "no texture is bound")
+  expect_error(glsl_program("uniform samplerCube t; void main() { }"), "only sampler2D")
 })

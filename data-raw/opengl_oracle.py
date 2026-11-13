@@ -333,6 +333,28 @@ def vgeom(r):
     sh = Shader(r.context, source={"vertex_shader": GLSL_VS, "geometry_shader": GEOM_GS, "fragment_shader": GEOM_FS})
     return [Mesh(sh, quad, indices=np.array([0, 1, 2, 0, 2, 3]))]
 frame("vgeom", lambda: [], lambda cam: cam.set_euler_angles(theta=-20 * np.pi / 180, phi=40 * np.pi / 180), meshes=vgeom)
+TEX_FS = """#version 330
+in vec2 v_uv;
+uniform sampler2D u_tex;
+out vec4 frag_color;
+void main() {
+    vec4 t = texture(u_tex, v_uv * 2.0 - 0.25);
+    frag_color = vec4(t.rgb, t.a);
+}
+"""
+TEX_DATA = [255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 255, 0, 0, 255, 255, 255, 0, 255, 255, 255, 255, 0, 0, 0, 128, 64, 32, 32, 64, 128, 200, 200, 50, 50, 100, 200]
+def vtex(r):
+    # The quad of vglsl with a 4 x 3 RGB texture, repeated and filtered.
+    from manim.renderer.shader import Mesh, Shader
+    quad = np.zeros(4, dtype=[("in_vert", np.float32, (3,)), ("in_uv", np.float32, (2,))])
+    quad["in_vert"] = [[-4, -3, -2], [4, -3, -2], [4, 3, 2], [-4, 3, 2]]
+    quad["in_uv"] = [[0, 0], [1, 0], [1, 1], [0, 1]]
+    tex = r.context.texture((4, 3), 3, bytes(TEX_DATA))
+    tex.use(location=1)
+    sh = Shader(r.context, source={"vertex_shader": GLSL_VS, "fragment_shader": TEX_FS})
+    sh.set_uniform("u_tex", 1)
+    return [Mesh(sh, quad, indices=np.array([0, 1, 2, 0, 2, 3]))]
+frame("vtex", lambda: [], lambda cam: cam.set_euler_angles(theta=-20 * np.pi / 180, phi=40 * np.pi / 180), meshes=vtex)
 # Each frame as a PNG, rows as OpenGL reads them (bottom row first).
 from PIL import Image
 for name, a in out.items():

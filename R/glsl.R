@@ -13,8 +13,9 @@
 # common built-in functions; structs, whose value is one matrix of their
 # fields side by side (a "glsl_struct" attribute names the struct).
 # Geometry shaders run with one row per input primitive: EmitVertex() and
-# EndPrimitive() record the outputs of the rows under the mask. Textures
-# and arrays inside structs raise an error.
+# EndPrimitive() record the outputs of the rows under the mask. A sampler2D
+# uniform holds a texture unit, which texture() samples as the software
+# context's texture bound there does. Arrays inside structs raise an error.
 
 glsl_tokenize <- function(code) {
   code <- gsub("/\\*.*?\\*/", " ", code, perl = TRUE)
@@ -29,7 +30,7 @@ glsl_tokenize <- function(code) {
 GLSL_TYPES <- c(float = 1, int = 1, uint = 1, bool = 1, double = 1,
                 vec2 = 2, vec3 = 3, vec4 = 4, ivec2 = 2, ivec3 = 3, ivec4 = 4, uvec2 = 2, uvec3 = 3, uvec4 = 4,
                 bvec2 = 2, bvec3 = 3, bvec4 = 4, dvec2 = 2, dvec3 = 3, dvec4 = 4,
-                mat2 = 4, mat3 = 9, mat4 = 16, mat2x2 = 4, mat3x3 = 9, mat4x4 = 16)
+                mat2 = 4, mat3 = 9, mat4 = 16, mat2x2 = 4, mat3x3 = 9, mat4x4 = 16, sampler2D = 1)
 GLSL_QUALIFIERS <- c("in", "out", "inout", "uniform", "const", "flat", "smooth", "noperspective", "centroid",
                      "highp", "mediump", "lowp", "attribute", "varying", "invariant")
 
@@ -358,7 +359,7 @@ glsl_parse <- function(tokens) {
       take(";")
       next
     }
-    if (grepl("sampler", peek())) glsl_error("textures are not supported by manimR's GLSL interpreter.")
+    if (grepl("sampler", peek()) && peek() != "sampler2D") glsl_error("only sampler2D textures are supported by manimR's GLSL interpreter.")
     if (!is_type(peek())) glsl_error(sprintf("unexpected '%s'.", peek()))
     type <- take()
     globals <- c(globals, declarations(type, quals))
@@ -732,6 +733,13 @@ glsl_call <- function(name, arg_exprs, env, st, mask) {
     st$emits[[length(st$emits) + 1]] <- event
     return(matrix(0, 1, 1))
   }
+  if (is.null(fns) && name %in% c("texture", "texture2D")) {
+    unit <- glsl_eval(arg_exprs[[1]], env, st, mask)[1, 1]
+    tex <- if (unit + 1 <= length(st$textures)) st$textures[[unit + 1]]
+    if (is.null(tex)) glsl_error("no texture is bound to unit ", unit, ".")
+    uv <- glsl_rows(glsl_eval(arg_exprs[[2]], env, st, mask), st$n)
+    return(tex$sample(uv[, 1:2, drop = FALSE]))
+  }
   if (is.null(fns)) {
     args <- lapply(arg_exprs, glsl_eval, env, st, mask)
     if (name %in% names(GLSL_TYPES)) return(glsl_construct(name, args))
@@ -866,8 +874,10 @@ glsl_declare <- function(s, env, st, mask, value = NULL) {
 # shader, `inputs` hold lists (one matrix per vertex of the primitive),
 # `geometry` the vertices' gl_Position, and the state's `emits` the events
 # of EmitVertex() and EndPrimitive().
-glsl_run <- function(program, n, inputs = list(), uniforms = list(), builtins = list(), geometry = NULL) {
+glsl_run <- function(program, n, inputs = list(), uniforms = list(), builtins = list(), geometry = NULL,
+                     textures = NULL) {
   st <- glsl_new_state(program, n)
+  st$textures <- textures
   g <- st$globals
   if (!is.null(geometry)) {
     st$program$structs$gl_PerVertex <- list(fields = list(gl_Position = list(type = "vec4", offset = 0, size = 4)),
