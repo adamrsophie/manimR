@@ -322,107 +322,67 @@ CameraClass <- R6::R6Class("Camera", lock_objects = FALSE,
                       default.units = "native", gp = grid::gpar(fill = cols, col = NA))
       invisible(self)
     },
-    # Draws an image mobject through its four projected corners (upper left,
-    # upper right, lower left, lower right), as upstream maps the image with
-    # the homography of those corners. A quadrilateral less than half a pixel
-    # high is skipped, as upstream. A rotated rectangle (flipped when
-    # mirrored) is placed by the device's raster drawing, after a bicubic
-    # resize when it is enlarged; any other shape (shear, perspective) is
-    # resampled here with the image's algorithm.
+    # Draws an image mobject as upstream's Camera.display_image_mobject():
+    # the four projected corners (upper left, upper right, lower left, lower
+    # right) in subpixel coordinates give the box the image is pasted into
+    # and the perspective transform Pillow resamples it with.
     display_image_mobject = function(image_mobject) {
       corners <- self$project_points(image_mobject$points, image_mobject)
       ul <- corners[1, 1:2]; ur <- corners[2, 1:2]; dl <- corners[3, 1:2]
       dr <- if (nrow(corners) >= 4) corners[4, 1:2] else ur + dl - ul
-      ppu <- self$pixel_width / self$get_frame_width()
-      if (quad_pixel_height(rbind(ul, ur, dr, dl) * ppu) < 0.5) return(invisible(self))
-      img <- image_mobject$get_raster()
       method <- image_mobject$resampling_algorithm %||% "bicubic"
       if (!method %in% c("nearest", "bilinear", "bicubic")) method <- "bilinear"
-      e1 <- ur - ul
-      e2 <- dl - ul
-      w <- sqrt(sum(e1^2))
-      h <- sqrt(sum(e2^2))
-      parallelogram <- sqrt(sum((dr - (ur + dl - ul))^2)) < 1e-6 * max(w, h)
-      perpendicular <- abs(sum(e1 * e2)) < 1e-6 * w * h
-      if (!(parallelogram && perpendicular)) {
-        return(self$display_image_resampled(img, ul, ur, dl, dr, method))
-      }
-      # An enlarged rectangle is resized with Pillow's bicubic filter first;
-      # the device then only places it. One enlarged to more pixels than the
-      # frame (as in a zoomed camera) is sampled only at the frame pixels it
-      # covers, as upstream's paste into the frame keeps.
-      new_h <- max(round(h * ppu), 1)
-      new_w <- max(round(w * ppu), 1)
-      if (method == "bicubic" && (new_w > dim(img)[2] || new_h > dim(img)[1])) {
-        if (new_h * new_w > self$pixel_width * self$pixel_height) {
-          return(self$display_image_resampled(img, ul, ur, dl, dr, method))
-        }
-        img <- cached_resize(image_mobject$mob_id, img, new_h, new_w)
-      }
-      # With y pointing up, an upright image has e1 x e2 < 0; a positive
-      # cross product means a mirror image.
-      if (e1[1] * e2[2] - e1[2] * e2[1] > 0) img <- img[rev(seq_len(dim(img)[1])), , , drop = FALSE]
-      angle <- atan2(e1[2], e1[1]) * 180 / pi
-      center <- (ur + dl) / 2
-      grid::pushViewport(grid::viewport(x = grid::unit(center[1], "native"), y = grid::unit(center[2], "native"),
-                                        width = grid::unit(w, "native"), height = grid::unit(h, "native"),
-                                        angle = angle))
-      grid::grid.raster(array_to_native_raster(img), interpolate = method != "nearest")
-      grid::popViewport()
-      invisible(self)
+      self$display_image_resampled(image_mobject$get_raster(), ul, ur, dl, dr, method, id = image_mobject$mob_id)
     },
-    # Resamples `img` onto the quadrilateral ul, ur, dl, dr through the
-    # homography of the unit square to those corners, sampling the image
-    # with `method` ("nearest", "bilinear" or "bicubic") as Pillow's
-    # perspective transform does. Points outside the image are transparent.
-    display_image_resampled = function(img, ul, ur, dl, dr, method = "bicubic") {
+    # Maps `img` (values in 0 to 1) onto the quadrilateral ul, ur, dl, dr (in
+    # frame coordinates) as upstream does: truncated pixel corners give the
+    # paste box, the homography from the subpixel corners to the image's
+    # corners drives Pillow's perspective transform with `method`
+    # ("nearest", "bilinear" or "bicubic"), and pixels outside the frame are
+    # dropped. A quadrilateral less than half a pixel high is skipped.
+    display_image_resampled = function(img, ul, ur, dl, dr, method = "bicubic", id = NULL) {
       if (isTRUE(method)) method <- "bilinear"
       if (isFALSE(method)) method <- "nearest"
-      # Three collinear corners make the mapping singular; upstream skips
-      # the image then. Other errors are not caught.
-      singular <- function(e) if (grepl("singular", conditionMessage(e))) NULL else stop(e)
-      H <- tryCatch(homography_from_unit_square(ul, ur, dl, dr), error = singular)
-      Hinv <- if (is.null(H)) NULL else tryCatch(solve(H), error = singular)
-      if (is.null(Hinv)) return(invisible(self))
-      xs <- c(ul[1], ur[1], dl[1], dr[1])
-      ys <- c(ul[2], ur[2], dl[2], dr[2])
-      # Sample at the centers of the frame pixels the image covers: upstream
-      # pastes the transformed image into the frame, so pixels outside it
-      # are dropped.
       fc <- self$get_frame_center()
-      x0 <- fc[1] - self$get_frame_width() / 2
-      y1 <- fc[2] + self$get_frame_height() / 2
-      dx <- self$get_frame_width() / self$pixel_width
-      dy <- self$get_frame_height() / self$pixel_height
-      c0 <- max(floor((min(xs) - x0) / dx), 0)
-      c1 <- min(ceiling((max(xs) - x0) / dx), self$pixel_width)
-      r0 <- max(floor((y1 - max(ys)) / dy), 0)
-      r1 <- min(ceiling((y1 - min(ys)) / dy), self$pixel_height)
-      nx <- c1 - c0
-      ny <- r1 - r0
-      if (nx < 1 || ny < 1) return(invisible(self))
-      gx <- x0 + (c0 + seq_len(nx) - 0.5) * dx
-      gy <- y1 - (r0 + seq_len(ny) - 0.5) * dy
-      px <- rep(gx, each = ny)
-      py <- rep(gy, times = nx)
-      q <- Hinv %*% rbind(px, py, 1)
-      u <- q[1, ] / q[3, ]
-      v <- q[2, ] / q[3, ]
-      ih <- dim(img)[1]
-      iw <- dim(img)[2]
-      inside <- is.finite(u) & is.finite(v) & u >= 0 & u <= 1 & v >= 0 & v <= 1 & q[3, ] > 0
-      out <- array(0, c(ny, nx, 4))
-      if (any(inside)) {
-        vals <- sample_image(img, pmin(u[inside] * iw, iw - 1e-9), pmin(v[inside] * ih, ih - 1e-9), method)
-        for (k in 1:4) {
-          ch <- numeric(length(u))
-          ch[inside] <- vals[, k]
-          out[, , k] <- matrix(ch, ny, nx)
+      pw <- self$pixel_width
+      ph <- self$pixel_height
+      to_px <- function(p) c((p[1] - fc[1]) * pw / self$get_frame_width() + pw / 2,
+                             (p[2] - fc[2]) * -ph / self$get_frame_height() + ph / 2)
+      target <- rbind(to_px(ul), to_px(ur), to_px(dl), to_px(dr))
+      if (!all(is.finite(target))) return(invisible(self))
+      itarget <- trunc(target)
+      shift <- c(min(itarget[, 1]), min(itarget[, 2]))
+      target <- sweep(target, 2, shift)
+      itarget <- sweep(itarget, 2, shift)
+      size <- c(max(itarget[, 1]), max(itarget[, 2]))
+      if (quad_pixel_height(target[c(1, 2, 4, 3), ]) < 0.5) return(invisible(self))
+      coeffs <- pillow_perspective_coefficients(target, dim(img)[2], dim(img)[1])
+      if (is.null(coeffs) || any(size < 1)) return(invisible(self))
+      # Paste box clipped to the frame, as pasting into a frame sized image.
+      c0 <- max(shift[1], 0); c1 <- min(shift[1] + size[1], pw)
+      r0 <- max(shift[2], 0); r1 <- min(shift[2] + size[2], ph)
+      if (c1 <= c0 || r1 <= r0) return(invisible(self))
+      key <- list(img, coeffs, size, method, c(c0, c1, r0, r1) - c(shift[1], shift[1], shift[2], shift[2]))
+      if (is.null(.manim$transform_cache)) .manim$transform_cache <- new.env(parent = emptyenv())
+      hit <- if (is.null(id)) NULL else .manim$transform_cache[[id]]
+      if (!is.null(hit) && identical(hit$key, key)) {
+        out <- hit$out
+      } else {
+        out <- pillow_transform(round(img * 255), coeffs, key[[5]], method) / 255
+        if (!is.null(id)) {
+          # Limitation: holds at most 16 images and drops arbitrary ones beyond that.
+          keys <- ls(.manim$transform_cache)
+          if (length(keys) >= 16) rm(list = keys[seq_len(length(keys) - 15)], envir = .manim$transform_cache)
+          assign(id, list(key = key, out = out), envir = .manim$transform_cache)
         }
       }
+      x0 <- fc[1] - self$get_frame_width() / 2
+      y1 <- fc[2] + self$get_frame_height() / 2
+      dx <- self$get_frame_width() / pw
+      dy <- self$get_frame_height() / ph
       grid::grid.raster(array_to_native_raster(out), x = grid::unit(x0 + c0 * dx, "native"),
-                        y = grid::unit(y1 - r1 * dy, "native"), width = grid::unit(nx * dx, "native"),
-                        height = grid::unit(ny * dy, "native"), just = c("left", "bottom"), interpolate = FALSE)
+                        y = grid::unit(y1 - r1 * dy, "native"), width = grid::unit((c1 - c0) * dx, "native"),
+                        height = grid::unit((r1 - r0) * dy, "native"), just = c("left", "bottom"), interpolate = FALSE)
       invisible(self)
     }
   ),
@@ -496,66 +456,100 @@ sample_image <- function(img, x, y, method = "bicubic") {
   }, numeric(length(x)))
 }
 
-# The n x size matrix of filter weights that resamples `size` pixels to `n`
-# along one axis, as Pillow samples output pixel centers.
-resample_weights <- function(size, n, method = "bicubic") {
-  pos <- (seq_len(n) - 0.5) * size / n - 0.5
-  p0 <- floor(pos)
+# The 8 coefficients of Pillow's perspective transform that map the
+# subpixel corners `target` (upper left, upper right, lower left, lower
+# right; one per row) to the corners of a w x h image, solved as upstream
+# does. NULL when the system is singular (three collinear corners), where
+# upstream skips the image.
+pillow_perspective_coefficients <- function(target, w, h) {
+  orig <- rbind(c(0, 0), c(w, 0), c(0, h), c(w, h))
+  A <- matrix(0, 8, 8)
+  for (i in 1:4) {
+    x <- target[i, 1]; y <- target[i, 2]; X <- orig[i, 1]; Y <- orig[i, 2]
+    A[2 * i - 1, ] <- c(x, y, 1, 0, 0, 0, -X * x, -X * y)
+    A[2 * i, ] <- c(0, 0, 0, x, y, 1, -Y * x, -Y * y)
+  }
+  tryCatch(solve(A, as.vector(t(orig))), error = function(e) NULL)
+}
+
+# Pillow's Image.transform() with Transform.PERSPECTIVE on an h x w x 4
+# array of 8 bit values, for the output columns cols[1] to cols[2] - 1 and
+# rows cols[3] to cols[4] - 1 (zero based). Each output pixel center maps
+# through `coeffs`; nearest takes the pixel there, bilinear and bicubic
+# (Pillow's transform cubic, a = -1) interpolate premultiplied colors with
+# edge pixels repeated and truncate to 8 bits. Samples outside the image
+# are transparent. Returns the 8 bit result.
+pillow_transform <- function(img, coeffs, box, method = "bicubic") {
+  ih <- dim(img)[1]
+  iw <- dim(img)[2]
+  cols <- seq(box[1], box[2] - 1)
+  rows <- seq(box[3], box[4] - 1)
+  nx <- length(cols)
+  ny <- length(rows)
+  xo <- rep(cols, each = ny) + 0.5
+  yo <- rep(rows, times = nx) + 0.5
+  a <- coeffs
+  den <- a[7] * xo + a[8] * yo + 1
+  xin <- (a[1] * xo + a[2] * yo + a[3]) / den
+  yin <- (a[4] * xo + a[5] * yo + a[6]) / den
+  out <- array(0, c(ny, nx, 4))
+  if (method == "nearest") {
+    ok <- is.finite(xin) & is.finite(yin) & xin >= 0 & yin >= 0
+    xi <- trunc(xin); yi <- trunc(yin)
+    ok <- ok & xi < iw & yi < ih
+    idx <- yi[ok] + 1 + xi[ok] * ih
+    for (k in 1:4) {
+      ch <- numeric(length(xin))
+      ch[ok] <- img[, , k][idx]
+      out[, , k] <- ch
+    }
+    return(out)
+  }
+  ok <- is.finite(xin) & is.finite(yin) & xin >= 0 & xin < iw & yin >= 0 & yin < ih
+  if (!any(ok)) return(out)
+  alpha <- img[, , 4]
+  pre <- img
+  for (k in 1:3) {
+    t <- img[, , k] * alpha + 128
+    pre[, , k] <- floor((floor(t / 256) + t) / 256)
+  }
+  x <- xin[ok] - 0.5
+  y <- yin[ok] - 0.5
+  x0 <- floor(x); y0 <- floor(y)
+  dx <- x - x0; dy <- y - y0
+  clipx <- function(v) pmin(pmax(v, 0), iw - 1)
+  clipy <- function(v) pmin(pmax(v, 0), ih - 1)
   if (method == "bilinear") {
     offs <- 0:1
-    w <- cbind(1 - (pos - p0), pos - p0)
+    interp <- function(v, d) v[[1]] + (v[[2]] - v[[1]]) * d
   } else {
     offs <- -1:2
-    w <- cubic_weights(pos - p0)
+    interp <- function(v, d) {
+      p1 <- v[[2]]; p2 <- -v[[1]] + v[[3]]
+      p3 <- 2 * (v[[1]] - v[[2]]) + v[[3]] - v[[4]]
+      p4 <- -v[[1]] + v[[2]] - v[[3]] + v[[4]]
+      p1 + d * (p2 + d * (p3 + d * p4))
+    }
   }
-  out <- matrix(0, n, size)
-  for (i in seq_along(offs)) {
-    idx <- cbind(seq_len(n), pmin(pmax(p0 + offs[i] + 1, 1), size))
-    out[idx] <- out[idx] + w[, i]
+  xs <- lapply(offs, function(o) clipx(x0 + o) * ih)
+  ys <- lapply(offs, function(o) clipy(y0 + o) + 1)
+  res <- matrix(0, sum(ok), 4)
+  for (k in 1:4) {
+    ch <- pre[, , k]
+    rowv <- lapply(ys, function(yy) interp(lapply(xs, function(xx) ch[yy + xx]), dx))
+    v <- interp(rowv, dy)
+    res[, k] <- ifelse(v <= 0, 0, ifelse(v >= 255, 255, trunc(v)))
+  }
+  # Back from premultiplied colors, as Pillow's RGBa to RGBA conversion.
+  al <- res[, 4]
+  part <- al > 0 & al < 255
+  for (k in 1:3) res[part, k] <- pmin(floor(255 * res[part, k] / al[part]), 255)
+  for (k in 1:4) {
+    ch <- numeric(length(xin))
+    ch[ok] <- res[, k]
+    out[, , k] <- ch
   }
   out
-}
-
-# resize_image() for the image of mobject `id`, reusing the last result while
-# the image and the size stay the same, as they do in most frames.
-cached_resize <- function(id, img, new_h, new_w) {
-  if (is.null(.manim$resize_cache)) .manim$resize_cache <- new.env(parent = emptyenv())
-  hit <- .manim$resize_cache[[id]]
-  if (!is.null(hit) && hit$h == new_h && hit$w == new_w && identical(hit$src, img)) return(hit$out)
-  out <- resize_image(img, new_h, new_w)
-  # Limitation: holds at most 16 images and drops arbitrary ones beyond that.
-  keys <- ls(.manim$resize_cache)
-  if (length(keys) >= 16) rm(list = keys[seq_len(length(keys) - 15)], envir = .manim$resize_cache)
-  assign(id, list(src = img, h = new_h, w = new_w, out = out), envir = .manim$resize_cache)
-  out
-}
-
-# Resizes an h x w x 4 image to new_h x new_w with a separable filter.
-resize_image <- function(img, new_h, new_w, method = "bicubic") {
-  wy <- resample_weights(dim(img)[1], new_h, method)
-  wx <- t(resample_weights(dim(img)[2], new_w, method))
-  top <- max(1, max(img))
-  out <- array(0, c(new_h, new_w, 4))
-  for (k in 1:4) out[, , k] <- pmin(pmax(wy %*% img[, , k] %*% wx, 0), top)
-  out
-}
-
-# The 3 x 3 homography that maps the unit square's corners (0, 0), (1, 0),
-# (0, 1), (1, 1) to p00, p10, p01, p11.
-homography_from_unit_square <- function(p00, p10, p01, p11) {
-  src <- rbind(c(0, 0), c(1, 0), c(0, 1), c(1, 1))
-  dst <- rbind(p00, p10, p01, p11)
-  A <- matrix(0, 8, 8)
-  b <- numeric(8)
-  for (i in 1:4) {
-    u <- src[i, 1]; v <- src[i, 2]; x <- dst[i, 1]; y <- dst[i, 2]
-    A[2 * i - 1, ] <- c(u, v, 1, 0, 0, 0, -u * x, -v * x)
-    A[2 * i, ] <- c(0, 0, 0, u, v, 1, -u * y, -v * y)
-    b[2 * i - 1] <- x
-    b[2 * i] <- y
-  }
-  hvec <- solve(A, b)
-  matrix(c(hvec, 1), 3, 3, byrow = TRUE)
 }
 
 # Stroke grobs for flattened paths: closed subpaths as paths (so the closing

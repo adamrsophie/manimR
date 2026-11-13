@@ -205,3 +205,49 @@ test_that("an image far larger than the frame is sampled at the frame pixels it 
   sheared$apply_matrix(matrix(c(1, 0.01, 0, 0, 1, 0, 0, 0, 1), 3, byrow = TRUE))
   check(sheared)
 })
+
+test_that("images are drawn as upstream's Cairo camera draws them", {
+  # Frames from data-raw/image_frame_oracle.py, side by side.
+  ref <- round(png::readPNG(test_path("fixtures", "image_frames.png")) * 255)
+  idx <- as.matrix(expand.grid(i = 0:5, j = 0:8, k = 0:3))
+  src <- array((idx[, 1] * 37 + idx[, 2] * 91 + idx[, 3] * 53) %% 256, c(6, 9, 4))
+  src[1:3, , 4] <- 255
+  cases <- list(
+    function(m) m,
+    function(m) m$scale(3.3),
+    function(m) m$scale(2.2)$rotate(0.6),
+    function(m) m$scale(2)$apply_matrix(matrix(c(1, 0.4, 0, 0.1, 1, 0, 0, 0, 1), 3, byrow = TRUE)),
+    function(m) m$scale(1.7)$shift(2.3 * RIGHT + 0.7 * UP),
+    function(m) m$scale(30),
+    function(m) m$scale(2.5)$set_resampling_algorithm("nearest"),
+    function(m) m$scale(2.5)$rotate(0.3)$set_resampling_algorithm("linear"),
+    function(m) m$scale(2.5)$set_opacity(0.4),
+    function(m) m$scale(0.3)
+  )
+  for (i in seq_along(cases)) {
+    m <- ImageMobject(src)
+    cases[[i]](m)
+    got <- manimR:::native_raster_to_array(m$get_image(pixel_width = 160, pixel_height = 90))[, , 1:3]
+    expect_lte(max(abs(got - ref[, (i - 1) * 160 + 1:160, ])), 1)
+  }
+})
+
+test_that("pillow_transform() samples as Pillow's perspective transform", {
+  # Values from Pillow 10.1: a 2 x 3 RGBA image, half transparent in its
+  # second row, scaled to 5 x 4 with each filter.
+  src <- array(c(10, 200, 30, 250, 120, 0, 40, 90, 170, 255, 255, 255, 255, 255, 255, 128, 64, 0,
+                 0, 0, 0, 0, 0, 0)[1:24], c(2, 3, 4))
+  src[, , 4] <- c(255, 128, 255, 64, 255, 0)
+  co <- c(3 / 5, 0, 0, 0, 2 / 4, 0, 0, 0)
+  out <- function(m) manimR:::pillow_transform(src, co, c(0, 5, 0, 4), m)
+  expect_equal(out("nearest")[, , 1], matrix(c(10, 10, 200, 200, 10, 10, 200, 200, 30, 30, 250, 250,
+                                               120, 120, 0, 0, 120, 120, 0, 0), 4))
+  expect_equal(out("bilinear")[, , 1], matrix(c(10, 36, 123, 199, 18, 40, 123, 212, 30, 46, 124, 251,
+                                                84, 89, 121, 255, 120, 120, 121, 0), 4))
+  expect_equal(out("bilinear")[, , 4], matrix(c(255, 223, 159, 128, 255, 216, 140, 102, 255, 207, 111, 64,
+                                                255, 197, 82, 25, 255, 191, 63, 0), 4))
+  expect_equal(out("bicubic")[, , 1], matrix(c(0, 35, 123, 252, 0, 33, 123, 255, 25, 46, 124, 255,
+                                               94, 89, 120, 12, 151, 129, 116, 0), 4))
+  expect_equal(out("bicubic")[, , 3], matrix(c(255, 255, 255, 255, 255, 255, 240, 196, 255, 245, 199, 0,
+                                               159, 137, 120, 0, 45, 37, 26, 0), 4))
+})

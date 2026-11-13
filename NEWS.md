@@ -75,9 +75,11 @@
   OpenGL classes. Their quadratic curves are
   stored raised to cubics, so `$points` and the point getters give 4
   points per curve where upstream gives 3.
-* Images are drawn through the homography of their corners with Pillow's
-  nearest, bilinear and bicubic filters, and an image seen edge on is
-  skipped as upstream.
+* Images are drawn as upstream's Cairo camera draws them: the truncated
+  pixel corners give the paste box, and the image goes through Pillow's
+  perspective transform (its nearest, bilinear and bicubic filters on
+  premultiplied 8 bit colors), so frames match upstream's within 1 of 255.
+  An image seen edge on is skipped as upstream.
 * Helpers of `manim.utils` outside `from manim import *` are exported too:
   the matrices of `manim.utils.opengl` (`orthographic_projection_matrix()`,
   `view_matrix()` and the rest), `rotation_matrix_transpose()`,
