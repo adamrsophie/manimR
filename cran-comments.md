@@ -1,8 +1,8 @@
 ## Test environments
 
 * local: macOS 27.2 (aarch64), R 4.6.0, `R CMD check --as-cran`
-* GitHub Actions: ubuntu-latest (R devel, release and oldrel-1) and
-  windows-latest (R release)
+* GitHub Actions: ubuntu-latest (R devel, release and oldrel-1),
+  windows-latest (R release) and macos-15-intel (R release)
 
 ## R CMD check results
 
