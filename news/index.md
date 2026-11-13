@@ -93,7 +93,10 @@
   [`OpenGLCircle()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md),
   [`OpenGLRectangle()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md),
   [`OpenGLImageMobject()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
-  and others take upstream’s arguments in upstream’s order.
+  and others take upstream’s arguments in upstream’s order, and
+  [`OpenGLImageMobject()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
+  upscales an image array with Pillow’s resampling filters as upstream
+  does.
 - Images are drawn through the homography of their corners with Pillow’s
   nearest, bilinear and bicubic filters, and an image seen edge on is
   skipped as upstream.
