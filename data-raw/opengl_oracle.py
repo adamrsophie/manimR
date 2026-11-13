@@ -166,6 +166,33 @@ def vmesh(r):
     return [Mesh(Shader(r.context, name="vertex_colors"), colored),
             Mesh(flat, plain, indices=np.array([0, 1, 2, 0, 2, 3]))]
 frame("vmesh", lambda: [], meshes=vmesh)
+def vmesh2(r):
+    # A rotated parent mesh with a child, a manim_coords mesh and a test
+    # shader mesh, over a filled square with the camera turned.
+    from manim.renderer.shader import Mesh, Shader
+    def tri(pts):
+        a = np.zeros(3, dtype=[("in_vert", np.float32, (len(pts[0]),))])
+        a["in_vert"] = pts
+        return a
+    def flat(name, color):
+        sh = Shader(r.context, name=name)
+        sh.set_uniform("u_color", color)
+        return sh
+    parent = Mesh(flat("default", (1.0, 0.2, 0.2, 0.8)), tri([[0, 0, 0.5], [3, 0, 0.5], [0, 2, 0.5]]))
+    c, s_ = np.cos(np.pi / 6), np.sin(np.pi / 6)
+    parent.model_matrix = np.array([[c, -s_, 0, 1], [s_, c, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
+    child = Mesh(flat("default", (0.2, 1.0, 0.2, 0.6)), tri([[0, 0, -0.5], [2, 0, -0.5], [1, 2, -0.5]]))
+    child.set_position(np.array([-4.0, -1, 0]))
+    parent.add(child)
+    coords = Mesh(flat("manim_coords", (1.0, 1.0, 0.0, 1.0)), tri([[-1, 1, 0, 1], [1, 1, 0, 1], [0, 3, 0, 1]]))
+    view = r.camera.formatted_view_matrix
+    coords.shader.set_uniform("u_model_view_matrix", view)
+    corner = np.zeros(3, dtype=[("in_vert", np.float32, (2,)), ("in_color", np.float32, (4,))])
+    corner["in_vert"] = [[0.6, 0.6], [0.95, 0.6], [0.95, 0.95]]
+    corner["in_color"] = [[1, 0, 1, 1], [0, 1, 1, 1], [1, 1, 1, 0.5]]
+    return [parent, coords, Mesh(Shader(r.context, name="test"), corner)]
+frame("vmesh2", lambda: [from_cubic(cubic_polygon(np.array([[-2.0, -2, 0], [2, -2, 0], [2, 2, 0], [-2, 2, 0]])), fill_color=BLUE, fill_opacity=1, stroke_width=0)],
+      lambda cam: cam.set_euler_angles(theta=-30 * np.pi / 180, phi=50 * np.pi / 180), meshes=vmesh2)
 # Each frame as a PNG, rows as OpenGL reads them (bottom row first).
 from PIL import Image
 for name, a in out.items():

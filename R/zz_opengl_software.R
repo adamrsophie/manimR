@@ -560,7 +560,8 @@ software_draw_mesh <- function(fbo, mesh) {
   attrs <- mesh$attributes
   get_attr <- function(name) if (exists(name, envir = attrs, inherits = FALSE)) as.matrix(get(name, envir = attrs))
   # An attribute with fewer components than the shader reads is filled
-  # from (0, 0, 0, 1), as OpenGL does.
+  # from (0, 0, 0, 1). Upstream reads such a buffer with the shader's
+  # attribute size and so misreads it; give the components the shader reads.
   as_vec4 <- function(v) {
     out <- matrix(c(0, 0, 0, 1), nrow(v), 4, byrow = TRUE)
     out[, seq_len(ncol(v))] <- v

@@ -41,7 +41,9 @@
   The CPU side of upstream's OpenGL renderer is ported too: the camera
   (`OpenGLCamera()`), trees of 3D objects and meshes (`Object3D()`,
   `Mesh()`), `Shader()`, `triangulate_mobject()` and
-  `build_matrix_lists()`; drawing a mesh needs an OpenGL context and stops
+  `build_matrix_lists()`. A scene draws meshes whose shader is one of
+  upstream's default, manim_coords, vertex_colors or test folders in
+  software; a mesh with other GLSL code needs an OpenGL context and stops
   with a message. `OpenGLRenderer()` renders scenes (also with
   `manim_config(renderer = "opengl")`) through a software context
   (`OpenGLSoftwareContext()`) whose framebuffers are ragg devices, the

@@ -910,6 +910,45 @@ test_that("the software shaders draw the frames of upstream's OpenGL renderer", 
     out
   })
   expect_lte(max(abs(meshes - oracle("vmesh"))), 2)
+  # A rotated parent mesh with a child, a manim_coords mesh and a test
+  # shader mesh, over a filled square with the camera turned.
+  meshes2 <- tempconfig(list(pixel_width = 160, pixel_height = 90), {
+    r <- OpenGLRenderer()
+    s <- Scene$new(renderer = r)
+    on.exit(r$close_device(), add = TRUE)
+    s$add(Square(side_length = 4, fill_color = BLUE, fill_opacity = 1, stroke_width = 0))
+    r$camera$set_euler_angles(theta = -30 * DEGREES, phi = 50 * DEGREES)
+    tri <- function(p) {
+      d <- shader_data(c(in_vert = ncol(p)), 3)
+      assign("in_vert", p, envir = d)
+      d
+    }
+    flat <- function(name, color) {
+      sh <- Shader(r$context, name = name)
+      sh$set_uniform("u_color", color)
+      sh
+    }
+    parent <- Mesh(flat("default", c(1, 0.2, 0.2, 0.8)), tri(rbind(c(0, 0, 0.5), c(3, 0, 0.5), c(0, 2, 0.5))))
+    parent$model_matrix <- rbind(c(cos(PI / 6), -sin(PI / 6), 0, 1), c(sin(PI / 6), cos(PI / 6), 0, 0),
+                                 c(0, 0, 1, 0), c(0, 0, 0, 1))
+    child <- Mesh(flat("default", c(0.2, 1, 0.2, 0.6)), tri(rbind(c(0, 0, -0.5), c(2, 0, -0.5), c(1, 2, -0.5))))
+    child$set_position(c(-4, -1, 0))
+    parent$add(child)
+    coords <- Mesh(flat("manim_coords", c(1, 1, 0, 1)), tri(rbind(c(-1, 1, 0, 1), c(1, 1, 0, 1), c(0, 3, 0, 1))))
+    coords$shader$set_uniform("u_model_view_matrix", r$camera$formatted_view_matrix)
+    corner <- shader_data(c(in_vert = 2, in_color = 4), 3)
+    assign("in_vert", rbind(c(0.6, 0.6), c(0.95, 0.6), c(0.95, 0.95)), envir = corner)
+    assign("in_color", rbind(c(1, 0, 1, 1), c(0, 1, 1, 1), c(1, 1, 1, 0.5)), envir = corner)
+    s$add(parent, coords, Mesh(Shader(r$context, name = "test"), corner))
+    r$update_frame(s)
+    out <- r$get_raw_frame_buffer_object_data()
+    # A mesh with other GLSL code is not run.
+    s$add(Mesh(Shader(r$context, source = list(vertex_shader = "void main() {}", fragment_shader = "void main() {}")),
+               tri(rbind(c(0, 0, 0), c(1, 0, 0), c(0, 1, 0)))))
+    expect_error(r$update_frame(s), "OpenGL")
+    out
+  })
+  expect_lte(max(abs(meshes2 - oracle("vmesh2"))), 2)
   # A VMobject holding a surface draws the surface with its own shader.
   plane <- surf(function(u, v) c(u, v, 0), c(-1, 1), c(-1, 1), c(4, 4), GREEN, 0, 0)
   expect_equal(frame(list(VGroup(plane$copy()))), frame(list(plane)))
