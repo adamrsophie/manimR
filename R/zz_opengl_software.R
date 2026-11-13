@@ -306,13 +306,15 @@ software_add_light <- function(rgb, point, normal, light, gloss, shadow) {
   darkening * (rgb + (1 - rgb) * shine)
 }
 
-# The surface shader: vert.glsl places each vertex with
+# The surface and textured_surface shaders: vert.glsl places each vertex with
 # position_point_into_frame() and get_gl_Position() (w is 1) and rotates the
 # normal of its du and dv neighbors; frag.glsl lights the interpolated
 # color at the interpolated point and normal. With depth_test on, a
 # fragment is kept where its depth is less than the framebuffer's (GL_LESS,
 # moderngl's default) and then writes its depth.
 software_draw_surface <- function(fbo, mobject, uniforms) {
+  # A surface group has no points of its own, as upstream's.
+  if (!length(mobject$list_of_faces)) return(invisible(NULL))
   sd <- mobject$get_shader_data()
   P <- get("point", envir = sd)
   if (!nrow(P)) return(invisible(NULL))
@@ -384,11 +386,36 @@ software_draw_surface <- function(fbo, mobject, uniforms) {
     if (!length(ord)) return(invisible(NULL))
   }
   f <- list(tri = f$tri[ord], row = f$row[ord], col = f$col[ord], b = f$b[ord, , drop = FALSE])
-  color <- lerp(get("color", envir = sd))
   n <- lerp(normal)
   n <- n / sqrt(rowSums(n * n))
-  rgb <- software_add_light(color[, 1:3, drop = FALSE], lerp(xyz), n, as.numeric(u$light_source_position),
-                            u$gloss %||% 0, u$shadow %||% 0)
+  point <- lerp(xyz)
+  light <- as.numeric(u$light_source_position)
+  if (inherits(mobject, "OpenGLTexturedSurface")) {
+    # textured_surface/frag.glsl: the image at im_coords (nearest texel,
+    # clamped at the edges), blended toward the dark image where the
+    # surface faces away from the light; the alpha is the opacity.
+    uv <- lerp(get("im_coords", envir = sd))
+    texel <- function(img) {
+      h <- dim(img)[1]
+      w <- dim(img)[2]
+      col <- pmin(pmax(floor(uv[, 1] * w), 0), w - 1)
+      row <- pmin(pmax(floor(uv[, 2] * h), 0), h - 1)
+      i <- row + 1 + col * h
+      cbind(img[i], img[i + h * w], img[i + 2 * h * w], if (dim(img)[3] > 3) img[i + 3 * h * w] else 255) / 255
+    }
+    color <- texel(mobject$image)
+    if (identical(as.numeric(mobject$num_textures), 2) && !is.null(mobject$dark_image)) {
+      to_light <- sweep(-point, 2, light, "+")
+      dp <- rowSums(to_light * n) / sqrt(rowSums(to_light * to_light))
+      t <- pmin(pmax((dp + 0.2) / 0.4, 0), 1)
+      alpha <- t * t * (3 - 2 * t)
+      color <- texel(mobject$dark_image) * (1 - alpha) + color * alpha
+    }
+    color[, 4] <- lerp(get("opacity", envir = sd))
+  } else {
+    color <- lerp(get("color", envir = sd))
+  }
+  rgb <- software_add_light(color[, 1:3, drop = FALSE], point, n, light, u$gloss %||% 0, u$shadow %||% 0)
   layer <- software_layer(W, H)
   # Fragments at one pixel blend in triangle order.
   start <- c(TRUE, pix[-1] != pix[-length(pix)])
@@ -688,10 +715,8 @@ opengl_is_vmobject <- function(m) {
 
 DEFAULT_OPENGL_FRAME_SHAPE <- c(8 * 16 / 9, 8)
 
-# The mobjects drawn with upstream's surface shader.
-opengl_is_software_surface <- function(m) {
-  inherits(m, "OpenGLSurface") && identical(m$shader_folder, "surface")
-}
+# The mobjects drawn with upstream's surface and textured_surface shaders.
+opengl_is_software_surface <- function(m) inherits(m, "OpenGLSurface")
 
 # Draws OpenGL mobjects as upstream's shaders place them: points rotated by
 # camera_rotation about camera_center, scaled by focal_distance /
@@ -862,7 +887,9 @@ OpenGLRendererClass <- R6::R6Class("OpenGLRenderer", inherit = RendererClass, lo
       # it in the family.
       family <- mobject$get_family()
       surfaces <- Filter(opengl_is_software_surface, family)
-      faces <- unlist(lapply(surfaces, function(sf) sf$submobjects), recursive = FALSE)
+      faces <- unlist(lapply(surfaces, function(sf) {
+        Filter(function(sm) inherits(sm, "ThreeDVMobject") && !inherits(sm, "OpenGLSurface"), sf$submobjects)
+      }), recursive = FALSE)
       pos <- stats::setNames(seq_along(family), vapply(family, function(m) m$mob_id, ""))
       surface_pos <- unname(pos[vapply(surfaces, function(m) m$mob_id, "")])
       done <- logical(length(surfaces))

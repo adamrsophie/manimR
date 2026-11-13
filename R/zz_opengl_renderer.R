@@ -40,7 +40,8 @@
 #'   by `focal_distance / (focal_distance - z)`, fixed in frame mobjects in
 #'   the default frame) and lights them with upstream's `add_light()`, once
 #'   per mobject rather than per pixel. An `OpenGLSurface` runs upstream's
-#'   surface shader instead: its triangles are rasterized at pixel centers,
+#'   surface shader instead, and an `OpenGLTexturedSurface` its
+#'   textured_surface shader (nearest texel): their triangles are rasterized at pixel centers,
 #'   lit per pixel, and with `depth_test` (on by default) tested against and
 #'   written to the framebuffer's depth buffer. `config$renderer = "opengl"` makes
 #'   scenes use it. `get_frame()` gives a `nativeRaster`;

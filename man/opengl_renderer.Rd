@@ -209,7 +209,8 @@ points as upstream's shaders do (rotated by \code{camera_rotation}, scaled
 by \code{focal_distance / (focal_distance - z)}, fixed in frame mobjects in
 the default frame) and lights them with upstream's \code{add_light()}, once
 per mobject rather than per pixel. An \code{OpenGLSurface} runs upstream's
-surface shader instead: its triangles are rasterized at pixel centers,
+surface shader instead, and an \code{OpenGLTexturedSurface} its
+textured_surface shader (nearest texel): their triangles are rasterized at pixel centers,
 lit per pixel, and with \code{depth_test} (on by default) tested against and
 written to the framebuffer's depth buffer. \code{config$renderer = "opengl"} makes
 scenes use it. \code{get_frame()} gives a \code{nativeRaster};

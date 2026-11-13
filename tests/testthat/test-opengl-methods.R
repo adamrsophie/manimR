@@ -687,3 +687,33 @@ test_that("OpenGLSurface runs the surface shader with the depth test", {
     expect_gt(max(abs(as.numeric(a[40, 72, 1:3]) - as.numeric(a[50, 88, 1:3]))), 2)
   })
 })
+
+test_that("OpenGLTexturedSurface samples its image as the textured_surface shader does", {
+  tempconfig(list(pixel_width = 160, pixel_height = 90), {
+    r <- OpenGLRenderer()
+    s <- Scene$new(renderer = r)
+    on.exit(r$close_device(), add = TRUE)
+    plane <- OpenGLSurface(function(u, v) c(u, v, 0), u_range = c(-2, 2), v_range = c(-2, 2), resolution = c(3, 3))
+    plane$gloss <- 0
+    plane$shadow <- 0
+    img <- array(0, c(2, 2, 4))
+    img[, , 4] <- 255
+    img[1, 1, 1] <- 255
+    img[1, 2, 2] <- 255
+    img[2, 1, 3] <- 255
+    img[2, 2, 1:3] <- 255
+    tex <- OpenGLTexturedSurface(plane, img)
+    s$add(tex)
+    r$update_frame(s)
+    a <- r$get_raw_frame_buffer_object_data()
+    # Rows from the bottom: the image stands upright on the plane, each
+    # texel covering a quarter of it (nearest texel, no smoothing).
+    px <- function(row, col) as.numeric(a[row, col, 1:3])
+    expect_equal(px(60, 60), c(255, 0, 0))
+    expect_equal(px(60, 100), c(0, 255, 0))
+    expect_equal(px(30, 60), c(0, 0, 255))
+    expect_equal(px(30, 100), c(255, 255, 255))
+    expect_equal(px(46, 81), c(0, 255, 0))
+    expect_equal(px(45, 80), c(0, 0, 255))
+  })
+})

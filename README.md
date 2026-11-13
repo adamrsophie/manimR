@@ -227,8 +227,9 @@ embedded the same way when it is printed.
   "opengl")`, scenes render with `OpenGLRenderer`, a port of upstream's
   OpenGL renderer that draws in software instead of on the GPU: shader
   wrappers are drawn by a grid camera with the OpenGL camera's projection
-  and lighting (lit once per mobject, not per pixel), the surface shader
-  of an `OpenGLSurface` and the projection shaders by their GLSL rules
+  and lighting (lit once per mobject, not per pixel), the surface shaders
+  of `OpenGLSurface` and `OpenGLTexturedSurface` and the projection
+  shaders by their GLSL rules
   (surfaces lit per pixel and depth tested), and a live preview `Window` is an R graphics
   device. GLSL code of a `Mesh` is not run. The OpenGL point clouds
   (`DotCloud`, `TrueDot`, `OpenGLPMobject`) are drawn as round dots like
