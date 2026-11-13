@@ -100,7 +100,7 @@ test_that("boolean operations cut the curves where skia-pathops does", {
     ab <- make[[cn]]()
     got <- ops[[on]](ab[[1]], ab[[2]])$points
     want <- as_pts(o[[key]])
-    if (key %in% exact) expect_lt(max(abs(got - want)), 1e-5, label = key)
+    if (key %in% exact) expect_lt(max(0, abs(got - want)), 1e-5, label = key)
     expect_identical(filled(got), filled(want), info = key)
     pg <- pieces(got)
     pw <- pieces(want)
@@ -616,6 +616,8 @@ test_that("Label, LabeledLine and LabeledArrow place their labels", {
   expect_equal(lab$background_rect$get_fill_color(), BLUE)
   expect_equal(lab$frame$width, lab$rendered_label$width + 0.1, tolerance = 1e-9)
   expect_error(Label(42), "Unsupported label")
+  # Only text mobjects, as upstream checks isinstance(label, (MathTex, Text, Typst)).
+  expect_error(LabeledPolygram(rbind(c(0, 0, 0), c(1, 0, 0), c(0, 1, 0)), label = Square()), "Must be MathTex")
   ll <- LabeledLine(Text("x"), label_position = 0.25, start = LEFT * 2, end = RIGHT * 2)
   expect_equal(ll$label$get_center(), c(-1, 0, 0), tolerance = 1e-9)
   skip_if_no_latex()

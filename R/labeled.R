@@ -46,10 +46,10 @@ LabelClass <- R6::R6Class("Label", inherit = VGroupClass, lock_objects = FALSE,
       frame_config <- labeled_merge(list(color = WHITE, buff = 0.05, stroke_width = 0.5), frame_config)
       if (is.character(label)) {
         self$rendered_label <- do.call(MathTex, c(list(label), label_config))
-      } else if (is_vmobject(label)) {
+      } else if (inherits(label, c("MathTex", "Text", "Typst"))) {
         self$rendered_label <- label
       } else {
-        stop("Unsupported label type. Must be a string or a VMobject such as MathTex, Tex or Text.", call. = FALSE)
+        stop("Unsupported label type. Must be MathTex, Tex, Text, Typst, or MathTypst.", call. = FALSE)
       }
       self$background_rect <- do.call(BackgroundRectangle, c(list(self$rendered_label), box_config))
       self$frame <- do.call(SurroundingRectangle, c(list(self$rendered_label), frame_config))
