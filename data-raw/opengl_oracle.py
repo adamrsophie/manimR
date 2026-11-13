@@ -203,6 +203,12 @@ def vnative():
     a = Arc(radius=1.2, start_angle=0.3, angle=4.0, stroke_width=10, color="#FF862F").shift(np.array([4.0, -2, 0]))
     return [c, sq, t, a]
 frame("vnative", vnative)
+def vsphere():
+    # A Sphere made under the OpenGL renderer: faces with upstream's OpenGL
+    # geometry (quadratic edges with midpoint handles).
+    from manim.mobject.three_d.three_dimensions import Sphere
+    return [Sphere(radius=1.5, resolution=(8, 6)).shift(np.array([-2.0, 0, 0]))]
+frame("vsphere", vsphere, lambda cam: cam.set_euler_angles(theta=-30 * np.pi / 180, phi=60 * np.pi / 180))
 # Each frame as a PNG, rows as OpenGL reads them (bottom row first).
 from PIL import Image
 for name, a in out.items():

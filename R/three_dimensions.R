@@ -117,7 +117,9 @@ get_shaded_rgb <- function(rgb, point, unit_normal_vect, light_source) {
 #' @param func Function of `(u, v)` returning a point.
 #' @param u_range,v_range Ranges `c(min, max)` of the `u` and `v` parameters.
 #' @param resolution Number of faces along `u` and `v`: one value or
-#'   `c(u, v)`; `NULL` uses the class default.
+#'   `c(u, v)`; `NULL` uses the class default (for `Sphere()`, `c(24, 12)`,
+#'   or `c(101, 51)` under `manim_config(renderer = "opengl")`; for
+#'   `Torus()`, `c(24, 24)`, or `c(101, 101)` under it, as upstream).
 #' @param surface_piece_config List of extra arguments for each face.
 #' @param fill_color,fill_opacity Fill color and opacity of the faces.
 #' @param checkerboard_colors Colors alternated across the faces; `FALSE`
@@ -298,7 +300,7 @@ SphereClass <- R6::R6Class("Sphere", inherit = SurfaceClass, lock_objects = FALS
     radius = 1,
     initialize = function(center = ORIGIN, radius = 1, resolution = NULL, u_range = c(0, TAU), v_range = c(0, PI), ...) {
       self$radius <- radius
-      super$initialize(func = NULL, resolution = resolution %||% c(24, 12), u_range = u_range, v_range = v_range, ...)
+      super$initialize(func = NULL, resolution = resolution %||% if (identical(cfg("renderer"), RendererType$OPENGL)) c(101, 51) else c(24, 12), u_range = u_range, v_range = v_range, ...)
       self$shift(center)
     },
     func = function(u, v) self$radius * c(cos(u) * sin(v), sin(u) * sin(v), -cos(v))
@@ -618,7 +620,7 @@ TorusClass <- R6::R6Class("Torus", inherit = SurfaceClass, lock_objects = FALSE,
                           resolution = NULL, ...) {
       self$R <- major_radius
       self$r <- minor_radius
-      super$initialize(func = NULL, u_range = u_range, v_range = v_range, resolution = resolution %||% c(24, 24), ...)
+      super$initialize(func = NULL, u_range = u_range, v_range = v_range, resolution = resolution %||% if (identical(cfg("renderer"), RendererType$OPENGL)) c(101, 101) else c(24, 24), ...)
     },
     func = function(u, v) (self$R - self$r * cos(v)) * c(cos(u), sin(u), 0) - self$r * sin(v) * OUT
   )

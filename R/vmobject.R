@@ -517,6 +517,17 @@ VMobjectClass <- R6::R6Class("VMobject", inherit = MobjectClass, lock_objects = 
       self$append_points(vectorized_mobject$points)
     },
     apply_function = function(func, about_point = NULL, about_edge = NULL, ...) {
+      if (isTRUE(self$opengl_quadratic)) {
+        # Made under the OpenGL renderer: as upstream's OpenGLVMobject, map
+        # the quadratic curves' points (anchors and their one handle), then
+        # raise them back to cubic curves.
+        members <- Filter(is_vmobject, self$family_members_with_points())
+        for (m in members) m$points <- opengl_quadratic_points(m)
+        super$apply_function(func, about_point = about_point %||% ORIGIN, about_edge = about_edge, ...)
+        for (m in members) m$points <- opengl_cubic_from_quadratic(m$points)
+        if (self$make_smooth_after_applying_functions) self$make_smooth()
+        return(invisible(self))
+      }
       factor <- self$pre_function_handle_to_anchor_scale_factor
       self$scale_handle_to_anchor_distances(factor)
       super$apply_function(func, about_point = about_point %||% ORIGIN, ...)

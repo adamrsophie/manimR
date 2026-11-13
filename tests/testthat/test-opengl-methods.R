@@ -927,6 +927,19 @@ test_that("the software shaders draw the frames of upstream's OpenGL renderer", 
     r$get_raw_frame_buffer_object_data()
   })
   expect_lte(max(abs(native - oracle("vnative"))), 2)
+  # A Sphere made under the OpenGL renderer: its faces map the midpoint
+  # handles of quadratic edges through the surface function, as upstream.
+  ball <- tempconfig(list(renderer = "opengl", pixel_width = 160, pixel_height = 90), {
+    expect_length(Sphere()$submobjects, 101 * 51)
+    r <- OpenGLRenderer()
+    s <- Scene$new(renderer = r)
+    on.exit(r$close_device(), add = TRUE)
+    s$add(Sphere(radius = 1.5, resolution = c(8, 6))$shift(c(-2, 0, 0)))
+    r$camera$set_euler_angles(theta = -30 * DEGREES, phi = 60 * DEGREES)
+    r$update_frame(s)
+    r$get_raw_frame_buffer_object_data()
+  })
+  expect_lte(max(abs(ball - oracle("vsphere"))), 4)
   # A rotated parent mesh with a child, a manim_coords mesh and a test
   # shader mesh, over a filled square with the camera turned.
   meshes2 <- tempconfig(list(pixel_width = 160, pixel_height = 90), {

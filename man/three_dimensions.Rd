@@ -138,7 +138,9 @@ light source.}
 \item{u_range, v_range}{Ranges \code{c(min, max)} of the \code{u} and \code{v} parameters.}
 
 \item{resolution}{Number of faces along \code{u} and \code{v}: one value or
-\code{c(u, v)}; \code{NULL} uses the class default.}
+\code{c(u, v)}; \code{NULL} uses the class default (for \code{Sphere()}, \code{c(24, 12)},
+or \code{c(101, 51)} under \code{manim_config(renderer = "opengl")}; for
+\code{Torus()}, \code{c(24, 24)}, or \code{c(101, 101)} under it, as upstream).}
 
 \item{surface_piece_config}{List of extra arguments for each face.}
 
