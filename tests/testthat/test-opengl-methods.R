@@ -869,6 +869,16 @@ test_that("the software shaders draw the frames of upstream's OpenGL renderer", 
   inner <- cubic_circle(1)
   ring$set_points(unname(rbind(cubic_circle(2), inner[nrow(inner):1, ])))
   expect_lte(max(abs(frame(list(ring)) - oracle("vhole"))), 3)
+  # OpenGLImageMobject is upstream's textured surface: the upscaled image
+  # sampled at nearest texels, with the opacity of set_opacity().
+  img <- array(0, c(2, 3, 4))
+  texels <- list(c(255, 0, 0, 255), c(0, 255, 0, 255), c(0, 0, 255, 255), c(255, 255, 0, 255), c(0, 255, 255, 255),
+                 c(255, 255, 255, 128))
+  for (k in 1:6) img[(k - 1) %/% 3 + 1, (k - 1) %% 3 + 1, ] <- texels[[k]]
+  image_a <- OpenGLImageMobject(img)$shift(LEFT * 3)
+  image_b <- OpenGLImageMobject(img, height = 2)$rotate(PI / 5)$shift(c(3, 1, 0))
+  image_b$set_opacity(0.5)
+  expect_lte(max(abs(frame(list(image_a, image_b)) - oracle("vimage"))), 4)
   # A VMobject holding a surface draws the surface with its own shader.
   plane <- surf(function(u, v) c(u, v, 0), c(-1, 1), c(-1, 1), c(4, 4), GREEN, 0, 0)
   expect_equal(frame(list(VGroup(plane$copy()))), frame(list(plane)))

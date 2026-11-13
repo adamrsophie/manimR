@@ -39,15 +39,17 @@
 #'   order of upstream's `get_shader_wrapper_list()`: a VMobject's family
 #'   runs the quadratic_bezier_fill and quadratic_bezier_stroke shaders
 #'   (anti aliased fills, and strokes with upstream's joints and ends), an
-#'   `OpenGLSurface` the surface shader, an `OpenGLTexturedSurface` the
-#'   textured_surface shader (nearest texel), and an OpenGL point cloud the
+#'   `OpenGLSurface` the surface shader, an `OpenGLTexturedSurface` or
+#'   `OpenGLImageMobject` the textured_surface shader (nearest texel), and an
+#'   OpenGL point cloud the
 #'   true_dot shader. Points are placed as the shaders place them (rotated
 #'   by `camera_rotation`, scaled by `focal_distance / (focal_distance -
 #'   z)`, fixed in frame mobjects in the default frame); triangles are
 #'   rasterized at pixel centers, lit per pixel by upstream's `add_light()`,
 #'   and with `depth_test` (on by default for surfaces) tested against and
-#'   written to the framebuffer's depth buffer. Images and other mobjects
-#'   are drawn by a grid camera. `config$renderer = "opengl"` makes
+#'   written to the framebuffer's depth buffer. A plain `ImageMobject`, on
+#'   which upstream's OpenGL renderer raises, is drawn by a grid camera.
+#'   `config$renderer = "opengl"` makes
 #'   scenes use it. `get_frame()` gives a `nativeRaster`;
 #'   `get_raw_frame_buffer_object_data()` the pixels bottom row first, as
 #'   OpenGL reads them.

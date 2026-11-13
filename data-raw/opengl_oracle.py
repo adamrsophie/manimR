@@ -131,6 +131,15 @@ def vhole():
     ring = np.vstack([cubic_circle(2.0, np.zeros(3)), cubic_circle(1.0, np.zeros(3))[::-1]])
     return [from_cubic(ring, fill_color=GREEN, fill_opacity=1, stroke_color=WHITE, stroke_width=4)]
 frame("vhole", vhole)
+def vimage():
+    from manim.mobject.opengl.opengl_image_mobject import OpenGLImageMobject
+    img = np.array([[[255, 0, 0, 255], [0, 255, 0, 255], [0, 0, 255, 255]],
+                    [[255, 255, 0, 255], [0, 255, 255, 255], [255, 255, 255, 128]]], dtype=np.uint8)
+    a = OpenGLImageMobject(img).shift(np.array([-3.0, 0, 0]))
+    b = OpenGLImageMobject(img, height=2).rotate(np.pi / 5).shift(np.array([3.0, 1, 0]))
+    b.set_opacity(0.5)
+    return [a, b]
+frame("vimage", vimage)
 # Each frame as a PNG, rows as OpenGL reads them (bottom row first).
 from PIL import Image
 for name, a in out.items():

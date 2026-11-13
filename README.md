@@ -229,7 +229,8 @@ embedded the same way when it is printed.
   wrappers run upstream's GLSL rules: VMobjects the quadratic Bezier fill
   and stroke shaders, `OpenGLSurface` and `OpenGLTexturedSurface` the
   surface shaders, and the projection shaders when configured, rasterized
-  at pixel centers, lit per pixel and depth tested. Images are drawn by a
+  at pixel centers, lit per pixel and depth tested. `OpenGLImageMobject`
+  runs the textured surface shader, a plain `ImageMobject` is drawn by a
   grid camera, and a live preview `Window` is an R graphics
   device. GLSL code of a `Mesh` is not run. The OpenGL point clouds
   (`DotCloud`, `TrueDot`, `OpenGLPMobject`) run upstream's true_dot

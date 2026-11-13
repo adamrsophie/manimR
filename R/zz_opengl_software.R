@@ -482,6 +482,59 @@ software_draw_surface <- function(fbo, mobject, uniforms) {
   software_rasterize(fbo, software_gl_position(xyz, u), tri, isTRUE(mobject$depth_test), shade)
 }
 
+# Upstream's OpenGLImageMobject is an OpenGLTexturedSurface: a plane of
+# 101 x 101 points with the image as its texture (an image array upscaled by
+# get_image_from_file()), gloss and shadow 0, drawn by the textured_surface
+# shader. manimR's keeps the image's corners, so the plane is placed by
+# them; the opacity is the one set_opacity() gave, as the shader ignores the
+# image's alpha.
+software_image_texture_cache <- new.env(parent = emptyenv())
+software_draw_opengl_image <- function(fbo, mobject, uniforms) {
+  P <- mobject$points
+  if (NROW(P) < 3) return(invisible(NULL))
+  orig <- mobject$pixel_array
+  if (!is.null(mobject$orig_alpha_pixel_array) && dim(orig)[3] == 4) orig[, , 4] <- mobject$orig_alpha_pixel_array
+  hit <- software_image_texture_cache[[mobject$mob_id]]
+  if (is.null(hit) || !identical(hit$orig, orig)) {
+    texture <- if (!is.null(mobject$path)) orig else opengl_upscale_image(orig, mobject$resampling_algorithm %||% "bicubic")
+    hit <- list(orig = orig, texture = texture)
+    assign(mobject$mob_id, hit, envir = software_image_texture_cache)
+  }
+  img <- hit$texture
+  n <- 101
+  s <- seq(0, 1, length.out = n)
+  # Points u major, v fastest; v runs from the bottom edge to the top.
+  uu <- rep(s, each = n)
+  vv <- rep(s, times = n)
+  ul <- P[1, ]
+  right <- P[2, ] - P[1, ]
+  down <- P[3, ] - P[1, ]
+  xyz0 <- outer(uu, right) + outer(1 - vv, down) + matrix(ul, n * n, 3, byrow = TRUE)
+  u <- c(uniforms, list(is_fixed_in_frame = as.numeric(isTRUE(as.logical(mobject$is_fixed_in_frame))),
+                        is_fixed_orientation = 0, fixed_orientation_center = c(0, 0, 0)))
+  xyz <- software_frame_points(as_float32(xyz0), u)
+  grid <- matrix(seq_len(n * n), n, n, byrow = TRUE)
+  # Upstream's index_grid flattened row by row: two triangles per cell.
+  flat <- function(m) as.vector(t(m))
+  a <- flat(grid[-n, -n])
+  b <- flat(grid[-1, -n])
+  c <- flat(grid[-n, -1])
+  d <- flat(grid[-1, -1])
+  tri <- matrix(rbind(a, b, c, c, b, d), ncol = 3, byrow = TRUE)
+  im <- cbind(uu, 1 - vv)
+  opacity <- as.numeric(mobject$stroke_opacity %||% 1)[1]
+  shade <- function(at, ...) {
+    uv <- at(im)
+    h <- dim(img)[1]
+    w <- dim(img)[2]
+    col <- pmin(pmax(floor(uv[, 1] * w), 0), w - 1)
+    row <- pmin(pmax(floor(uv[, 2] * h), 0), h - 1)
+    i <- row + 1 + col * h
+    cbind(cbind(img[i], img[i + h * w], img[i + 2 * h * w]) / 255, opacity)
+  }
+  software_rasterize(fbo, software_gl_position(xyz, u), tri, isTRUE(mobject$depth_test), shade)
+}
+
 # The true_dot shader: geom.glsl puts a square of half side point_radius +
 # anti_alias_width around each point (the radius grown with the point's z),
 # and frag.glsl discards what lies more than half anti_alias_width outside
@@ -1000,7 +1053,9 @@ OpenGLRendererClass <- R6::R6Class("OpenGLRenderer", inherit = RendererClass, lo
           for (sm in software_draw_vmobject(fbo, m, u)) walk(sm)
           return(invisible(NULL))
         }
-        if (inherits(m, "OpenGLPMobject")) {
+        if (inherits(m, "OpenGLImageMobject")) {
+          software_draw_opengl_image(fbo, m, u)
+        } else if (inherits(m, "OpenGLPMobject")) {
           software_draw_true_dot(fbo, m, u)
         } else if (NROW(m$points) > 0) {
           # Images and other mobjects are drawn by the grid camera.

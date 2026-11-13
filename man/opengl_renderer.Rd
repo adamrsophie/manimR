@@ -208,14 +208,16 @@ The shader wrappers run upstream's GLSL rules in software, in the
 order of upstream's \code{get_shader_wrapper_list()}: a VMobject's family
 runs the quadratic_bezier_fill and quadratic_bezier_stroke shaders
 (anti aliased fills, and strokes with upstream's joints and ends), an
-\code{OpenGLSurface} the surface shader, an \code{OpenGLTexturedSurface} the
-textured_surface shader (nearest texel), and an OpenGL point cloud the
+\code{OpenGLSurface} the surface shader, an \code{OpenGLTexturedSurface} or
+\code{OpenGLImageMobject} the textured_surface shader (nearest texel), and an
+OpenGL point cloud the
 true_dot shader. Points are placed as the shaders place them (rotated
 by \code{camera_rotation}, scaled by \code{focal_distance / (focal_distance - z)}, fixed in frame mobjects in the default frame); triangles are
 rasterized at pixel centers, lit per pixel by upstream's \code{add_light()},
 and with \code{depth_test} (on by default for surfaces) tested against and
-written to the framebuffer's depth buffer. Images and other mobjects
-are drawn by a grid camera. \code{config$renderer = "opengl"} makes
+written to the framebuffer's depth buffer. A plain \code{ImageMobject}, on
+which upstream's OpenGL renderer raises, is drawn by a grid camera.
+\code{config$renderer = "opengl"} makes
 scenes use it. \code{get_frame()} gives a \code{nativeRaster};
 \code{get_raw_frame_buffer_object_data()} the pixels bottom row first, as
 OpenGL reads them.
