@@ -205,6 +205,7 @@ Variable <- function(var, label, var_type = "decimal", num_decimal_places = 2, .
   value$next_to(lab, RIGHT)
   v <- VMobject(...)
   class(v) <- c("Variable", class(v))
+  opengl_relabel(v)
   v$label <- lab
   v$tracker <- tracker
   v$value <- value

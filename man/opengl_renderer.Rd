@@ -235,8 +235,10 @@ and with \code{depth_test} (on by default for surfaces) tested against and
 written to the framebuffer's depth buffer. A plain \code{ImageMobject}, on
 which upstream's OpenGL renderer raises, is drawn by a grid camera.
 \code{config$renderer = "opengl"} makes
-scenes use it. Mobjects made under that setting follow upstream's
-OpenGL classes: they get the OpenGL mobject methods
+scenes use it. Mobjects of the classes upstream converts to OpenGL
+classes under that setting (all but a bare \code{VMobject()} or \code{Mobject()},
+\code{StreamLine}, images and user classes made directly on \code{VMobjectClass}
+or \code{MobjectClass}) follow upstream's OpenGL classes: they get the OpenGL mobject methods
 (\code{get_triangulation()}, \code{get_shader_data()}, \code{set_gloss()} and the rest)
 and upstream's OpenGL geometry. Each quadratic curve is stored raised
 to a cubic, so \verb{$points}, \code{get_num_points()}, \code{get_subpaths()},

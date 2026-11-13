@@ -1369,3 +1369,21 @@ test_that("mobjects made under the OpenGL renderer have upstream's OpenGL method
   })
   expect_false(exists("get_triangulation", envir = Square(), inherits = FALSE))
 })
+
+test_that("only the classes upstream converts become OpenGL classes", {
+  tempconfig(list(renderer = "opengl"), {
+    # A bare VMobject stays a Cairo VMobject upstream, so a cubic stays one.
+    v <- VMobject()
+    v$start_new_path(ORIGIN)
+    v$add_cubic_bezier_curve_to(UP, RIGHT, DOWN)
+    expect_equal(nrow(v$points), 4)
+    expect_false(exists("get_triangulation", envir = v, inherits = FALSE))
+    # A class built from a bare VMobject and named afterwards is converted.
+    expect_equal(nrow(opengl_quadratic_points(CubicBezier(c(-1, -1, 0), c(-1, 1, 0), c(1, 1, 0), c(1, -1, 0)))), 6)
+    # Groups get the OpenGL mobject members, active bindings included.
+    expect_equal(Group()$get_opacity(), 1)
+    gg <- Group(Group(Square()))
+    gg$add_n_more_submobjects(1)
+    expect_length(gg$submobjects, 2)
+  })
+})

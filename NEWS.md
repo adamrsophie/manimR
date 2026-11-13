@@ -68,8 +68,11 @@
   quadratic curves, and an empty group keeps track of its shifts. Under
   that renderer a partial curve keeps its number of curves, and copies
   added to align groups in a transform stay visible when opaque, as in
-  upstream's OpenGL mobjects. Mobjects made under that renderer also get
-  the methods of upstream's OpenGL classes. Their quadratic curves are
+  upstream's OpenGL mobjects. Mobjects of the classes upstream converts
+  to OpenGL classes under that renderer (all but a bare `VMobject()` or
+  `Mobject()`, `StreamLine`, images and user classes made directly on
+  `VMobjectClass` or `MobjectClass`) also get the methods of upstream's
+  OpenGL classes. Their quadratic curves are
   stored raised to cubics, so `$points` and the point getters give 4
   points per curve where upstream gives 3.
 * Images are drawn through the homography of their corners with Pillow's

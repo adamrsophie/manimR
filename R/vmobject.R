@@ -106,7 +106,7 @@ VMobjectClass <- R6::R6Class("VMobject", inherit = MobjectClass, lock_objects = 
       self$close_new_points <- close_new_points
       self$make_smooth_after_applying_functions <- make_smooth_after_applying_functions
       self$shade_in_3d <- shade_in_3d
-      self$opengl_quadratic <- identical(cfg("renderer"), RendererType$OPENGL)
+      self$opengl_quadratic <- identical(cfg("renderer"), RendererType$OPENGL) && opengl_converted(self)
       super$initialize(color = color_items(color)[[1]], ...)
       if (self$opengl_quadratic) self$opengl_normalize_points()
     },
@@ -1149,6 +1149,7 @@ DashedVMobject <- function(vmobject, num_dashes = 15, dashed_ratio = 0.5, dash_o
                            color = "#FFFFFF", equal_lengths = TRUE, ...) {
   self <- VMobjectClass$new(color = color, ...)
   class(self) <- c("DashedVMobject", class(self))
+  opengl_relabel(self)
   vm <- vmobject$copy()
   tips <- NULL
   if (!is.null(vm$pop_tips)) {

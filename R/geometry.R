@@ -452,6 +452,7 @@ Annulus <- constructor(AnnulusClass)
 CubicBezier <- function(start_anchor, start_handle, end_handle, end_anchor, ...) {
   v <- VMobject(...)
   class(v) <- c("CubicBezier", class(v))
+  opengl_relabel(v)
   v$add_cubic_bezier_curve(start_anchor, start_handle, end_handle, end_anchor)
   v
 }
@@ -474,6 +475,7 @@ ArcPolygon <- function(..., angle = PI / 4, radius = NULL, arc_config = NULL) {
   })
   v <- do.call(VMobject, kwargs)
   class(v) <- c("ArcPolygon", class(v))
+  opengl_relabel(v)
   v$add(arcs)
   for (a in arcs) v$append_points(a$points)
   v$arcs <- arcs
@@ -488,6 +490,7 @@ ArcPolygonFromArcs <- function(...) {
   arcs <- args[nm == ""]
   v <- do.call(VMobject, args[nm != ""])
   class(v) <- c("ArcPolygonFromArcs", class(v))
+  opengl_relabel(v)
   v$add(arcs)
   v$arcs <- arcs
   n <- length(arcs)
@@ -649,6 +652,7 @@ TangentLine <- function(vmob, alpha, length = 1, d_alpha = 1e-6, ...) {
 Elbow <- function(width = 0.2, angle = 0, ...) {
   v <- VMobject(...)
   class(v) <- c("Elbow", class(v))
+  opengl_relabel(v)
   v$angle <- angle
   v$set_points_as_corners(rbind(UP, UP + RIGHT, RIGHT))
   v$scale_to_fit_width(width, about_point = ORIGIN)
@@ -1125,6 +1129,7 @@ Cutout <- function(main_shape, ...) {
   nm <- names(args) %||% rep("", length(args))
   v <- do.call(VMobject, args[nm != ""])
   class(v) <- c("Cutout", class(v))
+  opengl_relabel(v)
   v$append_points(main_shape$points)
   sub_dir <- if (main_shape$get_direction() == "CW") "CCW" else "CW"
   for (m in args[nm == ""]) v$append_points(m$force_direction(sub_dir)$points)

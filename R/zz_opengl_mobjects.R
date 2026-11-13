@@ -633,10 +633,25 @@ get_vectorized_mobject_class <- function() VMobjectClass
 #' @export
 get_point_mobject_class <- function() PMobjectClass
 
-# Under the OpenGL renderer every upstream mobject is built on OpenGLMobject
-# or OpenGLVMobject. A manimR mobject made then gets the members of those
-# classes it lacks, bound to the object as its own methods are. Objects of
-# locked classes (an R6 default for user classes) keep their own members.
+# Under the OpenGL renderer upstream rebuilds the classes declared with
+# metaclass=ConvertToOpenGL, and their subclasses, on OpenGLMobject or
+# OpenGLVMobject. A bare VMobject or Mobject, StreamLine, the image classes
+# and user classes made directly on VMobject or Mobject stay Cairo classes.
+opengl_converted <- function(obj) {
+  cl <- setdiff(class(obj), "R6")
+  if (any(startsWith(cl, "OpenGL"))) return(TRUE)
+  ns <- topenv()
+  base <- if ("VMobject" %in% cl) "VMobject" else "Mobject"
+  i <- match(base, cl)
+  if (is.na(i) || i == 1) return(FALSE)
+  child <- cl[i - 1]
+  !child %in% c("StreamLine", "AbstractImageMobject") && exists(paste0(child, "Class"), envir = ns, inherits = FALSE)
+}
+
+# A converted mobject made under the OpenGL renderer gets the members of
+# manimR's OpenGL classes it lacks, bound to the object as its own methods
+# are. Objects of locked classes (an R6 default for user classes) keep their
+# own members.
 opengl_attach_members <- function(obj) {
   if (environmentIsLocked(obj) || is.function(.subset2(obj, "get_triangulation"))) return(invisible(obj))
   key <- if (inherits(obj, "VMobject")) "opengl_vmobject_members" else "opengl_mobject_members"
@@ -644,11 +659,33 @@ opengl_attach_members <- function(obj) {
   if (is.null(members)) {
     specs <- if (key == "opengl_vmobject_members") list(OPENGL_MOBJECT_METHODS, OPENGL_VMOBJECT_METHODS)
              else list(OPENGL_MOBJECT_METHODS)
-    members <- .manim[[key]] <- opengl_merge(specs)$public
+    members <- .manim[[key]] <- opengl_merge(specs)[c("public", "active")]
   }
   enclos <- environment(.subset2(obj, "get_center"))
-  add <- members[setdiff(names(members), ls(obj, all.names = TRUE, sorted = FALSE))]
+  have <- ls(obj, all.names = TRUE, sorted = FALSE)
+  add <- members$public[setdiff(names(members$public), have)]
   add <- lapply(add, function(v) { if (is.function(v)) environment(v) <- enclos; v })
   list2env(add, envir = obj)
+  # Active bindings keep their private values in an environment of their own.
+  active <- members$active[setdiff(names(members$active), have)]
+  if (length(active)) {
+    env <- new.env(parent = enclos)
+    env$private <- new.env(parent = emptyenv())
+    for (nm in names(active)) {
+      f <- active[[nm]]
+      environment(f) <- env
+      makeActiveBinding(nm, f, obj)
+    }
+  }
+  invisible(obj)
+}
+
+# Constructors that build a bare VMobject and give it an upstream class name
+# afterwards call this, so the object is converted as upstream's class is.
+opengl_relabel <- function(obj) {
+  if (identical(cfg("renderer"), "opengl") && opengl_converted(obj)) {
+    if (inherits(obj, "VMobject")) obj$opengl_quadratic <- TRUE
+    opengl_attach_members(obj)
+  }
   invisible(obj)
 }

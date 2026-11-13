@@ -56,7 +56,7 @@ MobjectClass <- R6::R6Class("Mobject",
         for (nm in nms) assign(nm, extra[[nm]], envir = self)
       }
       self$mob_id <- next_mob_id()
-      if (identical(cfg("renderer"), "opengl")) opengl_attach_members(self)
+      if (identical(cfg("renderer"), "opengl") && opengl_converted(self)) opengl_attach_members(self)
       self$name <- name %||% class(self)[1]
       self$z_index <- z_index
       self$submobjects <- list()
