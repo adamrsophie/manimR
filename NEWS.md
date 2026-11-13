@@ -49,7 +49,8 @@
   `add_tip()` adds an `OpenGLArrowTip()`, `OpenGLSurface()` counts
   `resolution` in grid points, and `OpenGLArc()`, `OpenGLCircle()`,
   `OpenGLRectangle()`, `OpenGLImageMobject()` and others take upstream's
-  arguments in upstream's order.
+  arguments in upstream's order, and `OpenGLImageMobject()` upscales an
+  image array with Pillow's resampling filters as upstream does.
 * Images are drawn through the homography of their corners with Pillow's
   nearest, bilinear and bicubic filters, and an image seen edge on is
   skipped as upstream.

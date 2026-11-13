@@ -108,6 +108,16 @@ pixels = np.zeros((2, 4, 4), dtype=np.uint8)
 sizes = [{}, {"width": 2}, {"height": 3}, {"width": 1, "height": 5}]
 out["image_sizes"] = [[m.get_width(), m.get_height()] for m in (OpenGLImageMobject(pixels, **kw) for kw in sizes)]
 glossy = OpenGLImageMobject(pixels, gloss=0.2, shadow=0.3)
+# Image arrays are upscaled with the resampling algorithm before they are
+# used as textures.
+from PIL.Image import Resampling
+src = np.array([[[255, 0, 0, 255], [0, 255, 0, 128], [0, 0, 255, 255]],
+                [[255, 255, 0, 255], [0, 255, 255, 64], [40, 80, 120, 255]]], dtype=np.uint8)
+up = {}
+for name, alg in {"nearest": Resampling.NEAREST, "bilinear": Resampling.BILINEAR, "bicubic": Resampling.BICUBIC}.items():
+    im = np.asarray(OpenGLImageMobject(src, resampling_algorithm=alg).get_image_from_file(src, "RGBA"), dtype=float)
+    up[name] = {"dim": list(im.shape), "rows": im[[0, 300, 399]][:, list(range(0, 600, 7)) + [599], :].tolist()}
+out["image_upscaled"] = up
 out["image_gloss"] = [glossy.gloss, glossy.shadow]
 
 # Positional arguments of the base classes.

@@ -840,9 +840,68 @@ OPENGL_TEXTURED_SURFACE_METHODS <- list(
 
 OPENGL_MOBJECT_METHODS$public <- c(OPENGL_MOBJECT_METHODS$public, opengl_mobject_shader_methods)
 OPENGL_VMOBJECT_METHODS$public <- c(OPENGL_VMOBJECT_METHODS$public, opengl_vmobject_shader_methods)
+# Upstream's OpenGL renderer samples textures with nearest neighbor
+# filtering, so an image array is first upscaled with resampling_algorithm:
+# by at most 200 times, to at most 4096 pixels along its longer side.
 OPENGL_CLASS_METHODS$OpenGLImageMobject <- list(public = list(
-  get_image_from_file = function(image_file, image_mode) opengl_image_from_file(image_file, image_mode)
+  get_image_from_file = function(image_file, image_mode) {
+    if (is.character(image_file)) return(opengl_image_from_file(image_file, image_mode))
+    opengl_upscale_image(ImageMobject(image_file, image_mode = image_mode)$pixel_array,
+                         self$resampling_algorithm %||% "bicubic")
+  }
 ))
+
+# Pillow's resize() by a whole factor: the coefficients of its
+# precompute_coeffs() in 22 bit fixed point, a horizontal then a vertical
+# pass, each rounded to 8 bits. An image with alpha is resized with
+# premultiplied colors, as Pillow does.
+opengl_upscale_image <- function(img, method = "bicubic") {
+  hw <- dim(img)[1:2]
+  scale <- max(1, min(200, 4096 %/% max(hw)))
+  if (scale == 1) return(img)
+  if (method == "nearest") {
+    return(img[rep(seq_len(hw[1]), each = scale), rep(seq_len(hw[2]), each = scale), , drop = FALSE])
+  }
+  if (!method %in% c("bilinear", "bicubic")) method <- "bilinear"
+  nc <- dim(img)[3]
+  alpha <- nc %in% c(2, 4)
+  img <- round(img)
+  if (alpha) for (k in seq_len(nc - 1)) {
+    t <- img[, , k] * img[, , nc] + 128
+    img[, , k] <- (t %/% 256 + t) %/% 256
+  }
+  wx <- t(pillow_coefficients(hw[2], hw[2] * scale, method))
+  wy <- pillow_coefficients(hw[1], hw[1] * scale, method)
+  pass <- function(x) pmin(pmax((x + 2^21) %/% 2^22, 0), 255)
+  out <- array(0, c(hw * scale, nc))
+  for (k in seq_len(nc)) out[, , k] <- pass(wy %*% pass(img[, , k] %*% wx))
+  if (alpha) for (k in seq_len(nc - 1)) {
+    a <- out[, , nc]
+    out[, , k] <- ifelse(a == 0 | a == 255, out[, , k], pmin((255 * out[, , k]) %/% pmax(a, 1), 255))
+  }
+  out
+}
+
+pillow_coefficients <- function(in_size, out_size, method) {
+  scale <- in_size / out_size
+  fs <- max(scale, 1)
+  support <- if (method == "bicubic") 2 * fs else fs
+  f <- if (method == "bicubic") {
+    function(x) {
+      x <- abs(x)
+      ifelse(x < 1, (1.5 * x - 2.5) * x * x + 1, ifelse(x < 2, (((x - 5) * x + 8) * x - 4) * -0.5, 0))
+    }
+  } else function(x) pmax(1 - abs(x), 0)
+  w <- matrix(0, out_size, in_size)
+  for (i in seq_len(out_size)) {
+    center <- (i - 0.5) * scale
+    x <- max(trunc(center - support + 0.5), 0):(min(trunc(center + support + 0.5), in_size) - 1)
+    k <- f((x - center + 0.5) / fs)
+    k <- k / sum(k) * 2^22
+    w[i, x + 1] <- trunc(k + ifelse(k < 0, -0.5, 0.5))
+  }
+  w
+}
 
 # Upstream's OpenGL classes name some arguments differently from its Cairo
 # classes: `recurse` where the Cairo methods have `recursive` or `family`,
@@ -1221,9 +1280,9 @@ OPENGL_CLASS_METHODS$OpenGLCurvedDoubleArrow <- list(public = list(
   }
 ))
 # Upstream's OpenGL image is 4 units high unless width or height is given.
-OPENGL_CLASS_METHODS$OpenGLImageMobject <- list(public = list(
-  initialize = function(filename_or_array, width = NULL, height = NULL, image_mode = "RGBA",
-                        resampling_algorithm = "bicubic", opacity = 1, gloss = 0, shadow = 0, ...) {
+OPENGL_CLASS_METHODS$OpenGLImageMobject$public$initialize <-
+  function(filename_or_array, width = NULL, height = NULL, image_mode = "RGBA",
+           resampling_algorithm = "bicubic", opacity = 1, gloss = 0, shadow = 0, ...) {
     super$initialize(filename_or_array, image_mode = image_mode, resampling_algorithm = resampling_algorithm, ...)
     hw <- self$pixel_shape()
     if (is.null(width) && is.null(height)) height <- 4
@@ -1235,7 +1294,6 @@ OPENGL_CLASS_METHODS$OpenGLImageMobject <- list(public = list(
     self$set_gloss(gloss)
     self$set_shadow(shadow)
   }
-))
 # Upstream's arguments of the base classes, in upstream's order.
 OPENGL_CLASS_METHODS$OpenGLMobject <- list(public = list(
   opacity = 1,
