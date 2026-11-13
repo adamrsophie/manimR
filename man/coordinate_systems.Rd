@@ -185,6 +185,9 @@ coordinates returns an n x 3 matrix of points; \code{c2p(xs, ys)} with vectors
 returns a 3 x n matrix (rows x, y, z). \code{p2c()} returns a vector for one
 point and an n x d matrix for an n x 3 matrix of points.
 
+Under \code{manim_config(renderer = "opengl")}, \code{plot_surface()} returns an
+\code{\link[=OpenGLSurface]{OpenGLSurface()}}, as upstream, colored by value through its \code{axes}.
+
 Differences from Python: the point function of a graph is \code{graph$func}
 (\code{function} is reserved in R); axis indices and \code{colorscale_axis} are 1
 based; dictionaries become lists named by the numeric positions, for

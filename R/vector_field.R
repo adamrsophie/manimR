@@ -82,7 +82,10 @@ vf_with_seed <- function(seed, expr) {
 #' @details As upstream, stream lines in the plane are colored through a
 #'   background image of the field's colors (`get_colored_background_image()`,
 #'   so a line's color changes along it with the field), and 3D stream lines
-#'   get a stroke gradient from the colors at their anchors.
+#'   get a stroke gradient from the colors at their anchors. Under
+#'   `manim_config(renderer = "opengl")`, as upstream, each point of a line
+#'   takes the color of the field's norm there and the stroke is a quarter
+#'   of `stroke_width` wide.
 #' @export
 #' @examples
 #' func <- function(pos) ((pos[1] * UR + pos[2] * LEFT) - pos) / 3
@@ -99,6 +102,7 @@ VectorFieldClass <- R6::R6Class("VectorField", inherit = VGroupClass, lock_objec
     min_color_scheme_value = 0,
     max_color_scheme_value = 2,
     rgbs = NULL,
+    colors = NULL,
     submob_movement_updater = NULL,
     initialize = function(func, color = NULL, color_scheme = NULL, min_color_scheme_value = 0,
                           max_color_scheme_value = 2, colors = DEFAULT_SCALAR_FIELD_COLORS, ...) {
@@ -110,6 +114,7 @@ VectorFieldClass <- R6::R6Class("VectorField", inherit = VGroupClass, lock_objec
         self$single_color <- FALSE
         self$color_scheme <- color_scheme %||% function(vec) sqrt(sum(vec^2))
         self$rgbs <- t(vapply(unlist(colors), color_to_rgb, numeric(3)))
+        self$colors <- colors
       } else {
         self$single_color <- TRUE
         self$color <- manim_color(color)
@@ -340,6 +345,13 @@ StreamLinesClass <- R6::R6Class("StreamLines", inherit = VectorFieldClass, lock_
       # background image; 3D ones get a gradient from their anchors.
       flat <- isTRUE(all.equal(as.numeric(r$z), c(0, 0.5, 0.5)))
       if (!self$single_color && flat) self$background_img <- self$get_colored_background_image()
+      # Under the OpenGL renderer upstream colors each point by the norm of
+      # the field there, with a quarter of the stroke width.
+      opengl <- !self$single_color && identical(cfg("renderer"), RendererType$OPENGL)
+      if (opengl) {
+        values_to_rgbas <- self$get_vectorized_rgba_gradient_function(self$min_color_scheme_value,
+                                                                      self$max_color_scheme_value, self$colors)
+      }
       for (k in seq_len(nrow(start_points))) {
         pts <- matrix(0, max_steps + 1, 3)
         pts[1, ] <- start_points[k, ]
@@ -357,6 +369,10 @@ StreamLinesClass <- R6::R6Class("StreamLines", inherit = VectorFieldClass, lock_
         line$set_points_smoothly(pts[seq(1, n, by = step), , drop = FALSE])
         if (self$single_color) {
           line$set_stroke(color = self$color, width = self$stroke_width, opacity = opacity)
+        } else if (opengl) {
+          line$set_stroke(width = self$stroke_width / 4)
+          norms <- apply(line$points, 1, function(p) sqrt(sum(self$func(p)^2)))
+          line$stroke_rgbas <- unname(values_to_rgbas(norms, opacity))
         } else if (flat) {
           line$color_using_background_image(self$background_img)
           line$set_stroke(width = self$stroke_width, opacity = opacity)

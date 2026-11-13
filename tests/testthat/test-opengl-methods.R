@@ -1007,3 +1007,35 @@ test_that("ThreeDScene fixes mobjects in frame through their shader uniforms und
   expect_equal(frame(TRUE, TRUE), flat)
   expect_false(isTRUE(all.equal(frame(FALSE, TRUE), flat)))
 })
+
+test_that("plot_surface makes an OpenGLSurface under the OpenGL renderer, as upstream", {
+  axes <- ThreeDAxes()
+  f <- function(u, v) u * v
+  s <- tempconfig(list(renderer = "opengl"),
+                  axes$plot_surface(f, u_range = c(-1, 1), v_range = c(-1, 1), resolution = c(4, 4),
+                                    colorscale = c(BLUE, RED)))
+  expect_s3_class(s, "OpenGLSurface")
+  expect_length(s$submobjects, 9)
+  expect_false(inherits(axes$plot_surface(f, u_range = c(-1, 1), v_range = c(-1, 1), resolution = 2),
+                        "OpenGLSurface"))
+})
+
+test_that("plot colors by point under the OpenGL renderer, as upstream", {
+  g <- tempconfig(list(renderer = "opengl"),
+                  Axes()$plot(function(x) x^2, x_range = c(-2, 2), colorscale = c(BLUE, RED)))
+  expect_equal(g$sheen_factor, 0)
+  expect_gt(nrow(g$stroke_rgbas), 2)
+  expect_equal(nrow(g$fill_rgbas), nrow(g$stroke_rgbas))
+})
+
+test_that("StreamLines color each point by the field's norm under the OpenGL renderer", {
+  f <- function(p) c(-p[2], p[1], 0)
+  s <- tempconfig(list(renderer = "opengl"),
+                  StreamLines(f, x_range = c(-2, 2, 1), y_range = c(-2, 2, 1), virtual_time = 1, stroke_width = 2))
+  l <- s$stream_lines[[1]]
+  expect_equal(l$stroke_width, 0.5)
+  expect_equal(nrow(l$stroke_rgbas), nrow(l$points))
+  norm <- sqrt(sum(f(l$points[1, ])^2))
+  expect_equal(l$stroke_rgbas[1, ], s$get_vectorized_rgba_gradient_function(0, 2, s$colors)(norm, 1)[1, ],
+               ignore_attr = TRUE)
+})

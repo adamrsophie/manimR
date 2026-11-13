@@ -141,7 +141,10 @@ Methods: \code{nudge(mob, dt, substeps, pointwise)},
 As upstream, stream lines in the plane are colored through a
 background image of the field's colors (\code{get_colored_background_image()},
 so a line's color changes along it with the field), and 3D stream lines
-get a stroke gradient from the colors at their anchors.
+get a stroke gradient from the colors at their anchors. Under
+\code{manim_config(renderer = "opengl")}, as upstream, each point of a line
+takes the color of the field's norm there and the stroke is a quarter
+of \code{stroke_width} wide.
 }
 \examples{
 func <- function(pos) ((pos[1] * UR + pos[2] * LEFT) - pos) / 3

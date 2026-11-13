@@ -89,6 +89,9 @@ add_points <- function(a, b) {
 #' returns a 3 x n matrix (rows x, y, z). `p2c()` returns a vector for one
 #' point and an n x d matrix for an n x 3 matrix of points.
 #'
+#' Under `manim_config(renderer = "opengl")`, `plot_surface()` returns an
+#' [OpenGLSurface()], as upstream, colored by value through its `axes`.
+#'
 #' Differences from Python: the point function of a graph is `graph$func`
 #' (`function` is reserved in R); axis indices and `colorscale_axis` are 1
 #' based; dictionaries become lists named by the numeric positions, for
@@ -252,8 +255,12 @@ CoordinateSystemClass <- R6::R6Class("CoordinateSystem", inherit = VGroupClass, 
           ci <- min((v - pivots[i - 1]) / (pivots[i] - pivots[i - 1]), 1)
           interpolate_color(new_colors[i - 1], new_colors[i], ci)
         }, "")
-        graph$set_stroke(color_list)
-        graph$set_sheen_direction(RIGHT)
+        if (identical(cfg("renderer"), RendererType$OPENGL)) {
+          graph$set_color(color_list)
+        } else {
+          graph$set_stroke(color_list)
+          graph$set_sheen_direction(RIGHT)
+        }
       }
       graph
     },
@@ -288,6 +295,12 @@ CoordinateSystemClass <- R6::R6Class("CoordinateSystem", inherit = VGroupClass, 
     },
     plot_surface = function(func, u_range = NULL, v_range = NULL, ..., colorscale = NULL, colorscale_axis = 3) {
       args <- c(list(function(u, v) self$c2p(u, v, func(u, v))), list(u_range = u_range, v_range = v_range), list(...))
+      if (identical(cfg("renderer"), RendererType$OPENGL)) {
+        # As upstream, an OpenGLSurface colored by value along an axis
+        # counted from 0.
+        args <- c(args, list(axes = self$copy(), colorscale = colorscale, colorscale_axis = colorscale_axis - 1))
+        return(do.call(OpenGLSurface, args[!vapply(args, is.null, TRUE)]))
+      }
       surface <- do.call(Surface, args[!vapply(args, is.null, TRUE)])
       if (!is.null(colorscale)) {
         surface$set_fill_by_value(axes = self$copy(), colorscale = colorscale, axis = colorscale_axis)
