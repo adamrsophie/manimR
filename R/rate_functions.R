@@ -1,6 +1,31 @@
 # Rate functions ported from manim/utils/rate_functions.py.
 # Each maps animation progress t in [0, 1] to an eased value.
 
+# pow(x, n) for a whole n from 2 to 7, correctly rounded as C's pow() gives
+# it (exactly with glibc): R's x^3 and x^4 multiply out, which can round
+# differently. The power is carried in double-double arithmetic.
+cr_pow <- function(x, n) {
+  if (n == 2) return(x * x)
+  split <- function(v) {
+    big <- 134217729 * v
+    hi <- big - (big - v)
+    c(hi, v - hi)
+  }
+  hi <- x
+  lo <- 0
+  xs <- split(x)
+  for (k in 2:n) {
+    p <- hi * x
+    hs <- split(hi)
+    e <- ((hs[1] * xs[1] - p) + hs[1] * xs[2] + hs[2] * xs[1]) + hs[2] * xs[2]
+    l <- lo * x + e
+    s <- p + l
+    lo <- l - (s - p)
+    hi <- s
+  }
+  hi + lo
+}
+
 #' Rate function decorators
 #'
 #' Upstream's decorators for rate functions. `unit_interval(f)` returns a
@@ -90,15 +115,15 @@ smooth_rate <- unit_interval(function(t, inflection = 10) {
 
 #' @rdname rate_funcs
 #' @export
-smoothstep <- unit_interval(function(t) 3 * t^2 - 2 * t^3)
+smoothstep <- unit_interval(function(t) 3 * cr_pow(t, 2) - 2 * cr_pow(t, 3))
 
 #' @rdname rate_funcs
 #' @export
-smootherstep <- unit_interval(function(t) 6 * t^5 - 15 * t^4 + 10 * t^3)
+smootherstep <- unit_interval(function(t) 6 * cr_pow(t, 5) - 15 * cr_pow(t, 4) + 10 * cr_pow(t, 3))
 
 #' @rdname rate_funcs
 #' @export
-smoothererstep <- unit_interval(function(t) 35 * t^4 - 84 * t^5 + 70 * t^6 - 20 * t^7)
+smoothererstep <- unit_interval(function(t) 35 * cr_pow(t, 4) - 84 * cr_pow(t, 5) + 70 * cr_pow(t, 6) - 20 * cr_pow(t, 7))
 
 #' @rdname rate_funcs
 #' @export
@@ -137,9 +162,16 @@ there_and_back_with_pause <- zero(function(t, pause_ratio = 1 / 3) {
 #' @rdname rate_funcs
 #' @export
 running_start <- unit_interval(function(t, pull_factor = -0.5) {
+  t2 <- t * t
+  t3 <- t2 * t
+  t4 <- t3 * t
+  t5 <- t4 * t
+  t6 <- t5 * t
   mt <- 1 - t
-  15 * t^2 * mt^4 * pull_factor + 20 * t^3 * mt^3 * pull_factor +
-    15 * t^4 * mt^2 + 6 * t^5 * mt + t^6
+  mt2 <- mt * mt
+  mt3 <- mt2 * mt
+  mt4 <- mt3 * mt
+  15 * t2 * mt4 * pull_factor + 20 * t3 * mt3 * pull_factor + 15 * t4 * mt2 + 6 * t5 * mt + t6
 })
 
 #' @rdname rate_funcs
@@ -186,37 +218,37 @@ ease_in_out_sine <- unit_interval(function(t) -(cos(pi * t) - 1) / 2)
 ease_in_quad <- unit_interval(function(t) t * t)
 #' @rdname rate_funcs
 #' @export
-ease_out_quad <- unit_interval(function(t) 1 - (1 - t)^2)
+ease_out_quad <- unit_interval(function(t) 1 - (1 - t) * (1 - t))
 #' @rdname rate_funcs
 #' @export
-ease_in_out_quad <- unit_interval(function(t) if (t < 0.5) 2 * t^2 else 1 - (-2 * t + 2)^2 / 2)
+ease_in_out_quad <- unit_interval(function(t) if (t < 0.5) 2 * t * t else 1 - cr_pow(-2 * t + 2, 2) / 2)
 #' @rdname rate_funcs
 #' @export
-ease_in_cubic <- unit_interval(function(t) t^3)
+ease_in_cubic <- unit_interval(function(t) t * t * t)
 #' @rdname rate_funcs
 #' @export
-ease_out_cubic <- unit_interval(function(t) 1 - (1 - t)^3)
+ease_out_cubic <- unit_interval(function(t) 1 - cr_pow(1 - t, 3))
 #' @rdname rate_funcs
 #' @export
-ease_in_out_cubic <- unit_interval(function(t) if (t < 0.5) 4 * t^3 else 1 - (-2 * t + 2)^3 / 2)
+ease_in_out_cubic <- unit_interval(function(t) if (t < 0.5) 4 * t * t * t else 1 - cr_pow(-2 * t + 2, 3) / 2)
 #' @rdname rate_funcs
 #' @export
-ease_in_quart <- unit_interval(function(t) t^4)
+ease_in_quart <- unit_interval(function(t) t * t * t * t)
 #' @rdname rate_funcs
 #' @export
-ease_out_quart <- unit_interval(function(t) 1 - (1 - t)^4)
+ease_out_quart <- unit_interval(function(t) 1 - cr_pow(1 - t, 4))
 #' @rdname rate_funcs
 #' @export
-ease_in_out_quart <- unit_interval(function(t) if (t < 0.5) 8 * t^4 else 1 - (-2 * t + 2)^4 / 2)
+ease_in_out_quart <- unit_interval(function(t) if (t < 0.5) 8 * t * t * t * t else 1 - cr_pow(-2 * t + 2, 4) / 2)
 #' @rdname rate_funcs
 #' @export
-ease_in_quint <- unit_interval(function(t) t^5)
+ease_in_quint <- unit_interval(function(t) t * t * t * t * t)
 #' @rdname rate_funcs
 #' @export
-ease_out_quint <- unit_interval(function(t) 1 - (1 - t)^5)
+ease_out_quint <- unit_interval(function(t) 1 - cr_pow(1 - t, 5))
 #' @rdname rate_funcs
 #' @export
-ease_in_out_quint <- unit_interval(function(t) if (t < 0.5) 16 * t^5 else 1 - (-2 * t + 2)^5 / 2)
+ease_in_out_quint <- unit_interval(function(t) if (t < 0.5) 16 * t * t * t * t * t else 1 - cr_pow(-2 * t + 2, 5) / 2)
 #' @rdname rate_funcs
 #' @export
 ease_in_expo <- unit_interval(function(t) if (t == 0) 0 else 2^(10 * t - 10))
@@ -233,33 +265,36 @@ ease_in_out_expo <- unit_interval(function(t) {
 })
 #' @rdname rate_funcs
 #' @export
-ease_in_circ <- unit_interval(function(t) 1 - sqrt(1 - t^2))
+ease_in_circ <- unit_interval(function(t) 1 - sqrt(1 - cr_pow(t, 2)))
 #' @rdname rate_funcs
 #' @export
-ease_out_circ <- unit_interval(function(t) sqrt(1 - (t - 1)^2))
+ease_out_circ <- unit_interval(function(t) sqrt(1 - cr_pow(t - 1, 2)))
 #' @rdname rate_funcs
 #' @export
 ease_in_out_circ <- unit_interval(function(t) {
-  if (t < 0.5) (1 - sqrt(1 - (2 * t)^2)) / 2 else (sqrt(1 - (-2 * t + 2)^2) + 1) / 2
+  if (t < 0.5) (1 - sqrt(1 - cr_pow(2 * t, 2))) / 2 else (sqrt(1 - cr_pow(-2 * t + 2, 2)) + 1) / 2
 })
 #' @rdname rate_funcs
 #' @export
 ease_in_back <- unit_interval(function(t) {
   c1 <- 1.70158
-  (c1 + 1) * t^3 - c1 * t^2
+  c3 <- c1 + 1
+  c3 * t * t * t - c1 * t * t
 })
 #' @rdname rate_funcs
 #' @export
 ease_out_back <- unit_interval(function(t) {
   c1 <- 1.70158
-  1 + (c1 + 1) * (t - 1)^3 + c1 * (t - 1)^2
+  c3 <- c1 + 1
+  1 + c3 * cr_pow(t - 1, 3) + c1 * cr_pow(t - 1, 2)
 })
 #' @rdname rate_funcs
 #' @export
 ease_in_out_back <- unit_interval(function(t) {
-  c2 <- 1.70158 * 1.525
-  if (t < 0.5) ((2 * t)^2 * ((c2 + 1) * 2 * t - c2)) / 2
-  else ((2 * t - 2)^2 * ((c2 + 1) * (t * 2 - 2) + c2) + 2) / 2
+  c1 <- 1.70158
+  c2 <- c1 * 1.525
+  if (t < 0.5) (cr_pow(2 * t, 2) * ((c2 + 1) * 2 * t - c2)) / 2
+  else (cr_pow(2 * t - 2, 2) * ((c2 + 1) * (t * 2 - 2) + c2) + 2) / 2
 })
 #' @rdname rate_funcs
 #' @export
@@ -287,10 +322,10 @@ ease_in_out_elastic <- unit_interval(function(t) {
 ease_out_bounce <- unit_interval(function(t) {
   n1 <- 7.5625
   d1 <- 2.75
-  if (t < 1 / d1) n1 * t^2
-  else if (t < 2 / d1) n1 * (t - 1.5 / d1)^2 + 0.75
-  else if (t < 2.5 / d1) n1 * (t - 2.25 / d1)^2 + 0.9375
-  else n1 * (t - 2.625 / d1)^2 + 0.984375
+  if (t < 1 / d1) n1 * t * t
+  else if (t < 2 / d1) n1 * (t - 1.5 / d1) * (t - 1.5 / d1) + 0.75
+  else if (t < 2.5 / d1) n1 * (t - 2.25 / d1) * (t - 2.25 / d1) + 0.9375
+  else n1 * (t - 2.625 / d1) * (t - 2.625 / d1) + 0.984375
 })
 #' @rdname rate_funcs
 #' @export

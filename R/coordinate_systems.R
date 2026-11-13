@@ -576,7 +576,7 @@ Axes <- constructor(AxesClass)
 #' @rdname coordinate_systems
 #' @param z_normal Direction the z axis is rotated toward before tilting.
 #' @param num_axis_pieces Number of pieces each axis is cut into for 3D depth sorting.
-#' @param light_source Light direction; stored, but the upstream axis sheen is not applied.
+#' @param light_source Light direction; every axis piece has a sheen of 0.2 along it.
 #' @param depth,gloss Unused; kept for compatibility.
 #' @format NULL
 #' @usage NULL
@@ -616,9 +616,24 @@ ThreeDAxesClass <- R6::R6Class("ThreeDAxes", inherit = AxesClass, lock_objects =
       self$add(z_axis)
       self$z_axis <- z_axis
       self$add_3d_pieces()
-      # Limitation: upstream also sets sheen 0.2 on every axis submobject, shaded along
-      # light_source. The camera's mask based gradient stroke made one ThreeDAxes frame
-      # take minutes, so the sheen is skipped; add it back once gradient strokes are cheap.
+      self$set_axis_shading()
+    },
+    # Every piece of an axis gets a sheen of 0.2 whose gradient runs across
+    # the whole axis along the light source.
+    set_axis_shading = function() {
+      make_func <- function(axis) {
+        force(axis)
+        vect <- self$light_source
+        function() list(axis$get_edge_center(-vect), axis$get_edge_center(vect))
+      }
+      for (axis in self$submobjects) {
+        for (submob in axis$family_members_with_points()) {
+          if (!is_vmobject(submob)) next
+          submob$gradient_points_func <- make_func(axis)
+          submob$set_sheen(0.2, family = FALSE)
+        }
+      }
+      invisible(self)
     },
     add_3d_pieces = function() {
       for (axis in self$axes$submobjects) {

@@ -113,14 +113,17 @@ ThreeDCameraClass <- R6::R6Class("ThreeDCamera", inherit = CameraClass, lock_obj
       self$modified_rgbas(vmobject, vmobject$get_stroke_rgbas(background))
     },
     # A gradient mask per shaded face costs more than the rest of the face,
-    # so the closed, opaque stroke of a shaded 3D face is drawn as segments,
-    # each colored with the gradient's color at its midpoint, with round ends
-    # that fill the joins. At the thin strokes faces use this matches the
-    # gradient. Open or translucent strokes, where round ends would show or
-    # overlap, use the exact gradient.
+    # so the opaque stroke of a shaded 3D mobject is drawn as segments, each
+    # colored with the gradient's color at its midpoint. Closed strokes use
+    # round ends that fill the joins; open ones (as the pieces of
+    # ThreeDAxes) the stroke's own cap, so their ends look as the exact
+    # stroke's. At the thin strokes these mobjects use this matches the
+    # gradient. Translucent strokes, where segment ends would overlap, use the
+    # exact gradient.
     apply_gradient_stroke = function(vmobject, paths, rgbas, lwd, join, cap) {
       # Wide strokes (where round joins would show) also use the exact path.
-      if (!(isTRUE(vmobject$shade_in_3d) && self$should_apply_shading) || !all(paths$closed) ||
+      closed <- all(paths$closed)
+      if (!(isTRUE(vmobject$shade_in_3d) && self$should_apply_shading) || (!closed && any(paths$closed)) ||
           any(rgbas[, 4] < 1) || lwd > 3) {
         return(super$apply_gradient_stroke(vmobject, paths, rgbas, lwd, join, cap))
       }
@@ -157,7 +160,7 @@ ThreeDCameraClass <- R6::R6Class("ThreeDCamera", inherit = CameraClass, lock_obj
       stops <- seq(0, 1, length.out = nrow(rgbas))
       cols <- rgba_hex(vapply(1:4, function(ch) stats::approx(stops, rgbas[, ch], t)$y, numeric(length(t))))
       grid::grid.segments(seg[, 1], seg[, 2], seg[, 3], seg[, 4], default.units = "native",
-                          gp = grid::gpar(col = cols, lwd = lwd, lineend = "round"))
+                          gp = grid::gpar(col = cols, lwd = lwd, lineend = if (closed) "round" else cap))
       invisible(self)
     },
     get_fill_rgbas = function(vmobject) self$modified_rgbas(vmobject, vmobject$get_fill_rgbas()),

@@ -74,11 +74,10 @@ rgb_to_color <- function(rgb) new_manim_color(parse_manim_color_value(rgb[1:3]))
 rgba_to_color <- function(rgba) new_manim_color(parse_manim_color_value(rgba))
 
 # The hex string of RGB values in [0, 1], as ManimColor.to_hex(): it
-# truncates int(x * 255); the epsilon keeps exact channel values such as
-# 88 / 255 from dropping to 87.
+# truncates int(x * 255).
 rgb_hex <- function(rgb) {
   rgb <- pmin(pmax(rgb[1:3], 0), 1)
-  v <- floor(rgb * 255 + 1e-6)
+  v <- floor(rgb * 255)
   sprintf("#%02X%02X%02X", v[1], v[2], v[3])
 }
 

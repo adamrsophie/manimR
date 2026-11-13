@@ -117,3 +117,13 @@ test_that("clip_value matches upstream clip()", {
   o <- misc_oracle()
   expect_equal(c(clip_value(5, 0, 3), clip_value(-1, 0, 3), clip_value(2, 0, 3)), nums(o$clip))
 })
+
+test_that("rate functions round as upstream's float arithmetic does", {
+  # Values from manim 0.22.1 with a correctly rounded pow(), as glibc gives.
+  expect_identical(ease_in_back(1 / 997), -0x1.cac91d75da5ddp-20)
+  expect_identical(ease_in_back(2 / 997), -0x1.ca0dc87159c01p-18)
+  expect_identical(ease_in_back(4 / 997), -0x1.c8971e685884ap-16)
+  expect_identical(ease_out_cubic(3 / 997), 0x1.26e904582f900p-7)
+  expect_identical(ease_out_cubic(6 / 997), 0x1.2605d857cc2a0p-6)
+  expect_identical(cr_pow(0.7, 4), 0x1.ebb98c7e2823fp-3)
+})

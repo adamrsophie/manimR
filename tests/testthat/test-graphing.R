@@ -453,3 +453,24 @@ test_that("StreamLines can end after a skipped long wait", {
   f <- render(S, format = "png", quality = "l", media_dir = d, preview = FALSE)
   expect_true(file.exists(f))
 })
+
+test_that("ThreeDAxes give every axis piece upstream's sheen along the light", {
+  ax <- ThreeDAxes(axis_config = list(color = BLUE))
+  blue <- color_to_rgb(BLUE)
+  for (axis in list(ax$x_axis, ax$y_axis, ax$z_axis)) {
+    piece <- axis$pieces$submobjects[[3]]
+    rgbas <- piece$get_stroke_rgbas()
+    expect_equal(rgbas[, 1:3], rbind(blue, pmin(blue + 0.2, 1)), ignore_attr = TRUE)
+    # The gradient runs across the whole axis, from its edge away from the
+    # light source to the edge toward it.
+    expect_equal(piece$get_gradient_start_and_end_points(),
+                 list(axis$get_edge_center(-ax$light_source), axis$get_edge_center(ax$light_source)))
+  }
+  # A shaded frame of the axes draws in a few seconds at most.
+  cam <- ThreeDCamera(pixel_width = 320, pixel_height = 180)
+  cam$set_phi(75 * DEGREES)
+  cam$reset_rotation_matrix()
+  cap <- ragg::agg_capture(width = 320, height = 180)
+  on.exit(grDevices::dev.off())
+  expect_lt(system.time(cam$draw_frame(list(ax)))[["user.self"]], 20)
+})

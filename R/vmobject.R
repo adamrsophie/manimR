@@ -301,7 +301,11 @@ VMobjectClass <- R6::R6Class("VMobject", inherit = MobjectClass, lock_objects = 
     },
     get_sheen_direction = function() self$sheen_direction,
     get_sheen_factor = function() self$sheen_factor,
+    # A function set here replaces this method for one mobject, as upstream
+    # assigns get_gradient_start_and_end_points on instances (ThreeDAxes).
+    gradient_points_func = NULL,
     get_gradient_start_and_end_points = function() {
+      if (!is.null(self$gradient_points_func)) return(self$gradient_points_func())
       if (isTRUE(self$shade_in_3d)) return(get_3d_vmob_gradient_start_and_end_points(self))
       direction <- self$get_sheen_direction()
       cc <- self$get_center()
