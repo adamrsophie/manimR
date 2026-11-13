@@ -15,7 +15,8 @@ labeled_merge <- function(defaults, user) {
 #'   `LabeledPolygram()` puts it at the pole of inaccessibility of a polygram,
 #'   the interior point farthest from its edges, stored in `$pole` with the
 #'   distance in `$radius`.
-#' @param label A string (rendered with [MathTex()]) or a mobject such as [Text()].
+#' @param label A string (rendered with [MathTex()]) or a [MathTex()], [Tex()],
+#'   [Text()], [Typst()] or [MathTypst()] mobject, as upstream accepts.
 #' @param label_config Named list of arguments for [MathTex()] when `label`
 #'   is a string.
 #' @param box_config Named list of arguments for the [BackgroundRectangle()].
@@ -46,7 +47,8 @@ LabelClass <- R6::R6Class("Label", inherit = VGroupClass, lock_objects = FALSE,
       frame_config <- labeled_merge(list(color = WHITE, buff = 0.05, stroke_width = 0.5), frame_config)
       if (is.character(label)) {
         self$rendered_label <- do.call(MathTex, c(list(label), label_config))
-      } else if (inherits(label, c("MathTex", "Text", "Typst"))) {
+      } else if (inherits(label, c("MathTex", "Text", "Typst")) && !inherits(label, "MarkupText")) {
+        # MarkupText is not a Text upstream.
         self$rendered_label <- label
       } else {
         stop("Unsupported label type. Must be MathTex, Tex, Text, Typst, or MathTypst.", call. = FALSE)

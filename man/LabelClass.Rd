@@ -41,7 +41,8 @@ LabeledPolygram(
 )
 }
 \arguments{
-\item{label}{A string (rendered with \code{\link[=MathTex]{MathTex()}}) or a mobject such as \code{\link[=Text]{Text()}}.}
+\item{label}{A string (rendered with \code{\link[=MathTex]{MathTex()}}) or a \code{\link[=MathTex]{MathTex()}}, \code{\link[=Tex]{Tex()}},
+\code{\link[=Text]{Text()}}, \code{\link[=Typst]{Typst()}} or \code{\link[=MathTypst]{MathTypst()}} mobject, as upstream accepts.}
 
 \item{label_config}{Named list of arguments for \code{\link[=MathTex]{MathTex()}} when \code{label}
 is a string.}

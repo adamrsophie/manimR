@@ -616,7 +616,9 @@ test_that("Label, LabeledLine and LabeledArrow place their labels", {
   expect_equal(lab$background_rect$get_fill_color(), BLUE)
   expect_equal(lab$frame$width, lab$rendered_label$width + 0.1, tolerance = 1e-9)
   expect_error(Label(42), "Unsupported label")
-  # Only text mobjects, as upstream checks isinstance(label, (MathTex, Text, Typst)).
+  # Only text mobjects, as upstream checks isinstance(label, (MathTex, Text, Typst));
+  # MarkupText is not a Text upstream.
+  expect_error(Label(MarkupText("a")), "Must be MathTex")
   expect_error(LabeledPolygram(rbind(c(0, 0, 0), c(1, 0, 0), c(0, 1, 0)), label = Square()), "Must be MathTex")
   ll <- LabeledLine(Text("x"), label_position = 0.25, start = LEFT * 2, end = RIGHT * 2)
   expect_equal(ll$label$get_center(), c(-1, 0, 0), tolerance = 1e-9)
