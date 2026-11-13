@@ -1077,3 +1077,17 @@ test_that("mobjects made under the OpenGL renderer are bounded and transformed a
     expect_equal(round(unname(opengl_quadratic_points(a$submobjects[[1]])[2, ]), 3), c(1.333, 0.682, 0))
   })
 })
+
+test_that("OpenGL-made mobjects keep upstream's quadratic curve counts in transforms", {
+  # Values from upstream 0.22.1 under renderer = "opengl".
+  tempconfig(list(renderer = "opengl"), {
+    a <- VMobjectFromSVGPath("M 0 0 C 1 2 2 3 3 0 C 2 -1 1 -2 0 0 Z")
+    expect_equal(a$get_num_curves(), 4)
+    t1 <- Transform(a, Circle())
+    t1$begin()
+    t1$interpolate(0.3)
+    q <- opengl_quadratic_points(a)
+    expect_equal(nrow(q), 27)
+    expect_equal(round(unname(q[c(2, 5, 6), 1:2]), 4), rbind(c(0.3355, 0.4845), c(0.7252, 1.2126), c(0.9058, 1.4412)))
+  })
+})

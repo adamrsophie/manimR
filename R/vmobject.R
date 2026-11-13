@@ -108,6 +108,7 @@ VMobjectClass <- R6::R6Class("VMobject", inherit = MobjectClass, lock_objects = 
       self$shade_in_3d <- shade_in_3d
       self$opengl_quadratic <- identical(cfg("renderer"), RendererType$OPENGL)
       super$initialize(color = color_items(color)[[1]], ...)
+      if (self$opengl_quadratic) self$opengl_normalize_points()
     },
 
     get_group_class = function() VGroup,
@@ -725,7 +726,18 @@ VMobjectClass <- R6::R6Class("VMobject", inherit = MobjectClass, lock_objects = 
     get_arc_length = function(sample_points_per_curve = NULL) sum(self$get_curve_lengths(sample_points_per_curve)),
 
     # Alignment and interpolation -------------------------------------------
+    # Upstream's OpenGL mobjects hold quadratic curves, a cubic one as two:
+    # store each as its raised cubic, so curve counts match upstream.
+    opengl_normalize_points = function() {
+      n <- nrow(self$points)
+      if (n >= 4 && n %% 4 == 0) self$points <- opengl_cubic_from_quadratic(opengl_quadratic_points(self))
+      invisible(self)
+    },
     align_points = function(vmobject) {
+      if (isTRUE(self$opengl_quadratic)) {
+        self$opengl_normalize_points()
+        if (is_vmobject(vmobject)) vmobject$opengl_normalize_points()
+      }
       self$align_rgbas(vmobject)
       if (self$get_num_points() == vmobject$get_num_points()) return(invisible(self))
       for (m in list(self, vmobject)) {
