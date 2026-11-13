@@ -139,7 +139,9 @@ Torus(
 - resolution:
 
   Number of faces along `u` and `v`: one value or `c(u, v)`; `NULL` uses
-  the class default.
+  the class default (for `Sphere()`, `c(24, 12)`, or `c(101, 51)` under
+  `manim_config(renderer = "opengl")`; for `Torus()`, `c(24, 24)`, or
+  `c(101, 101)` under it, as upstream).
 
 - surface_piece_config:
 

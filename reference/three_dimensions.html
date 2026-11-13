@@ -218,7 +218,9 @@ light source.</p></dd>
 
 <dt id="arg-resolution">resolution<a class="anchor" aria-label="anchor" href="#arg-resolution"></a></dt>
 <dd><p>Number of faces along <code>u</code> and <code>v</code>: one value or
-<code>c(u, v)</code>; <code>NULL</code> uses the class default.</p></dd>
+<code>c(u, v)</code>; <code>NULL</code> uses the class default (for <code>Sphere()</code>, <code>c(24, 12)</code>,
+or <code>c(101, 51)</code> under <code>manim_config(renderer = "opengl")</code>; for
+<code>Torus()</code>, <code>c(24, 24)</code>, or <code>c(101, 101)</code> under it, as upstream).</p></dd>
 
 
 <dt id="arg-surface-piece-config">surface_piece_config<a class="anchor" aria-label="anchor" href="#arg-surface-piece-config"></a></dt>
