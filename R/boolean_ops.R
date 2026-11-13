@@ -256,7 +256,10 @@ bool_join <- function(pieces) {
       if (length(cand) > 1) {
         # Where an exclusion's contours cross, skia keeps each region apart:
         # it goes from a piece inside the other shape to one outside it.
-        alt <- cand[vapply(cand, function(c) pieces[[c]]$inside != pieces[[k]]$inside, NA)]
+        # Where they meet at anchors of both (a circle through a square's
+        # corners), skia stays on the same side and walks the outer outline.
+        at_anchor <- all(vapply(cand, function(c) pieces[[c]]$vertex, NA))
+        alt <- cand[vapply(cand, function(c) xor(pieces[[c]]$inside != pieces[[k]]$inside, at_anchor), NA)]
         if (length(alt)) cand <- alt
       }
       if (length(cand) > 1) {
