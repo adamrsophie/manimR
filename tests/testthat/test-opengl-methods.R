@@ -1296,4 +1296,13 @@ void main() { if (v_pos.x > 5.0) discard; mat2 r = mat2(0.0, 1.0, -1.0, 0.0);
   expect_error(glsl_run(glsl_program("uniform sampler2D t; void main() { gl_FragColor = texture(t, vec2(0.0)); }"), 1),
                "no texture is bound")
   expect_error(glsl_program("uniform samplerCube t; void main() { }"), "only sampler2D")
+  # Indices are per row: a loop counter under a mask, and indices that
+  # differ between rows, for reads and writes.
+  run <- function(fs, x) get("c", glsl_run(glsl_program(fs), length(x), list(x = x))$globals)
+  expect_equal(c(run("in float x; out float c; void main() { float a[3]; a[0] = 1.; a[1] = 2.; a[2] = 3.; c = 0.;
+    if (x > 0.5) { for (int i = 0; i < 3; i++) c += a[i]; } }", c(0, 1, 1))), c(0, 6, 6))
+  got <- run("in float x; out vec4 c; void main() { vec3 p[3]; p[0] = vec3(1.); p[1] = vec3(2.); p[2] = vec3(3.);
+    int k = int(x); p[k].y = 9.0; mat2 m = mat2(1., 2., 3., 4.); vec4 v = vec4(5., 6., 7., 8.);
+    c = vec4(p[k], m[k % 2][1] + v[k]); }", c(0, 1, 2))
+  expect_equal(unname(got), rbind(c(1, 9, 1, 7), c(2, 9, 2, 10), c(3, 9, 3, 9)))
 })

@@ -191,6 +191,9 @@ bool_op <- function(shapes, op) {
     }
   }
   pieces <- list()
+  # Every piece's ends and sides, kept or not, to tell where a boundary
+  # crosses the other shape's (goes from outside it to inside).
+  ends <- list()
   rank <- 0
   for (s in seq_len(ns)) {
     others <- setdiff(seq_len(ns), s)
@@ -213,6 +216,7 @@ bool_op <- function(shapes, op) {
             if (sum(tan * near$dir) > 0) "same" else "opposite"
           } else if (bool_winding(mid, flat[[o]]) != 0) "inside" else "outside"
         }, "")
+        ends[[length(ends) + 1]] <- c(s, piece[1, ], piece[4, ], any(state == "inside"), any(state == "outside"))
         keep <- switch(op,
           union = all(state == "outside" | (state == "same" & others > s)),
           intersection = state == "inside" || (s == 1 && state == "same"),
@@ -228,11 +232,23 @@ bool_op <- function(shapes, op) {
         p0 <- piece[1, ]
         near <- function(M) nrow(M) > 0 && any(abs(M[, 1] - p0[1]) < 1e-7 & abs(M[, 2] - p0[2]) < 1e-7)
         crossing <- near(touch) && !near(shared)
-        pieces[[length(pieces) + 1]] <- list(P = piece, rank = rank, reversed = reverse,
+        pieces[[length(pieces) + 1]] <- list(P = piece, rank = rank, reversed = reverse, shape = s,
                                              inside = any(state == "inside"), vertex = vertex,
                                              crossing = crossing)
       }
     }
+  }
+  # A touching point is a crossing only where the boundary of another shape
+  # runs both inside and outside this one.
+  ends <- do.call(rbind, ends)
+  for (k in seq_along(pieces)) {
+    if (!pieces[[k]]$crossing) next
+    p0 <- pieces[[k]]$P[1, ]
+    at <- ends[, 1] != pieces[[k]]$shape &
+      ((abs(ends[, 2] - p0[1]) < 1e-7 & abs(ends[, 3] - p0[2]) < 1e-7) |
+       (abs(ends[, 4] - p0[1]) < 1e-7 & abs(ends[, 5] - p0[2]) < 1e-7))
+    pieces[[k]]$touch <- TRUE
+    pieces[[k]]$crossing <- any(ends[at, 6] == 1) && any(ends[at, 7] == 1)
   }
   bool_join(pieces)
 }
@@ -315,26 +331,28 @@ bool_write <- function(contours, input_starts) {
   out <- list()
   for (contour in contours) {
     vstart <- t(vapply(contour, function(pc) pc$P[1, ], numeric(2)))
+    # The original start of the earliest piece: a reversed piece starts
+    # where the next one does.
+    ranks <- vapply(contour, function(pc) pc$rank, 0)
+    e <- which.min(ranks)
+    walk_at <- if (contour[[e]]$reversed) e %% length(contour) + 1 else e
     at <- NA
     moved <- FALSE
     for (s in which(!used)) {
-      hit <- which(abs(vstart[, 1] - input_starts[s, 1]) < 1e-7 & abs(vstart[, 2] - input_starts[s, 2]) < 1e-7)
+      hit <- which(abs(vstart[, 1] - input_starts[s, 1]) < 1e-7 & abs(vstart[, 2] - input_starts[s, 2]) < 1e-7 &
+                   vapply(contour, function(pc) is.null(pc$shape) || pc$shape == input_starts[s, 3] || pc$crossing, NA))
       if (length(hit)) {
         used[s] <- TRUE
         at <- hit[1]
         # Skia's own walk already starts at an input start the other shape
         # touches, so pathops leaves that contour as it is.
-        moved <- !contour[[at]]$crossing
+        # Where the other shape only touches the start without crossing
+        # there, a hole (reversed) keeps skia's walk.
+        moved <- !contour[[at]]$crossing && !(isTRUE(contour[[at]]$touch) && contour[[at]]$reversed)
         break
       }
     }
-    if (is.na(at)) {
-      # The original start of the earliest piece: a reversed piece starts
-      # where the next one does.
-      ranks <- vapply(contour, function(pc) pc$rank, 0)
-      e <- which.min(ranks)
-      at <- if (contour[[e]]$reversed) e %% length(contour) + 1 else e
-    }
+    if (is.na(at)) at <- walk_at
     n <- length(contour)
     contour <- contour[c(at:n, seq_len(at - 1))]
     curves <- lapply(contour, function(pc) pc$P)
@@ -377,8 +395,11 @@ bool_write <- function(contours, input_starts) {
 }
 
 bool_input_starts <- function(...) {
-  s <- do.call(c, lapply(list(...), function(sh) lapply(sh, function(segs) attr(segs, "start") %||% segs[[1]][1, ])))
-  if (!length(s)) return(matrix(0, 0, 2))
+  shapes <- list(...)
+  s <- do.call(c, lapply(seq_along(shapes), function(k) lapply(shapes[[k]], function(segs) {
+    c((attr(segs, "start") %||% segs[[1]][1, ])[1:2], k)
+  })))
+  if (!length(s)) return(matrix(0, 0, 3))
   do.call(rbind, s)
 }
 

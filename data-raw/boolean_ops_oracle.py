@@ -53,10 +53,13 @@ def cases():
     def corners():
         return Square(), Circle().shift(RIGHT)
 
+    def all_corners():
+        return Square(), Circle(radius=2 ** 0.5)
+
     for cname, make in [("sq_cr", sq_cr), ("ellipses", ellipses), ("nested", nested),
                         ("apart", apart), ("poly", poly), ("star", star),
                         ("offset_square", offset_square), ("rect_circle", rect_circle),
-                        ("corners", corners)]:
+                        ("corners", corners), ("all_corners", all_corners)]:
         for oname, op in [("union", Union), ("intersection", Intersection),
                           ("difference", Difference), ("exclusion", Exclusion)]:
             a, b = make()

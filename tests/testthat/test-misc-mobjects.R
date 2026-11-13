@@ -86,7 +86,8 @@ test_that("boolean operations cut the curves where skia-pathops does", {
     star = function() list(Star(), Circle(radius = 0.8)$shift(0.3 * RIGHT)),
     offset_square = function() list(Square(), Square()$shift(0.5 * RIGHT + 0.5 * UP)),
     rect_circle = function() list(Rectangle(width = 4, height = 1), Circle(radius = 1.2)),
-    corners = function() list(Square(), Circle()$shift(RIGHT)))
+    corners = function() list(Square(), Circle()$shift(RIGHT)),
+    all_corners = function() list(Square(), Circle(radius = sqrt(2))))
   ops <- list(union = Union, intersection = Intersection, difference = Difference, exclusion = Exclusion)
   # Skia computes crossings in single precision, so points agree to about
   # 1e-6. Results whose contours hold an input start match point for point.
@@ -95,7 +96,9 @@ test_that("boolean operations cut the curves where skia-pathops does", {
              "nested_exclusion", "apart_union", "apart_intersection", "apart_difference",
              "apart_exclusion", "poly_difference", "star_union", "offset_square_union",
              "offset_square_intersection", "offset_square_exclusion", "rect_circle_union",
-             "rect_circle_intersection", "rect_circle_difference", "corners_exclusion")
+             "rect_circle_intersection", "rect_circle_difference", "corners_union",
+             "corners_intersection", "corners_difference", "corners_exclusion", "all_corners_union",
+             "all_corners_intersection", "all_corners_difference", "all_corners_exclusion")
   for (cn in names(make)) for (on in names(ops)) {
     key <- paste0(cn, "_", on)
     ab <- make[[cn]]()

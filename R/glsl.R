@@ -615,11 +615,23 @@ glsl_eval <- function(e, env, st, mask) {
     },
     index = {
       x <- ev(e$args[[1]])
-      i <- ev(e$args[[2]])[1, 1] + 1
-      if (is.list(x)) return(x[[i]])
-      d <- attr(x, "glsl_dim")
-      if (!is.null(d)) return(x[, (i - 1) * d[2] + seq_len(d[2]), drop = FALSE])
-      x[, i, drop = FALSE]
+      i <- glsl_row_index(ev(e$args[[2]]), st, mask)
+      pick <- function(i) {
+        if (is.list(x)) return(x[[i]])
+        d <- attr(x, "glsl_dim")
+        if (!is.null(d)) return(x[, (i - 1) * d[2] + seq_len(d[2]), drop = FALSE])
+        x[, i, drop = FALSE]
+      }
+      u <- unique(i[rep_len(mask, length(i))])
+      if (length(u) <= 1) return(pick(if (length(u)) u else i[1]))
+      # Rows index different elements: each row takes its own.
+      parts <- lapply(u, function(k) glsl_rows(pick(k), st$n))
+      out <- parts[[1]]
+      for (j in seq_along(u)[-1]) {
+        rows <- i == u[j]
+        out[rows, ] <- parts[[j]][rows, , drop = FALSE]
+      }
+      out
     },
     array = lapply(e$args, ev),
     call = glsl_call(e$name, e$args, env, st, mask),
@@ -665,11 +677,29 @@ glsl_eval <- function(e, env, st, mask) {
 # element, or an array element, in the rows of the mask. Returns the value.
 glsl_assign <- function(target, how, value, env, st, mask) {
   force(value)
+  # An index that differs between the rows: assign each group of rows with
+  # its index written as a number.
+  t <- target
+  while (t$op %in% c("swizzle", "index")) {
+    if (t$op == "index") {
+      i <- glsl_row_index(glsl_eval(t$args[[2]], env, st, mask), st, mask)
+      m <- rep_len(mask, length(i))
+      u <- unique(i[m])
+      if (length(u) > 1) {
+        for (k in u) {
+          fixed <- glsl_replace_index(target, t, k)
+          glsl_assign(fixed, how, value, env, st, m & i == k)
+        }
+        return(value)
+      }
+    }
+    t <- t$args[[1]]
+  }
   path <- list()
   t <- target
   while (t$op %in% c("swizzle", "index")) {
     path <- c(list(if (t$op == "swizzle") list(kind = "swizzle", name = t$name)
-                   else list(kind = "index", i = glsl_eval(t$args[[2]], env, st, mask)[1, 1] + 1)), path)
+                   else list(kind = "index", i = glsl_masked_index(glsl_eval(t$args[[2]], env, st, mask), st, mask))), path)
     t <- t$args[[1]]
   }
   if (t$op != "var") glsl_error("cannot assign to this expression.")
@@ -721,6 +751,26 @@ glsl_assign <- function(target, how, value, env, st, mask) {
     assign(t$name, whole, envir = where)
   }
   value
+}
+
+# The 1-based index of each row from an index value.
+glsl_row_index <- function(v, st, mask) {
+  rep_len(trunc(v[, 1]) + 1, max(st$n, nrow(v)))
+}
+# The index of the rows under the mask (the same for all of them).
+glsl_masked_index <- function(v, st, mask) {
+  i <- glsl_row_index(v, st, mask)
+  on <- which(rep_len(mask, length(i)))
+  i[if (length(on)) on[1] else 1]
+}
+# The target expression with the index node `node` replaced by a number.
+glsl_replace_index <- function(e, node, k) {
+  if (identical(e, node)) {
+    e$args[[2]] <- list(op = "num", value = k - 1)
+    return(e)
+  }
+  if (!is.null(e$args)) e$args[[1]] <- glsl_replace_index(e$args[[1]], node, k)
+  e
 }
 
 glsl_call <- function(name, arg_exprs, env, st, mask) {
