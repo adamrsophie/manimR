@@ -67,7 +67,14 @@
 #'   written to the framebuffer's depth buffer. A plain `ImageMobject`, on
 #'   which upstream's OpenGL renderer raises, is drawn by a grid camera.
 #'   `config$renderer = "opengl"` makes
-#'   scenes use it. `get_frame()` gives a `nativeRaster`;
+#'   scenes use it. Mobjects made under that setting follow upstream's
+#'   OpenGL classes: they get the OpenGL mobject methods
+#'   (`get_triangulation()`, `get_shader_data()`, `set_gloss()` and the rest)
+#'   and upstream's OpenGL geometry. Each quadratic curve is stored raised
+#'   to a cubic, so `$points`, `get_num_points()`, `get_subpaths()`,
+#'   `get_nth_curve_points()` and `get_bezier_tuples()` give 4 points per
+#'   curve where upstream gives 3; curve counts, anchors, bounds and drawn
+#'   frames match upstream. `get_frame()` gives a `nativeRaster`;
 #'   `get_raw_frame_buffer_object_data()` the pixels bottom row first, as
 #'   OpenGL reads them.
 #' * `render_opengl_vectorized_mobject_fill()`,

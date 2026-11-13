@@ -6,10 +6,11 @@
 # Shader data of a VMobject for both shaders, as upstream's
 # get_fill_shader_data(), get_stroke_shader_data() and get_triangulation()
 # give it. manimR's plain VMobjects (Circle(), Text(), ...) have no shader
-# methods; upstream's would be OpenGLVMobjects, so they get the same data
-# with OpenGLVMobject's defaults.
+# methods of their own (under the OpenGL renderer they get them attached);
+# upstream's would be OpenGLVMobjects, so they get the same data with
+# OpenGLVMobject's defaults.
 software_vmobject_data <- function(m) {
-  if (exists("get_fill_shader_data", envir = m, inherits = FALSE)) {
+  if (any(startsWith(class(m), "OpenGL"))) {
     fill <- m$get_fill_shader_data()
     stroke <- m$get_stroke_shader_data()
     return(list(

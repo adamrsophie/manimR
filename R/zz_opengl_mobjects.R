@@ -632,3 +632,23 @@ get_vectorized_mobject_class <- function() VMobjectClass
 #' @rdname get_mobject_class
 #' @export
 get_point_mobject_class <- function() PMobjectClass
+
+# Under the OpenGL renderer every upstream mobject is built on OpenGLMobject
+# or OpenGLVMobject. A manimR mobject made then gets the members of those
+# classes it lacks, bound to the object as its own methods are. Objects of
+# locked classes (an R6 default for user classes) keep their own members.
+opengl_attach_members <- function(obj) {
+  if (environmentIsLocked(obj) || is.function(.subset2(obj, "get_triangulation"))) return(invisible(obj))
+  key <- if (inherits(obj, "VMobject")) "opengl_vmobject_members" else "opengl_mobject_members"
+  members <- .manim[[key]]
+  if (is.null(members)) {
+    specs <- if (key == "opengl_vmobject_members") list(OPENGL_MOBJECT_METHODS, OPENGL_VMOBJECT_METHODS)
+             else list(OPENGL_MOBJECT_METHODS)
+    members <- .manim[[key]] <- opengl_merge(specs)$public
+  }
+  enclos <- environment(.subset2(obj, "get_center"))
+  add <- members[setdiff(names(members), ls(obj, all.names = TRUE, sorted = FALSE))]
+  add <- lapply(add, function(v) { if (is.function(v)) environment(v) <- enclos; v })
+  list2env(add, envir = obj)
+  invisible(obj)
+}

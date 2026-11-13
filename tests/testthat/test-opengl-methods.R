@@ -1354,3 +1354,18 @@ test_that("animations under the OpenGL renderer follow upstream's OpenGL mobject
     expect_equal(h$submobjects[[2]]$get_stroke_opacity(), 0)
   })
 })
+
+test_that("mobjects made under the OpenGL renderer have upstream's OpenGL methods", {
+  tempconfig(list(renderer = "opengl"), {
+    s <- Square(fill_opacity = 0.5)
+    for (nm in c("get_triangulation", "get_shader_data", "set_gloss", "get_bezier_tuples", "has_fill",
+                 "get_unit_normal", "get_fill_shader_wrapper", "fix_in_frame")) expect_true(is.function(s[[nm]]), info = nm)
+    expect_equal(s$get_opacity(), 0.5)
+    expect_true(s$has_fill())
+    # Copies have the methods bound to themselves.
+    c2 <- s$copy()$shift(RIGHT)
+    expect_equal(c2$get_bounding_box()[2, ], c(1, 0, 0))
+    expect_equal(s$get_bounding_box()[2, ], c(0, 0, 0))
+  })
+  expect_false(exists("get_triangulation", envir = Square(), inherits = FALSE))
+})

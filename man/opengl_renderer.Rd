@@ -235,7 +235,14 @@ and with \code{depth_test} (on by default for surfaces) tested against and
 written to the framebuffer's depth buffer. A plain \code{ImageMobject}, on
 which upstream's OpenGL renderer raises, is drawn by a grid camera.
 \code{config$renderer = "opengl"} makes
-scenes use it. \code{get_frame()} gives a \code{nativeRaster};
+scenes use it. Mobjects made under that setting follow upstream's
+OpenGL classes: they get the OpenGL mobject methods
+(\code{get_triangulation()}, \code{get_shader_data()}, \code{set_gloss()} and the rest)
+and upstream's OpenGL geometry. Each quadratic curve is stored raised
+to a cubic, so \verb{$points}, \code{get_num_points()}, \code{get_subpaths()},
+\code{get_nth_curve_points()} and \code{get_bezier_tuples()} give 4 points per
+curve where upstream gives 3; curve counts, anchors, bounds and drawn
+frames match upstream. \code{get_frame()} gives a \code{nativeRaster};
 \code{get_raw_frame_buffer_object_data()} the pixels bottom row first, as
 OpenGL reads them.
 \item \code{render_opengl_vectorized_mobject_fill()},
