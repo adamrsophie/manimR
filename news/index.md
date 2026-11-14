@@ -103,8 +103,13 @@
   through httpuv and reports pyglet’s events, wheel and key releases
   included. Surface normals are computed in single precision as on the
   GPU, so a sphere’s pole takes the shader’s fallback normal where
-  upstream’s does. Where an OpenGL class differs from its Cairo
-  counterpart, it follows upstream’s OpenGL class:
+  upstream’s does. Stroke points pass through single precision as they
+  do on the GPU, so points a rounding error apart (at a sphere’s pole)
+  join as on the GPU, and each fragment blends into the 8 bit
+  framebuffer in turn, rounded as a GPU rounds. Frames now match the
+  GPU’s within 1 of 255 for most of the test scenes. Where an OpenGL
+  class differs from its Cairo counterpart, it follows upstream’s OpenGL
+  class:
   [`OpenGLArrow()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
   is a filled shape,
   [`OpenGLLine()`](https://adamrsophie.github.io/manimR/reference/opengl_mobjects.md)
