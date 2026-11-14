@@ -1584,11 +1584,13 @@ test_that("a Window passes Windows mouse and key events to the scene", {
     "  if (!length(grDevices::dev.capabilities('events')$events)) { writeLines('no events', out); quit(save = 'no') }",
     "  system2('powershell', c('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', shQuote(ps),",
     "          shQuote(w$title), shQuote(plog)), wait = FALSE)",
-    "  for (i in 1:20) {",
+    "  t0 <- Sys.time(); n <- 0",
+    "  while (as.numeric(Sys.time() - t0, units = 'secs') < 30) {",
+    "    n <- n + 1",
     "    w$handle_event()",
     "    if (any(startsWith(log, 'press')) && any(startsWith(log, 'key'))) break",
     "  }",
-    "  writeLines(log, out)",
+    "  writeLines(c(log, paste('events', n)), out)",
     "})"
   ), script)
   res <- suppressWarnings(system2(file.path(R.home("bin"), "Rterm.exe"),
@@ -1599,9 +1601,10 @@ test_that("a Window passes Windows mouse and key events to the scene", {
                                                      collapse = " | ")))
   log <- readLines(out)
   skip_if(identical(log, "no events"), "this device reports no events")
+  info <- paste(c(log, if (file.exists(plog)) readLines(plog, warn = FALSE)), collapse = " | ")
   press <- grep("^press", log, value = TRUE)[1]
-  expect_match(press, "^press LEFT ")
+  expect_match(press, "^press LEFT ", info = info)
   xy <- as.numeric(strsplit(press, " ")[[1]][3:4])
   expect_equal(xy, c(0.25 * cfg("frame_width"), 0.25 * cfg("frame_height")), tolerance = 0.05)
-  expect_true("key a" %in% log)
+  expect_true("key a" %in% log, info = info)
 })
