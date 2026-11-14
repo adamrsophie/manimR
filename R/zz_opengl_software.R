@@ -294,8 +294,10 @@ software_raster_triangle <- function(c3, W, H) {
 }
 
 # Collects the fragments of one draw call and blends them over the
-# framebuffer as one pixel aligned raster.
-software_layer <- function(W, H) {
+# framebuffer as one pixel aligned raster. With `fbo` and opaque pixels
+# under the draw, each fragment is blended into them in turn and the result
+# rounded to 8 bits, as a GPU blends into an RGBA8 framebuffer.
+software_layer <- function(W, H, fbo = NULL) {
   frags <- list()
   list(
     add = function(row, col, rgba) {
@@ -308,6 +310,22 @@ software_layer <- function(W, H) {
       c0 <- min(vapply(frags, function(f) min(f$col), 0)); c1 <- max(vapply(frags, function(f) max(f$col), 0))
       h <- r1 - r0 + 1
       w <- c1 - c0 + 1
+      dst <- if (!is.null(fbo$capture)) native_raster_to_array(fbo$capture(native = TRUE))[r0:r1, c0:c1, , drop = FALSE]
+      if (!is.null(dst) && all(dst[, , 4] == 255)) {
+        for (f in frags) {
+          idx <- (f$col - c0) * h + (f$row - r0 + 1)
+          a <- pmin(pmax(f$rgba[, 4], 0), 1)
+          for (k in 1:3) {
+            ch <- dst[, , k]
+            ch[idx] <- round(pmin(pmax(f$rgba[, k], 0), 1) * a * 255 + ch[idx] * (1 - a))
+            dst[, , k] <- ch
+          }
+        }
+        grid::grid.raster(array_to_native_raster(dst / 255), x = grid::unit((c0 - 1) / W, "npc"),
+                          y = grid::unit(1 - r1 / H, "npc"), width = grid::unit(w / W, "npc"),
+                          height = grid::unit(h / H, "npc"), just = c("left", "bottom"), interpolate = FALSE)
+        return(invisible(NULL))
+      }
       out <- array(0, c(h, w, 4))
       for (f in frags) {
         idx <- (f$col - c0) * h + (f$row - r0 + 1)
@@ -464,7 +482,7 @@ software_rasterize <- function(fbo, gl, tri, depth_test, shade, discard = NULL) 
   }
   rgba <- shade(at, f$tri)
   rgba[is.na(rgba)] <- 0
-  layer <- software_layer(W, H)
+  layer <- software_layer(W, H, fbo)
   rank <- seq_along(pix) - which(start)[cumsum(start)] + 1
   for (r in seq_len(max(rank))) {
     k <- rank == r

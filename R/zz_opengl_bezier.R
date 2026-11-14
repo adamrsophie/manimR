@@ -369,9 +369,14 @@ software_bezier_stroke_geometry <- function(data, uniforms) {
   aaw <- u$anti_alias_width
   fd <- u$focal_distance
   joint <- u$joint_type %||% 0
-  bp <- software_frame_points(s$point, u)
-  prev_bp <- software_frame_points(s$prev_point, u)
-  next_bp <- software_frame_points(s$next_point, u)
+  # The points reach the GPU as float32 and the vertex shader moves them
+  # into the frame in single precision, which merges points only 1e-16
+  # apart (a sphere's pole); in double their tiny differences would give
+  # the joints arbitrary angles.
+  f32 <- function(m) as_float32(software_frame_points(as_float32(m), u))
+  bp <- f32(s$point)
+  prev_bp <- f32(s$prev_point)
+  next_bp <- f32(s$next_point)
   normal <- bz_rotate(s$unit_normal, u)
   width <- 0.01 * s$stroke_width
   color <- s$color

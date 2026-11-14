@@ -820,12 +820,12 @@ test_that("the software shaders draw the frames of upstream's OpenGL renderer", 
   # shaders.
   circle <- Circle(radius = 1.5, color = WHITE, fill_color = RED, fill_opacity = 1, stroke_width = 4)$shift(LEFT * 2)
   square <- Square(side_length = 2, color = YELLOW, fill_color = BLUE, fill_opacity = 0.5, stroke_width = 8)$shift(RIGHT * 2)
-  expect_lte(max(abs(frame(list(circle, square)) - oracle("vfill"))), 2)
+  expect_lte(max(abs(frame(list(circle, square)) - oracle("vfill"))), 1)
   zig <- OpenGLVMobject(stroke_color = GREEN, stroke_width = 10)
   zig$set_points_as_corners(rbind(c(-4, -1, 0), c(-2, 1.5, 0), c(0, -1, 0), c(2, 1.5, 0), c(4, -1, 0)))
   arc <- OpenGLVMobject(stroke_color = WHITE, stroke_width = 6)
   arc$set_points(rbind(c(-3, -2.5, 0), c(-1, -0.5, 0), c(1, -0.5, 0), c(3, -2.5, 0)))
-  expect_lte(max(abs(frame(list(zig, arc)) - oracle("vstroke"))), 3)
+  expect_lte(max(abs(frame(list(zig, arc)) - oracle("vstroke"))), 2)
   # Turned out of the frame's plane (perspective, flat_stroke) and with
   # round, miter and bevel joints.
   tilted_square <- Square(side_length = 2, color = YELLOW, fill_color = BLUE, fill_opacity = 0.8, stroke_width = 12)
@@ -836,12 +836,12 @@ test_that("the software shaders draw the frames of upstream's OpenGL renderer", 
     z$joint_type <- c("round", "miter", "bevel")[k]
     z$shift(c(-0.5, 5 - 2.5 * k, 0))
   })
-  expect_lte(max(abs(frame(c(list(tilted_square), zigs)) - oracle("vtilt"))), 3)
+  expect_lte(max(abs(frame(c(list(tilted_square), zigs)) - oracle("vtilt"))), 1)
   # A curve of zero length is left out of the stroke, as upstream's
   # geometry shader emits nothing for it.
   dup <- OpenGLVMobject(stroke_color = GREEN, stroke_width = 10)
   dup$set_points_as_corners(rbind(c(-4, -1, 0), c(-2, 1.5, 0), c(-2, 1.5, 0), c(0, -1, 0), c(2, 1.5, 0), c(4, -1, 0)))
-  expect_lte(max(abs(frame(list(dup)) - oracle("vdup"))), 3)
+  expect_lte(max(abs(frame(list(dup)) - oracle("vdup"))), 1)
   # A turned camera, and a checkerboard sphere whose faces upstream draws in
   # order without a depth test.
   turned <- tempconfig(list(pixel_width = 160, pixel_height = 90), {
@@ -854,7 +854,7 @@ test_that("the software shaders draw the frames of upstream's OpenGL renderer", 
     r$update_frame(s)
     r$get_raw_frame_buffer_object_data()
   })
-  expect_lte(max(abs(turned - oracle("vcamera"))), 4)
+  expect_lte(max(abs(turned - oracle("vcamera"))), 1)
   # A fill with a hole: the inner circle runs the other way.
   cubic_circle <- function(radius) {
     a <- seq(0, TAU, length.out = 9)
@@ -868,7 +868,7 @@ test_that("the software shaders draw the frames of upstream's OpenGL renderer", 
   ring <- OpenGLVMobject(fill_color = GREEN, fill_opacity = 1, stroke_color = WHITE, stroke_width = 4)
   inner <- cubic_circle(1)
   ring$set_points(unname(rbind(cubic_circle(2), inner[nrow(inner):1, ])))
-  expect_lte(max(abs(frame(list(ring)) - oracle("vhole"))), 3)
+  expect_lte(max(abs(frame(list(ring)) - oracle("vhole"))), 1)
   # OpenGLImageMobject is upstream's textured surface: the upscaled image
   # sampled at nearest texels, with the opacity of set_opacity().
   img <- array(0, c(2, 3, 4))
@@ -878,7 +878,7 @@ test_that("the software shaders draw the frames of upstream's OpenGL renderer", 
   image_a <- OpenGLImageMobject(img)$shift(LEFT * 3)
   image_b <- OpenGLImageMobject(img, height = 2)$rotate(PI / 5)$shift(c(3, 1, 0))
   image_b$set_opacity(0.5)
-  expect_lte(max(abs(frame(list(image_a, image_b)) - oracle("vimage"))), 4)
+  expect_lte(max(abs(frame(list(image_a, image_b)) - oracle("vimage"))), 3)
   # Upstream's renderer compiles shaders from their files, so the code
   # set_color_by_code() puts into the wrappers' programs is not drawn.
   coded <- OpenGLVMobject(fill_color = RED, fill_opacity = 1, stroke_color = WHITE, stroke_width = 8)
@@ -886,7 +886,7 @@ test_that("the software shaders draw the frames of upstream's OpenGL renderer", 
   coded$set_color_by_code("color.rgb = vec3(point.x > -3.0 ? 1.0 : 0.0, 0.5 + 0.2 * point.y, 1.0);")
   coded_plane <- surf(function(u, v) c(u, v, 0), c(1, 5), c(-2, 2), c(4, 4), GREEN, 0, 0)
   coded_plane$set_color_by_code("color.rgb = vec3(1.0, 0.0, 1.0);")
-  expect_lte(max(abs(frame(list(coded, coded_plane)) - oracle("vcode"))), 2)
+  expect_lte(max(abs(frame(list(coded, coded_plane)) - oracle("vcode"))), 1)
   # Meshes with upstream's own mesh shaders, drawn after the mobjects.
   meshes <- tempconfig(list(pixel_width = 160, pixel_height = 90), {
     r <- OpenGLRenderer()
@@ -909,7 +909,7 @@ test_that("the software shaders draw the frames of upstream's OpenGL renderer", 
     expect_length(s$meshes, 1)
     out
   })
-  expect_lte(max(abs(meshes - oracle("vmesh"))), 2)
+  expect_lte(max(abs(meshes - oracle("vmesh"))), 1)
   # A mesh with its own GLSL code: its shaders run in the interpreter, with
   # perspective-correct varyings, a user function, a loop and discard.
   glsl_vs <- "#version 330
@@ -958,7 +958,7 @@ void main() {
     r$update_frame(s)
     r$get_raw_frame_buffer_object_data()
   })
-  expect_lte(max(abs(custom - oracle("vglsl"))), 2)
+  expect_lte(max(abs(custom - oracle("vglsl"))), 1)
   # A geometry shader: triangles in, a triangle strip out, with EmitVertex()
   # under a mask.
   glsl_gs <- "#version 330
@@ -1006,7 +1006,7 @@ void main() {
     r$update_frame(s)
     r$get_raw_frame_buffer_object_data()
   })
-  expect_lte(max(abs(geom - oracle("vgeom"))), 2)
+  expect_lte(max(abs(geom - oracle("vgeom"))), 1)
   # A texture bound to a unit, sampled by a sampler2D (linear, repeated).
   glsl_tfs <- "#version 330
 in vec2 v_uv;
@@ -1033,7 +1033,27 @@ void main() {
     r$update_frame(s)
     r$get_raw_frame_buffer_object_data()
   })
-  expect_lte(max(abs(textured - oracle("vtex"))), 2)
+  expect_lte(max(abs(textured - oracle("vtex"))), 1)
+  # A texture the renderer makes from an image (get_texture_id()): nearest
+  # texels, clamped to the edge, as upstream's.
+  by_id <- tempconfig(list(pixel_width = 160, pixel_height = 90), {
+    r <- OpenGLRenderer()
+    s <- Scene$new(renderer = r)
+    on.exit(r$close_device(), add = TRUE)
+    r$camera$set_euler_angles(theta = -20 * DEGREES, phi = 40 * DEGREES)
+    quad <- shader_data(c(in_vert = 3, in_uv = 2), 4)
+    assign("in_vert", rbind(c(-4, -3, -2), c(4, -3, -2), c(4, 3, 2), c(-4, 3, 2)), envir = quad)
+    assign("in_uv", rbind(c(0, 0), c(1, 0), c(1, 1), c(0, 1)), envir = quad)
+    img <- aperm(array(c(255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 255, 0, 0, 255, 255, 255, 0, 255, 255, 255, 255, 0, 0, 0,
+                         128, 64, 32, 32, 64, 128, 200, 200, 50, 50, 100, 200), c(3, 4, 3)), c(3, 2, 1))
+    tid <- r$get_texture_id(img)
+    sh <- Shader(r$context, source = list(vertex_shader = glsl_vs, fragment_shader = glsl_tfs))
+    sh$set_uniform("u_tex", tid)
+    s$add(Mesh(sh, quad, indices = c(0, 1, 2, 0, 2, 3)))
+    r$update_frame(s)
+    r$get_raw_frame_buffer_object_data()
+  })
+  expect_lte(max(abs(by_id - oracle("vtexid"))), 1)
   # A FullScreenQuad runs its fragment shader over the frame.
   quad <- tempconfig(list(pixel_width = 160, pixel_height = 90), {
     r <- OpenGLRenderer()
@@ -1050,7 +1070,7 @@ void main() {
     r$update_frame(s)
     r$get_raw_frame_buffer_object_data()
   })
-  expect_lte(max(abs(quad - oracle("vquad"))), 2)
+  expect_lte(max(abs(quad - oracle("vquad"))), 1)
   # Structs: constructors, fields, nested writes, inout, returns, arrays.
   structs <- tempconfig(list(pixel_width = 160, pixel_height = 90), {
     r <- OpenGLRenderer()
@@ -1081,7 +1101,7 @@ void main() {
     r$update_frame(s)
     r$get_raw_frame_buffer_object_data()
   })
-  expect_lte(max(abs(structs - oracle("vstruct"))), 2)
+  expect_lte(max(abs(structs - oracle("vstruct"))), 1)
   # Shapes made under the OpenGL renderer have upstream's OpenGL geometry
   # (a circle of 9 quadratic arcs), drawn without conversion.
   native <- tempconfig(list(renderer = "opengl", pixel_width = 160, pixel_height = 90), {
@@ -1098,7 +1118,7 @@ void main() {
     r$update_frame(s)
     r$get_raw_frame_buffer_object_data()
   })
-  expect_lte(max(abs(native - oracle("vnative"))), 2)
+  expect_lte(max(abs(native - oracle("vnative"))), 1)
   # A Sphere made under the OpenGL renderer: its faces map the midpoint
   # handles of quadratic edges through the surface function, as upstream.
   ball <- tempconfig(list(renderer = "opengl", pixel_width = 160, pixel_height = 90), {
@@ -1111,8 +1131,8 @@ void main() {
     r$update_frame(s)
     r$get_raw_frame_buffer_object_data()
   })
-  # Face edges blend within 4 of 255 of the GPU's.
-  expect_lte(max(abs(ball - oracle("vsphere"))), 4)
+  # The strokes at the pole blend in single precision on the GPU.
+  expect_lte(max(abs(ball - oracle("vsphere"))), 2)
   # A rotated parent mesh with a child, a manim_coords mesh and a test
   # shader mesh, over a filled square with the camera turned.
   meshes2 <- tempconfig(list(pixel_width = 160, pixel_height = 90), {
@@ -1152,7 +1172,7 @@ void main() {
     expect_error(r$update_frame(s), "OpenGL")
     out
   })
-  expect_lte(max(abs(meshes2 - oracle("vmesh2"))), 2)
+  expect_lte(max(abs(meshes2 - oracle("vmesh2"))), 1)
   # A VMobject holding a surface draws the surface with its own shader.
   plane <- surf(function(u, v) c(u, v, 0), c(-1, 1), c(-1, 1), c(4, 4), GREEN, 0, 0)
   expect_equal(frame(list(VGroup(plane$copy()))), frame(list(plane)))
@@ -1437,4 +1457,52 @@ test_that("a Window passes browser events to the scene as pyglet would", {
   expect_match(page, "Manim &lt;1>", fixed = TRUE)
   expect_match(page, "new WebSocket", fixed = TRUE)
   expect_match(page, "width:320px;height:180px", fixed = TRUE)
+})
+
+test_that("a Window passes X11 mouse and key events to the scene", {
+  # Needs an X server (Xvfb on CI), xdotool to send real X events, and an
+  # interactive R, since getGraphicsEvent() returns at once otherwise.
+  skip_on_cran()
+  skip_if_not(.Platform$OS.type == "unix" && isTRUE(capabilities("X11")) && nzchar(Sys.getenv("DISPLAY")))
+  skip_if(!nzchar(Sys.which("xdotool")) || !nzchar(Sys.which("timeout")))
+  out <- tempfile(fileext = ".txt")
+  script <- tempfile(fileext = ".R")
+  writeLines(c(
+    "library(manimR)",
+    "options(device = function(...) grDevices::X11(type = 'Xlib', ...))",
+    sprintf("out <- %s", deparse(out)),
+    "tempconfig(list(pixel_width = 160, pixel_height = 90), {",
+    "  log <- character()",
+    "  Logged <- R6::R6Class('Logged', inherit = Scene, public = list(",
+    "    on_mouse_press = function(point, button, modifiers = 0) log <<- c(log, sprintf('press %s %.2f %.2f', button, point[1], point[2])),",
+    "    on_mouse_motion = function(point, d_point) NULL,",
+    "    on_key_press = function(symbol, modifiers = 0) log <<- c(log, paste('key', symbol)),",
+    "    on_key_release = function(symbol, modifiers = 0) NULL))",
+    "  r <- OpenGLRenderer()",
+    "  s <- Logged$new(renderer = r)",
+    "  r$update_frame(s)",
+    "  w <- Window(r, window_size = c(320, 180))",
+    "  if (!length(grDevices::dev.capabilities('events')$events)) { writeLines('no events', out); quit(save = 'no') }",
+    "  grDevices::dev.set(w$device)",
+    "  system(paste0('(sleep 2; id=$(xdotool search --sync --onlyvisible --class R | tail -1); ',",
+    "    'eval $(xdotool getwindowgeometry --shell $id); ',",
+    "    'xdotool mousemove --window $id $((WIDTH*3/4)) $((HEIGHT/4)) sleep 0.5 click 1 sleep 1 key a) &'))",
+    "  for (i in 1:20) {",
+    "    w$handle_event()",
+    "    if (any(startsWith(log, 'press')) && any(startsWith(log, 'key'))) break",
+    "  }",
+    "  writeLines(log, out)",
+    "})"
+  ), script)
+  system2("timeout", c("60", file.path(R.home("bin"), "R"), "--interactive", "--vanilla", "--quiet", "-f", script),
+          stdout = FALSE, stderr = FALSE)
+  skip_if(!file.exists(out), "the X11 window did not report events")
+  log <- readLines(out)
+  skip_if(identical(log, "no events"), "this X11 device reports no events")
+  # A click at 3/4 of the width and 3/4 of the height from the bottom left.
+  press <- grep("^press", log, value = TRUE)[1]
+  expect_match(press, "^press LEFT ")
+  xy <- as.numeric(strsplit(press, " ")[[1]][3:4])
+  expect_equal(xy, c(0.25 * cfg("frame_width"), 0.25 * cfg("frame_height")), tolerance = 0.05)
+  expect_true("key a" %in% log)
 })

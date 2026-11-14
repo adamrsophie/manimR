@@ -355,6 +355,20 @@ def vtex(r):
     sh.set_uniform("u_tex", 1)
     return [Mesh(sh, quad, indices=np.array([0, 1, 2, 0, 2, 3]))]
 frame("vtex", lambda: [], lambda cam: cam.set_euler_angles(theta=-20 * np.pi / 180, phi=40 * np.pi / 180), meshes=vtex)
+def vtexid(r):
+    # The same quad with a texture the renderer makes from an image
+    # (get_texture_id(): nearest texels, clamped to the edge).
+    from PIL import Image
+    from manim.renderer.shader import Mesh, Shader
+    quad = np.zeros(4, dtype=[("in_vert", np.float32, (3,)), ("in_uv", np.float32, (2,))])
+    quad["in_vert"] = [[-4, -3, -2], [4, -3, -2], [4, 3, 2], [-4, 3, 2]]
+    quad["in_uv"] = [[0, 0], [1, 0], [1, 1], [0, 1]]
+    img = Image.fromarray(np.array(TEX_DATA, dtype=np.uint8).reshape(3, 4, 3), "RGB")
+    tid = r.get_texture_id(img)
+    sh = Shader(r.context, source={"vertex_shader": GLSL_VS, "fragment_shader": TEX_FS})
+    sh.set_uniform("u_tex", tid)
+    return [Mesh(sh, quad, indices=np.array([0, 1, 2, 0, 2, 3]))]
+frame("vtexid", lambda: [], lambda cam: cam.set_euler_angles(theta=-20 * np.pi / 180, phi=40 * np.pi / 180), meshes=vtexid)
 # Each frame as a PNG, rows as OpenGL reads them (bottom row first).
 from PIL import Image
 for name, a in out.items():
