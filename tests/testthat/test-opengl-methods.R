@@ -1560,6 +1560,7 @@ test_that("a Window passes Windows mouse and key events to the scene", {
   ), ps)
   script <- tempfile(fileext = ".R")
   writeLines(c(
+    "Sys.unsetenv('_R_CHECK_SCREEN_DEVICE_')",
     "library(manimR)",
     sprintf("out <- %s; ps <- %s; plog <- %s", deparse(out), deparse(ps), deparse(plog)),
     "manimR:::tempconfig(list(pixel_width = 160, pixel_height = 90), {",
@@ -1586,8 +1587,7 @@ test_that("a Window passes Windows mouse and key events to the scene", {
   ), script)
   res <- suppressWarnings(system2(file.path(R.home("bin"), "Rterm.exe"),
                                   c("--ess", "--no-save", "--no-restore", "--no-init-file", "--quiet"),
-                                  stdin = script, stdout = TRUE, stderr = TRUE, timeout = 60,
-                                  env = "_R_CHECK_SCREEN_DEVICE_="))
+                                  stdin = script, stdout = TRUE, stderr = TRUE, timeout = 60))
   skip_if(!file.exists(out), paste("the window did not report events:", paste(utils::tail(res, 3), collapse = " | "),
                                        "PowerShell:", paste(if (file.exists(plog)) readLines(plog), collapse = " | ")))
   log <- readLines(out)
