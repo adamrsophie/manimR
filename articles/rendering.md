@@ -703,9 +703,11 @@ Beeps <- R6::R6Class("Beeps", inherit = Scene,
   })
 )
 beeps <- render(Beeps, quality = "l", media_dir = sec_dir)
+#> Warning: Adding sound failed (ffmpeg status 244); the video was written without
+#> sound.
 info <- capture(c("ffmpeg", "-hide_banner", "-i", beeps))$err
 regmatches(info, gregexpr("(Video|Audio): [a-z0-9]+", info))[[1]]
-#> [1] "Video: h264" "Audio: aac"
+#> [1] "Video: h264"
 ```
 
 The movie has a video and an audio stream.
