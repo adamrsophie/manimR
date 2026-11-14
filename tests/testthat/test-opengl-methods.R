@@ -1583,7 +1583,7 @@ test_that("a Window passes Windows mouse and key events to the scene", {
     "  grDevices::dev.set(w$device)",
     "  if (!length(grDevices::dev.capabilities('events')$events)) { writeLines('no events', out); quit(save = 'no') }",
     "  system2('powershell', c('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', shQuote(ps),",
-    "          shQuote(paste('R Graphics: Device', w$device)), shQuote(plog)), wait = FALSE)",
+    "          shQuote(w$title), shQuote(plog)), wait = FALSE)",
     "  for (i in 1:20) {",
     "    w$handle_event()",
     "    if (any(startsWith(log, 'press')) && any(startsWith(log, 'key'))) break",
