@@ -1494,9 +1494,9 @@ test_that("a Window passes X11 mouse and key events to the scene", {
     "  writeLines(log, out)",
     "})"
   ), script)
-  system2("timeout", c("60", file.path(R.home("bin"), "R"), "--interactive", "--vanilla", "--quiet", "-f", script),
-          stdout = FALSE, stderr = FALSE)
-  skip_if(!file.exists(out), "the X11 window did not report events")
+  res <- suppressWarnings(system2("timeout", c("60", file.path(R.home("bin"), "R"), "--interactive", "--vanilla",
+                                              "--quiet", "-f", script), stdout = TRUE, stderr = TRUE))
+  skip_if(!file.exists(out), paste("the X11 window did not report events:", paste(utils::tail(res, 8), collapse = " | ")))
   log <- readLines(out)
   skip_if(identical(log, "no events"), "this X11 device reports no events")
   # A click at 3/4 of the width and 3/4 of the height from the bottom left.
