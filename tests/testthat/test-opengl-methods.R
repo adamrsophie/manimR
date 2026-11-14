@@ -1551,8 +1551,7 @@ test_that("a Window passes Windows mouse and key events to the scene", {
     "$h = [W]::Find($prefix)",
     "$r = New-Object W+RECT; [void][W]::GetClientRect($h, [ref]$r)",
     "$p = New-Object W+POINT; $p.X = [int]($r.R * 3 / 4); $p.Y = [int]($r.B / 4); [void][W]::ClientToScreen($h, [ref]$p)",
-    "\"window $h client $($r.R) x $($r.B) click $($p.X) $($p.Y)\" | Out-File $log",
-    "[void][W]::SetForegroundWindow($h)",
+    "\"window $h client $($r.R) x $($r.B) click $($p.X) $($p.Y) foreground $([W]::SetForegroundWindow($h))\" | Out-File -Encoding ascii $log",
     "[void][W]::SetCursorPos($p.X, $p.Y); Start-Sleep -Milliseconds 500",
     "[W]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero); [W]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)",
     "Start-Sleep -Seconds 1",
@@ -1589,7 +1588,8 @@ test_that("a Window passes Windows mouse and key events to the scene", {
                                   c("--ess", "--no-save", "--no-restore", "--no-init-file", "--quiet"),
                                   stdin = script, stdout = TRUE, stderr = TRUE, timeout = 60))
   skip_if(!file.exists(out), paste("the window did not report events:", paste(utils::tail(res, 3), collapse = " | "),
-                                       "PowerShell:", paste(if (file.exists(plog)) readLines(plog), collapse = " | ")))
+                                       "PowerShell:", paste(if (file.exists(plog)) iconv(readLines(plog, warn = FALSE), "", "ASCII", sub = "?"),
+                                                     collapse = " | ")))
   log <- readLines(out)
   skip_if(identical(log, "no events"), "this device reports no events")
   press <- grep("^press", log, value = TRUE)[1]
