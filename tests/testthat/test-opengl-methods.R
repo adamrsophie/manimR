@@ -1513,3 +1513,88 @@ test_that("a Window passes X11 mouse and key events to the scene", {
   expect_equal(xy, c(0.25 * cfg("frame_width"), 0.25 * cfg("frame_height")), tolerance = 0.05)
   expect_true("key a" %in% log)
 })
+
+test_that("a Window passes Windows mouse and key events to the scene", {
+  # Real input sent with the Win32 API from PowerShell to an interactive
+  # Rterm (--ess), as on the windows-latest CI runner.
+  skip_on_cran()
+  skip_if_not(.Platform$OS.type == "windows" && nzchar(Sys.which("powershell")))
+  out <- tempfile(fileext = ".txt")
+  plog <- tempfile(fileext = ".log")
+  ps <- tempfile(fileext = ".ps1")
+  writeLines(c(
+    "param($prefix, $log)",
+    "Add-Type @'",
+    "using System; using System.Text; using System.Runtime.InteropServices;",
+    "public class W {",
+    "  public delegate bool P(IntPtr h, IntPtr l);",
+    "  [DllImport(\"user32.dll\")] public static extern bool EnumWindows(P f, IntPtr l);",
+    "  [DllImport(\"user32.dll\")] public static extern int GetWindowText(IntPtr h, StringBuilder s, int n);",
+    "  [DllImport(\"user32.dll\")] public static extern bool IsWindowVisible(IntPtr h);",
+    "  [DllImport(\"user32.dll\")] public static extern bool SetForegroundWindow(IntPtr h);",
+    "  [DllImport(\"user32.dll\")] public static extern bool GetClientRect(IntPtr h, out RECT r);",
+    "  [DllImport(\"user32.dll\")] public static extern bool ClientToScreen(IntPtr h, ref POINT p);",
+    "  [DllImport(\"user32.dll\")] public static extern bool SetCursorPos(int x, int y);",
+    "  [DllImport(\"user32.dll\")] public static extern void mouse_event(uint f, int x, int y, uint d, UIntPtr e);",
+    "  [DllImport(\"user32.dll\")] public static extern void keybd_event(byte k, byte s, uint f, UIntPtr e);",
+    "  public struct RECT { public int L, T, R, B; }",
+    "  public struct POINT { public int X, Y; }",
+    "  public static IntPtr Find(string prefix) {",
+    "    IntPtr found = IntPtr.Zero;",
+    "    EnumWindows((h, l) => { var sb = new StringBuilder(256); GetWindowText(h, sb, 256);",
+    "      if (IsWindowVisible(h) && sb.ToString().StartsWith(prefix)) { found = h; return false; } return true; }, IntPtr.Zero);",
+    "    return found;",
+    "  }",
+    "}",
+    "'@",
+    "Start-Sleep -Seconds 3",
+    "$h = [W]::Find($prefix)",
+    "$r = New-Object W+RECT; [void][W]::GetClientRect($h, [ref]$r)",
+    "$p = New-Object W+POINT; $p.X = [int]($r.R * 3 / 4); $p.Y = [int]($r.B / 4); [void][W]::ClientToScreen($h, [ref]$p)",
+    "\"window $h client $($r.R) x $($r.B) click $($p.X) $($p.Y)\" | Out-File $log",
+    "[void][W]::SetForegroundWindow($h)",
+    "[void][W]::SetCursorPos($p.X, $p.Y); Start-Sleep -Milliseconds 500",
+    "[W]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero); [W]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)",
+    "Start-Sleep -Seconds 1",
+    "[W]::keybd_event(0x41, 0, 0, [UIntPtr]::Zero); [W]::keybd_event(0x41, 0, 2, [UIntPtr]::Zero)"
+  ), ps)
+  script <- tempfile(fileext = ".R")
+  writeLines(c(
+    "library(manimR)",
+    sprintf("out <- %s; ps <- %s; plog <- %s", deparse(out), deparse(ps), deparse(plog)),
+    "manimR:::tempconfig(list(pixel_width = 160, pixel_height = 90), {",
+    "  log <- character()",
+    "  Logged <- R6::R6Class('Logged', inherit = Scene, public = list(",
+    "    on_mouse_press = function(point, button, modifiers = 0) log <<- c(log, sprintf('press %s %.2f %.2f', button, point[1], point[2])),",
+    "    on_mouse_motion = function(point, d_point) NULL,",
+    "    on_key_press = function(symbol, modifiers = 0) log <<- c(log, paste('key', symbol)),",
+    "    on_key_release = function(symbol, modifiers = 0) NULL))",
+    "  r <- OpenGLRenderer()",
+    "  s <- Logged$new(renderer = r)",
+    "  r$update_frame(s)",
+    "  w <- Window(r, window_size = c(320, 180))",
+    "  grDevices::dev.set(w$device)",
+    "  if (!length(grDevices::dev.capabilities('events')$events)) { writeLines('no events', out); quit(save = 'no') }",
+    "  system2('powershell', c('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', shQuote(ps),",
+    "          shQuote(paste('R Graphics: Device', w$device)), shQuote(plog)), wait = FALSE)",
+    "  for (i in 1:20) {",
+    "    w$handle_event()",
+    "    if (any(startsWith(log, 'press')) && any(startsWith(log, 'key'))) break",
+    "  }",
+    "  writeLines(log, out)",
+    "})"
+  ), script)
+  res <- suppressWarnings(system2(file.path(R.home("bin"), "Rterm.exe"),
+                                  c("--ess", "--no-save", "--no-restore", "--no-init-file", "--quiet"),
+                                  stdin = script, stdout = TRUE, stderr = TRUE, timeout = 60,
+                                  env = "_R_CHECK_SCREEN_DEVICE_="))
+  skip_if(!file.exists(out), paste("the window did not report events:", paste(utils::tail(res, 3), collapse = " | "),
+                                       "PowerShell:", paste(if (file.exists(plog)) readLines(plog), collapse = " | ")))
+  log <- readLines(out)
+  skip_if(identical(log, "no events"), "this device reports no events")
+  press <- grep("^press", log, value = TRUE)[1]
+  expect_match(press, "^press LEFT ")
+  xy <- as.numeric(strsplit(press, " ")[[1]][3:4])
+  expect_equal(xy, c(0.25 * cfg("frame_width"), 0.25 * cfg("frame_height")), tolerance = 0.05)
+  expect_true("key a" %in% log)
+})
