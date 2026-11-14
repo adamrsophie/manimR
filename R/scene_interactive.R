@@ -213,8 +213,9 @@ Scene$set("public", "check_interactive_embed_is_valid", function() {
 #' window can be opened (an interactive session with shiny and miniUI
 #' installed, and no video being written).
 #'
-#' @param scene A scene object.
-#' @param fps Redraws per second.
+#' @section Arguments:
+#' * `scene`: a scene object.
+#' * `fps`: redraws per second.
 #' @return The scene, invisibly, when the window closes.
 #' @name interactive_scene
 #' @examplesIf interactive()

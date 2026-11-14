@@ -86,17 +86,18 @@
 #'   (-10, 10, 10) and turns with the view as upstream's light does; each face is blended from its two
 #'   colors when the camera draws it, as upstream's shader does.
 #'
-#' @param uv_surface A [Surface()].
-#' @param resolution Number of mesh lines along `u` and `v`.
-#' @param stroke_width Width of the mesh lines.
-#' @param normal_nudge Distance the mesh is moved along the surface normal.
-#' @param depth_test,flat_stroke,shader_folder Settings of upstream's
+#' @section Arguments:
+#' * `uv_surface`: a [Surface()].
+#' * `resolution`: number of mesh lines along `u` and `v`.
+#' * `stroke_width`: width of the mesh lines.
+#' * `normal_nudge`: distance the mesh is moved along the surface normal.
+#' * `depth_test`, `flat_stroke`, `shader_folder`: settings of upstream's
 #'   shaders, kept but not used.
-#' @param image_file Image file (looked up with
+#' * `image_file`: image file (looked up with
 #'   [get_full_raster_image_path()]) or array for the texture.
-#' @param dark_image_file Image for the dark side, stored in `dark_image`.
-#' @param image_mode Mode the image is converted to, as in [ImageMobject()].
-#' @param ... Further arguments for [VGroup()] or [Surface()].
+#' * `dark_image_file`: image for the dark side, stored in `dark_image`.
+#' * `image_mode`: mode the image is converted to, as in [ImageMobject()].
+#' * `...`: further arguments for [VGroup()] or [Surface()].
 #' @return A mobject: an R6 object of the class named by the function called.
 #'   The objects whose names end in `Class` are the R6 class generators that
 #'   these functions call.

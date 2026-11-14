@@ -1,3 +1,14 @@
+## Resubmission
+
+This is a resubmission. In this version I have:
+
+* Reworded the Description so that the spelling check finds no unknown
+  words ('Manim Community' is quoted as a software name; mobjects,
+  updaters, Bezier and addins are gone).
+* Removed the argument sections of the Rd files `interactive_scene.Rd` and
+  `opengl_mobjects.Rd`, which have no usage section; the arguments are now
+  described in a section of their own.
+
 ## Test environments
 
 * local: macOS 27.2 (aarch64), R 4.6.0, `R CMD check --as-cran`
@@ -12,9 +23,6 @@ Local `--as-cran` check: 0 errors | 0 warnings | 1 note
 * Installed size (INFO): 8.9 Mb, of which 7.6 Mb is the `R` directory. The
   package is pure R code ported from a large library; it has no compiled
   code and no data files.
-* Should the spelling check list Bezier, mobjects, updaters or addins in
-  DESCRIPTION: Bezier is a proper name; mobjects, updaters and addins are
-  terms of the library and of 'RStudio'.
 
 ## Notes for the reviewers
 

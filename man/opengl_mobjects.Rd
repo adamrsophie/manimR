@@ -81,27 +81,6 @@
 \alias{OpenGLSurfaceMeshClass}
 \alias{OpenGLTexturedSurfaceClass}
 \title{OpenGL mobject classes}
-\arguments{
-\item{uv_surface}{A \code{\link[=Surface]{Surface()}}.}
-
-\item{resolution}{Number of mesh lines along \code{u} and \code{v}.}
-
-\item{stroke_width}{Width of the mesh lines.}
-
-\item{normal_nudge}{Distance the mesh is moved along the surface normal.}
-
-\item{depth_test, flat_stroke, shader_folder}{Settings of upstream's
-shaders, kept but not used.}
-
-\item{image_file}{Image file (looked up with
-\code{\link[=get_full_raster_image_path]{get_full_raster_image_path()}}) or array for the texture.}
-
-\item{dark_image_file}{Image for the dark side, stored in \code{dark_image}.}
-
-\item{image_mode}{Mode the image is converted to, as in \code{\link[=ImageMobject]{ImageMobject()}}.}
-
-\item{...}{Further arguments for \code{\link[=VGroup]{VGroup()}} or \code{\link[=Surface]{Surface()}}.}
-}
 \value{
 A mobject: an R6 object of the class named by the function called.
 The objects whose names end in \code{Class} are the R6 class generators that
@@ -188,6 +167,23 @@ upstream's texture coordinates. Upstream's shader shows
 colors when the camera draws it, as upstream's shader does.
 }
 }
+\section{Arguments}{
+
+\itemize{
+\item \code{uv_surface}: a \code{\link[=Surface]{Surface()}}.
+\item \code{resolution}: number of mesh lines along \code{u} and \code{v}.
+\item \code{stroke_width}: width of the mesh lines.
+\item \code{normal_nudge}: distance the mesh is moved along the surface normal.
+\item \code{depth_test}, \code{flat_stroke}, \code{shader_folder}: settings of upstream's
+shaders, kept but not used.
+\item \code{image_file}: image file (looked up with
+\code{\link[=get_full_raster_image_path]{get_full_raster_image_path()}}) or array for the texture.
+\item \code{dark_image_file}: image for the dark side, stored in \code{dark_image}.
+\item \code{image_mode}: mode the image is converted to, as in \code{\link[=ImageMobject]{ImageMobject()}}.
+\item \code{...}: further arguments for \code{\link[=VGroup]{VGroup()}} or \code{\link[=Surface]{Surface()}}.
+}
+}
+
 \examples{
 c1 <- OpenGLCircle(radius = 2)
 inherits(c1, "Circle")

@@ -5,12 +5,13 @@ Authors@R: c(
     person("Adam R", "Sophie", , "adamrsophie@gmail.com", role = c("aut", "cre")))
 Description: Create precise programmatic animations for explanatory math videos,
     in the style of 'Manim Community' <https://www.manim.community/>, written in
-    pure R. Scenes are built from vectorized mobjects made of cubic Bezier curves,
-    animated with transforms, creations, fades, and updaters, and rendered to
-    video, GIF, or PNG through 'ffmpeg'. Includes text rendered from system fonts,
-    LaTeX via 'dvisvgm', SVG import, graphing tools, a 3D camera, and 'RStudio'
-    addins. The design and algorithms follow the Python 'manim' library by the
-    Manim Community developers, whose work is gratefully acknowledged.
+    pure R. Scenes are built from vectorized mathematical objects made of cubic
+    spline curves, animated with transforms, creations, fades, and functions
+    that update them every frame, and rendered to video, GIF, or PNG through
+    'ffmpeg'. Includes text rendered from system fonts, LaTeX via 'dvisvgm', SVG
+    import, graphing tools, a 3D camera, and 'RStudio' add-ins. The design and
+    algorithms follow the Python 'manim' library by the 'Manim Community'
+    developers, whose work is gratefully acknowledged.
 License: GPL (>= 3)
 Copyright: See the file inst/COPYRIGHTS for the copyright holders of
     Manim Community, NetworkX, earcut.hpp and isosurfaces, whose code this

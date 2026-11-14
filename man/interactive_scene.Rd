@@ -3,11 +3,6 @@
 \name{interactive_scene}
 \alias{interactive_scene}
 \title{Interactive scenes}
-\arguments{
-\item{scene}{A scene object.}
-
-\item{fps}{Redraws per second.}
-}
 \value{
 The scene, invisibly, when the window closes.
 }
@@ -34,6 +29,14 @@ called directly. \code{check_interactive_embed_is_valid()} tells whether a
 window can be opened (an interactive session with shiny and miniUI
 installed, and no video being written).
 }
+\section{Arguments}{
+
+\itemize{
+\item \code{scene}: a scene object.
+\item \code{fps}: redraws per second.
+}
+}
+
 \examples{
 \dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 sc <- ThreeDScene$new()
