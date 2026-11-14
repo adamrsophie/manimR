@@ -1462,7 +1462,8 @@ test_that("a Window passes browser events to the scene as pyglet would", {
 test_that("a Window passes X11 mouse and key events to the scene", {
   # Needs an X server (Xvfb on CI), xdotool to send real X events, and an
   # interactive R, since getGraphicsEvent() returns at once otherwise (an
-  # interactive R ignores -f, so the script comes on standard input).
+  # interactive R ignores -f, so the script comes on standard input). R CMD
+  # check stops screen devices; the window is the point here.
   skip_on_cran()
   skip_if_not(.Platform$OS.type == "unix" && isTRUE(capabilities("X11")) && nzchar(Sys.getenv("DISPLAY")))
   skip_if(!nzchar(Sys.which("xdotool")) || !nzchar(Sys.which("timeout")))
@@ -1499,7 +1500,8 @@ test_that("a Window passes X11 mouse and key events to the scene", {
   ), script)
   res <- suppressWarnings(system2("timeout", c("60", file.path(R.home("bin"), "R"), "--interactive", "--no-readline",
                                               "--no-save", "--no-restore", "--no-init-file", "--quiet"),
-                                    stdin = script, stdout = TRUE, stderr = TRUE))
+                                    stdin = script, stdout = TRUE, stderr = TRUE,
+                                    env = "_R_CHECK_SCREEN_DEVICE_="))
   skip_if(!file.exists(out), paste("the X11 window did not report events:", paste(utils::tail(res, 3), collapse = " | "),
                                        "xdotool:", paste(if (file.exists(xlog)) readLines(xlog), collapse = " | ")))
   log <- readLines(out)
