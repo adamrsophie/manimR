@@ -95,48 +95,6 @@ renderer (its camera, meshes and shaders) is in <a href="opengl_renderer.html">o
 
 
     <div class="section level2">
-    <h2 id="arguments">Arguments<a class="anchor" aria-label="anchor" href="#arguments"></a></h2>
-
-
-<dl><dt id="arg-uv-surface">uv_surface<a class="anchor" aria-label="anchor" href="#arg-uv-surface"></a></dt>
-<dd><p>A <code><a href="three_dimensions.html">Surface()</a></code>.</p></dd>
-
-
-<dt id="arg-resolution">resolution<a class="anchor" aria-label="anchor" href="#arg-resolution"></a></dt>
-<dd><p>Number of mesh lines along <code>u</code> and <code>v</code>.</p></dd>
-
-
-<dt id="arg-stroke-width">stroke_width<a class="anchor" aria-label="anchor" href="#arg-stroke-width"></a></dt>
-<dd><p>Width of the mesh lines.</p></dd>
-
-
-<dt id="arg-normal-nudge">normal_nudge<a class="anchor" aria-label="anchor" href="#arg-normal-nudge"></a></dt>
-<dd><p>Distance the mesh is moved along the surface normal.</p></dd>
-
-
-<dt id="arg-depth-test-flat-stroke-shader-folder">depth_test, flat_stroke, shader_folder<a class="anchor" aria-label="anchor" href="#arg-depth-test-flat-stroke-shader-folder"></a></dt>
-<dd><p>Settings of upstream's
-shaders, kept but not used.</p></dd>
-
-
-<dt id="arg-image-file">image_file<a class="anchor" aria-label="anchor" href="#arg-image-file"></a></dt>
-<dd><p>Image file (looked up with
-<code><a href="path_helpers.html">get_full_raster_image_path()</a></code>) or array for the texture.</p></dd>
-
-
-<dt id="arg-dark-image-file">dark_image_file<a class="anchor" aria-label="anchor" href="#arg-dark-image-file"></a></dt>
-<dd><p>Image for the dark side, stored in <code>dark_image</code>.</p></dd>
-
-
-<dt id="arg-image-mode">image_mode<a class="anchor" aria-label="anchor" href="#arg-image-mode"></a></dt>
-<dd><p>Mode the image is converted to, as in <code><a href="image_mobject.html">ImageMobject()</a></code>.</p></dd>
-
-
-<dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Further arguments for <code><a href="VGroupClass.html">VGroup()</a></code> or <code><a href="three_dimensions.html">Surface()</a></code>.</p></dd>
-
-</dl></div>
-    <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A mobject: an R6 object of the class named by the function called.
 The objects whose names end in <code>Class</code> are the R6 class generators that
@@ -203,6 +161,22 @@ upstream's texture coordinates. Upstream's shader shows
 <code>dark_image_file</code> on the side facing away from the light, which is at
 (-10, 10, 10) and turns with the view as upstream's light does; each face is blended from its two
 colors when the camera draws it, as upstream's shader does.</p></li>
+</ul></div>
+    <div class="section level2">
+    <h2 id="arguments">Arguments<a class="anchor" aria-label="anchor" href="#arguments"></a></h2>
+
+
+<ul><li><p><code>uv_surface</code>: a <code><a href="three_dimensions.html">Surface()</a></code>.</p></li>
+<li><p><code>resolution</code>: number of mesh lines along <code>u</code> and <code>v</code>.</p></li>
+<li><p><code>stroke_width</code>: width of the mesh lines.</p></li>
+<li><p><code>normal_nudge</code>: distance the mesh is moved along the surface normal.</p></li>
+<li><p><code>depth_test</code>, <code>flat_stroke</code>, <code>shader_folder</code>: settings of upstream's
+shaders, kept but not used.</p></li>
+<li><p><code>image_file</code>: image file (looked up with
+<code><a href="path_helpers.html">get_full_raster_image_path()</a></code>) or array for the texture.</p></li>
+<li><p><code>dark_image_file</code>: image for the dark side, stored in <code>dark_image</code>.</p></li>
+<li><p><code>image_mode</code>: mode the image is converted to, as in <code><a href="image_mobject.html">ImageMobject()</a></code>.</p></li>
+<li><p><code>...</code>: further arguments for <code><a href="VGroupClass.html">VGroup()</a></code> or <code><a href="three_dimensions.html">Surface()</a></code>.</p></li>
 </ul></div>
 
     <div class="section level2">

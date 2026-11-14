@@ -17,51 +17,6 @@ ones. manimR draws with grid and has no OpenGL window; the CPU side of
 upstream's renderer (its camera, meshes and shaders) is in
 [opengl_renderer](https://adamrsophie.github.io/manimR/reference/opengl_renderer.md).
 
-## Arguments
-
-- uv_surface:
-
-  A
-  [`Surface()`](https://adamrsophie.github.io/manimR/reference/three_dimensions.md).
-
-- resolution:
-
-  Number of mesh lines along `u` and `v`.
-
-- stroke_width:
-
-  Width of the mesh lines.
-
-- normal_nudge:
-
-  Distance the mesh is moved along the surface normal.
-
-- depth_test, flat_stroke, shader_folder:
-
-  Settings of upstream's shaders, kept but not used.
-
-- image_file:
-
-  Image file (looked up with
-  [`get_full_raster_image_path()`](https://adamrsophie.github.io/manimR/reference/path_helpers.md))
-  or array for the texture.
-
-- dark_image_file:
-
-  Image for the dark side, stored in `dark_image`.
-
-- image_mode:
-
-  Mode the image is converted to, as in
-  [`ImageMobject()`](https://adamrsophie.github.io/manimR/reference/image_mobject.md).
-
-- ...:
-
-  Further arguments for
-  [`VGroup()`](https://adamrsophie.github.io/manimR/reference/VGroupClass.md)
-  or
-  [`Surface()`](https://adamrsophie.github.io/manimR/reference/three_dimensions.md).
-
 ## Value
 
 A mobject: an R6 object of the class named by the function called. The
@@ -155,6 +110,34 @@ Three classes have no Cairo counterpart:
   (-10, 10, 10) and turns with the view as upstream's light does; each
   face is blended from its two colors when the camera draws it, as
   upstream's shader does.
+
+## Arguments
+
+- `uv_surface`: a
+  [`Surface()`](https://adamrsophie.github.io/manimR/reference/three_dimensions.md).
+
+- `resolution`: number of mesh lines along `u` and `v`.
+
+- `stroke_width`: width of the mesh lines.
+
+- `normal_nudge`: distance the mesh is moved along the surface normal.
+
+- `depth_test`, `flat_stroke`, `shader_folder`: settings of upstream's
+  shaders, kept but not used.
+
+- `image_file`: image file (looked up with
+  [`get_full_raster_image_path()`](https://adamrsophie.github.io/manimR/reference/path_helpers.md))
+  or array for the texture.
+
+- `dark_image_file`: image for the dark side, stored in `dark_image`.
+
+- `image_mode`: mode the image is converted to, as in
+  [`ImageMobject()`](https://adamrsophie.github.io/manimR/reference/image_mobject.md).
+
+- `...`: further arguments for
+  [`VGroup()`](https://adamrsophie.github.io/manimR/reference/VGroupClass.md)
+  or
+  [`Surface()`](https://adamrsophie.github.io/manimR/reference/three_dimensions.md).
 
 ## Examples
 

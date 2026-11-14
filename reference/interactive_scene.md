@@ -6,16 +6,6 @@ while it runs, in its OpenGL window. In manimR,
 opens the scene in a Shiny window (the RStudio Viewer, or a browser),
 live:
 
-## Arguments
-
-- scene:
-
-  A scene object.
-
-- fps:
-
-  Redraws per second.
-
 ## Value
 
 The scene, invisibly, when the window closes.
@@ -38,6 +28,12 @@ The same key and mouse handlers (`on_key_press()`, `on_mouse_drag()`,
 be called directly. `check_interactive_embed_is_valid()` tells whether a
 window can be opened (an interactive session with shiny and miniUI
 installed, and no video being written).
+
+## Arguments
+
+- `scene`: a scene object.
+
+- `fps`: redraws per second.
 
 ## Examples
 
