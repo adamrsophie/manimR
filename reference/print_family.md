@@ -66,11 +66,11 @@ of the mobject.
 
 ``` r
 print_family(VGroup(Square(), VGroup(Circle(), Dot())))
-#>  VGroup 232e2af7b65aa7b598-1962
-#>   Square 232e2af7b65aa7b598-1957
-#>   VGroup 232e2af7b65aa7b598-1961
-#>       Circle 232e2af7b65aa7b598-1959
-#>       Dot 232e2af7b65aa7b598-1960
+#>  VGroup 24022af7b210dfffc0-1962
+#>   Square 24022af7b210dfffc0-1957
+#>   VGroup 24022af7b210dfffc0-1961
+#>       Circle 24022af7b210dfffc0-1959
+#>       Dot 24022af7b210dfffc0-1960
 if (FALSE) { # \dontrun{
 # Needs LaTeX and dvisvgm.
 eq <- MathTex("\\frac{d}{dx}f(x)g(x)=")
