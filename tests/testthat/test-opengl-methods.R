@@ -1461,7 +1461,8 @@ test_that("a Window passes browser events to the scene as pyglet would", {
 
 test_that("a Window passes X11 mouse and key events to the scene", {
   # Needs an X server (Xvfb on CI), xdotool to send real X events, and an
-  # interactive R, since getGraphicsEvent() returns at once otherwise.
+  # interactive R, since getGraphicsEvent() returns at once otherwise (an
+  # interactive R ignores -f, so the script comes on standard input).
   skip_on_cran()
   skip_if_not(.Platform$OS.type == "unix" && isTRUE(capabilities("X11")) && nzchar(Sys.getenv("DISPLAY")))
   skip_if(!nzchar(Sys.which("xdotool")) || !nzchar(Sys.which("timeout")))
@@ -1471,7 +1472,7 @@ test_that("a Window passes X11 mouse and key events to the scene", {
     "library(manimR)",
     "options(device = function(...) grDevices::X11(type = 'Xlib', ...))",
     sprintf("out <- %s", deparse(out)),
-    "tempconfig(list(pixel_width = 160, pixel_height = 90), {",
+    "manimR:::tempconfig(list(pixel_width = 160, pixel_height = 90), {",
     "  log <- character()",
     "  Logged <- R6::R6Class('Logged', inherit = Scene, public = list(",
     "    on_mouse_press = function(point, button, modifiers = 0) log <<- c(log, sprintf('press %s %.2f %.2f', button, point[1], point[2])),",
@@ -1482,8 +1483,8 @@ test_that("a Window passes X11 mouse and key events to the scene", {
     "  s <- Logged$new(renderer = r)",
     "  r$update_frame(s)",
     "  w <- Window(r, window_size = c(320, 180))",
-    "  if (!length(grDevices::dev.capabilities('events')$events)) { writeLines('no events', out); quit(save = 'no') }",
     "  grDevices::dev.set(w$device)",
+    "  if (!length(grDevices::dev.capabilities('events')$events)) { writeLines('no events', out); quit(save = 'no') }",
     "  system(paste0('(sleep 2; id=$(xdotool search --sync --onlyvisible --class R | tail -1); ',",
     "    'eval $(xdotool getwindowgeometry --shell $id); ',",
     "    'xdotool mousemove --window $id $((WIDTH*3/4)) $((HEIGHT/4)) sleep 0.5 click 1 sleep 1 key a) &'))",
@@ -1494,8 +1495,9 @@ test_that("a Window passes X11 mouse and key events to the scene", {
     "  writeLines(log, out)",
     "})"
   ), script)
-  res <- suppressWarnings(system2("timeout", c("60", file.path(R.home("bin"), "R"), "--interactive", "--vanilla",
-                                              "--quiet", "-f", script), stdout = TRUE, stderr = TRUE))
+  res <- suppressWarnings(system2("timeout", c("60", file.path(R.home("bin"), "R"), "--interactive", "--no-readline",
+                                              "--no-save", "--no-restore", "--no-init-file", "--quiet"),
+                                    stdin = script, stdout = TRUE, stderr = TRUE))
   skip_if(!file.exists(out), paste("the X11 window did not report events:", paste(utils::tail(res, 8), collapse = " | ")))
   log <- readLines(out)
   skip_if(identical(log, "no events"), "this X11 device reports no events")
