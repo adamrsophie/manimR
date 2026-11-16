@@ -465,3 +465,30 @@ test_that("mesh updaters run while a scene plays", {
                           scene_name = "MeshTime"))
   expect_equal(elapsed, 0.9, tolerance = 1e-9)
 })
+
+test_that("segments encoded in the background give the same video", {
+  skip_if_not(nzchar(Sys.which("ffmpeg")))
+  skip_on_cran()
+  construct <- function(self) {
+    s <- Square()
+    for (i in 1:4) self$play(s$animate$shift(0.2 * RIGHT), run_time = 0.4)
+  }
+  one <- suppressMessages(render(construct, quality = "l", media_dir = withr_tempdir(), scene_name = "Encoders",
+                                 max_inflight_encoders = 1))
+  dir <- withr_tempdir()
+  three <- suppressMessages(render(construct, quality = "l", media_dir = dir, scene_name = "Encoders",
+                                   max_inflight_encoders = 3))
+  expect_equal(get_video_metadata(three)$nb_frames, get_video_metadata(one)$nb_frames)
+  pdir <- file.path(dirname(three), "partial_movie_files", "Encoders")
+  expect_length(list.files(pdir, pattern = "\\.mp4$"), 4)
+  expect_length(list.files(pdir, pattern = "\\.part"), 0)
+  # A second render finds every segment in the cache.
+  expect_message(render(construct, quality = "l", media_dir = dir, scene_name = "Encoders", max_inflight_encoders = 3),
+                 "Using cached data")
+  # An encoder error is reported, and no unfinished file is left.
+  bad <- withr_tempdir()
+  expect_error(suppressMessages(render(construct, quality = "l", media_dir = bad, scene_name = "Encoders",
+                                       max_inflight_encoders = 3, video_encoder_options = list(crf = "x"))),
+               "ffmpeg")
+  expect_length(list.files(bad, pattern = "\\.part", recursive = TRUE), 0)
+})

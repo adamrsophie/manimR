@@ -84,6 +84,13 @@ SceneFileWriterClass <- R6::R6Class("SceneFileWriter", lock_objects = FALSE,
     video_encoder = NULL,
     con = NULL,
     partial_path = NULL,
+    # Segments whose frames are all written and whose ffmpeg may still be
+    # encoding in the background: list(part, path, status, log), oldest
+    # first.
+    inflight = NULL,
+    # Exit status and log files of the open segment's background ffmpeg.
+    con_status = NULL,
+    con_log = NULL,
     frame_count = 0,
     sounds = NULL,
     sections = NULL,
@@ -121,7 +128,48 @@ SceneFileWriterClass <- R6::R6Class("SceneFileWriter", lock_objects = FALSE,
     },
     open_pipe = function(path) {
       dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
-      pipe(paste(shQuote(ffmpeg_path()), paste(shQuote(self$output_command(path)), collapse = " ")), open = "wb")
+      command <- paste(shQuote(ffmpeg_path()), paste(shQuote(self$output_command(path)), collapse = " "))
+      self$con_status <- NULL
+      self$con_log <- NULL
+      if (self$background_encoding()) {
+        # The shell starts ffmpeg in the background, reading this pipe, and
+        # exits; closing the pipe then returns at once while ffmpeg finishes
+        # the segment and writes its exit status.
+        self$con_status <- tempfile("manimR-ffmpeg-", fileext = ".status")
+        self$con_log <- tempfile("manimR-ffmpeg-", fileext = ".log")
+        command <- sprintf("exec 3<&0; (%s <&3 2>%s; echo $? > %s) & exit 0", command, shQuote(self$con_log),
+                           shQuote(self$con_status))
+      }
+      pipe(command, open = "wb")
+    },
+    # Whether segments may keep encoding after their last frame: when more
+    # than one encoder may be in flight, on systems with a POSIX shell.
+    background_encoding = function() {
+      (self$settings$max_inflight_encoders %||% 1) > 1 && .Platform$OS.type == "unix"
+    },
+    # Waits for the oldest segment still encoding and moves its file into
+    # place, or stops with ffmpeg's error.
+    finish_oldest_encode_job = function() {
+      job <- self$inflight[[1]]
+      self$inflight[[1]] <- NULL
+      on.exit(unlink(c(job$status, job$log)), add = TRUE)
+      status <- character()
+      while (!length(status)) {
+        if (file.exists(job$status)) status <- readLines(job$status, warn = FALSE)
+        if (!length(status)) Sys.sleep(0.01)
+      }
+      if (!identical(trimws(status[1]), "0")) {
+        unlink(job$part)
+        msg <- if (file.exists(job$log)) paste(utils::tail(readLines(job$log, warn = FALSE), 5), collapse = " ") else ""
+        stop("ffmpeg exited with status ", trimws(status[1]), if (nzchar(msg)) paste0(": ", msg), call. = FALSE)
+      }
+      file.rename(job$part, job$path)
+      invisible(self)
+    },
+    # Waits for the segment being encoded into `path`, if any.
+    finish_encode_job_for = function(path) {
+      while (any(vapply(self$inflight, function(j) identical(j$path, path), NA))) self$finish_oldest_encode_job()
+      invisible(self)
     },
 
     # Sections (manim.scene.section) ------------------------------------------
@@ -156,6 +204,7 @@ SceneFileWriterClass <- R6::R6Class("SceneFileWriter", lock_objects = FALSE,
     is_already_cached = function(hash_invocation) {
       if (!self$output_spec$is_video) return(FALSE)
       path <- plan_segment_path(self$output_plan, hash_invocation)
+      self$finish_encode_job_for(path)
       if (!file.exists(path)) return(FALSE)
       modify_atime(path)
       TRUE
@@ -179,6 +228,11 @@ SceneFileWriterClass <- R6::R6Class("SceneFileWriter", lock_objects = FALSE,
           stop("open_partial_movie_stream() called for a play that has no partial movie file path.", call. = FALSE)
         }
       }
+      self$finish_encode_job_for(file_path)
+      # As upstream, max_inflight_encoders counts the segment being written.
+      while (length(self$inflight) && length(self$inflight) >= (self$settings$max_inflight_encoders %||% 1) - 1) {
+        self$finish_oldest_encode_job()
+      }
       self$partial_path <- file_path
       self$con <- self$open_pipe(paste0(file_path, ".part", self$output_plan$segment_extension))
       invisible(self)
@@ -190,6 +244,14 @@ SceneFileWriterClass <- R6::R6Class("SceneFileWriter", lock_objects = FALSE,
       status <- close(self$con)
       self$con <- NULL
       part <- paste0(self$partial_path, ".part", self$output_plan$segment_extension)
+      if (!is.null(self$con_status)) {
+        # ffmpeg is still encoding; finish() or the next segment waits for it.
+        self$inflight[[length(self$inflight) + 1L]] <- list(part = part, path = self$partial_path,
+                                                            status = self$con_status, log = self$con_log)
+        self$con_status <- NULL
+        self$con_log <- NULL
+        return(invisible(self))
+      }
       if (!is.null(status) && status != 0) {
         unlink(part)
         stop("ffmpeg exited with status ", status, call. = FALSE)
@@ -199,15 +261,47 @@ SceneFileWriterClass <- R6::R6Class("SceneFileWriter", lock_objects = FALSE,
       file.rename(part, self$partial_path)
       invisible(self)
     },
-    # Segments are encoded in this process while frames are written, so there
-    # are no background jobs to wait for (max_inflight_encoders and
-    # encoder_queue_size only bound upstream's encoder threads); aborting
-    # drops the segment being written.
-    join_all_encode_jobs = function() invisible(self),
+    # Ends the open segment after ffmpeg stopped taking frames, with
+    # ffmpeg's error.
+    encoder_stopped = function(write_error) {
+      part <- paste0(self$partial_path, ".part", self$output_plan$segment_extension)
+      status <- suppressWarnings(tryCatch(close(self$con), error = function(e) NULL))
+      self$con <- NULL
+      msg <- ""
+      if (!is.null(self$con_status)) {
+        job <- list(part = part, path = self$partial_path, status = self$con_status, log = self$con_log)
+        self$con_status <- NULL
+        self$con_log <- NULL
+        self$inflight <- c(list(job), self$inflight)
+        self$finish_oldest_encode_job()
+      }
+      unlink(part)
+      stop("ffmpeg stopped reading frames", if (!is.null(status) && status != 0) paste0(" (status ", status, ")"),
+           ": ", write_error, call. = FALSE)
+    },
+    # Waits for every segment still encoding in the background.
+    join_all_encode_jobs = function() {
+      while (length(self$inflight)) self$finish_oldest_encode_job()
+      invisible(self)
+    },
+    # Drops the segment being written; segments still encoding finish and
+    # are removed, so no partial file is left behind.
     abort_encode_jobs = function(reraise_encoder_failures = FALSE) {
+      jobs <- self$inflight
+      self$inflight <- NULL
+      for (job in jobs) {
+        while (!file.exists(job$status) || !length(readLines(job$status, warn = FALSE))) Sys.sleep(0.01)
+        unlink(c(job$part, job$status, job$log))
+      }
       if (!is.null(self$con)) {
         try(close(self$con), silent = TRUE)
         self$con <- NULL
+        if (!is.null(self$con_status)) {
+          while (!file.exists(self$con_status) || !length(readLines(self$con_status, warn = FALSE))) Sys.sleep(0.01)
+          unlink(c(self$con_status, self$con_log))
+          self$con_status <- NULL
+          self$con_log <- NULL
+        }
         unlink(paste0(self$partial_path, ".part", self$output_plan$segment_extension))
         logger$info("Discarded partial movie file of aborted animation")
       }
@@ -219,7 +313,9 @@ SceneFileWriterClass <- R6::R6Class("SceneFileWriter", lock_objects = FALSE,
       if (`repeat` < 1) return(invisible(self))
       if (self$output_spec$is_video && !is.null(self$con)) {
         bytes <- frame_bytes(pixels)
-        for (i in seq_len(`repeat`)) writeBin(bytes, self$con)
+        # A write fails when ffmpeg has stopped; its own error explains why.
+        tryCatch(for (i in seq_len(`repeat`)) writeBin(bytes, self$con),
+                 error = function(e) self$encoder_stopped(conditionMessage(e)))
       }
       if (self$output_spec$is_image_sequence) {
         for (i in seq_len(`repeat`)) self$output_image(pixels)

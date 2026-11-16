@@ -268,9 +268,10 @@ embedded the same way when it is printed.
 * `Code()` highlights with Pygments, as upstream, when Python with the
   pygments module is installed; without it, a built in tokenizer highlights
   R and Python.
-* Video segments are encoded in the R process, one at a time;
-  `max_inflight_encoders` and `encoder_queue_size` are accepted but have no
-  effect.
+* Frames are written straight to ffmpeg, so `encoder_queue_size` is accepted
+  but has no effect. `max_inflight_encoders` above 1 lets segments finish
+  encoding in the background on Unix-like systems; Windows encodes one
+  segment at a time.
 * Copy mobjects with `$copy()`; R6's `$clone()` keeps the original's id.
 * Graph layouts, including `"planar"`, are native ports of the networkx
   algorithms, so igraph is not required. Where networkx picks an arbitrary

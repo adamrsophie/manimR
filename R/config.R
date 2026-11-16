@@ -171,8 +171,11 @@ check_choice <- function(name, value, choices) {
 #' * Encoding: `video_codec`, `pixel_format` (both `"auto"`) and
 #'   `video_encoder_options` (a named list of ffmpeg options such as
 #'   `list(crf = "18")`) for the cached video segments;
-#'   `max_inflight_encoders` and `encoder_queue_size` are validated but
-#'   encoding runs in the R process, one segment at a time.
+#'   `max_inflight_encoders` (1) is how many segments may be encoding at
+#'   once: above 1, each segment's ffmpeg keeps encoding in the background
+#'   while the next play renders (on Unix-like systems; Windows encodes one
+#'   segment at a time). `encoder_queue_size` is validated but has no
+#'   effect: frames go straight to ffmpeg rather than through a queue.
 #' * Caching: `disable_caching`, `disable_caching_warning`,
 #'   `max_files_cached` (100; -1 keeps all), and manimR's `flush_cache`.
 #' * Presentation and logging: `preview` (open the result), `preview_command`,

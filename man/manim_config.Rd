@@ -55,8 +55,11 @@ being rendered; its name is the module name) and manimR's
 \item Encoding: \code{video_codec}, \code{pixel_format} (both \code{"auto"}) and
 \code{video_encoder_options} (a named list of ffmpeg options such as
 \code{list(crf = "18")}) for the cached video segments;
-\code{max_inflight_encoders} and \code{encoder_queue_size} are validated but
-encoding runs in the R process, one segment at a time.
+\code{max_inflight_encoders} (1) is how many segments may be encoding at
+once: above 1, each segment's ffmpeg keeps encoding in the background
+while the next play renders (on Unix-like systems; Windows encodes one
+segment at a time). \code{encoder_queue_size} is validated but has no
+effect: frames go straight to ffmpeg rather than through a queue.
 \item Caching: \code{disable_caching}, \code{disable_caching_warning},
 \code{max_files_cached} (100; -1 keeps all), and manimR's \code{flush_cache}.
 \item Presentation and logging: \code{preview} (open the result), \code{preview_command},
