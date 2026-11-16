@@ -69,6 +69,13 @@ native_raster_to_array <- function(x) {
   array(c(channel(0), channel(8), channel(16), channel(24)), c(h, w, 4))
 }
 
+# Rows r0:r1 and columns c0:c1 of a nativeRaster, whose pixels are stored
+# row by row.
+native_raster_crop <- function(x, r0, r1, c0, c1) {
+  m <- matrix(unclass(x), nrow = dim(x)[2])[c0:c1, r0:r1, drop = FALSE]
+  structure(as.vector(m), dim = c(r1 - r0 + 1L, c1 - c0 + 1L), class = "nativeRaster", channels = attr(x, "channels"))
+}
+
 # The inverse for an h x w x 4 array of values 0 to 1: a nativeRaster draws
 # without the color conversion grid does for arrays.
 array_to_native_raster <- function(a) {

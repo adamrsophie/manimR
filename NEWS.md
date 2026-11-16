@@ -57,6 +57,9 @@
 * `get_family()` collects members into one list instead of concatenating
   at each level: 30% faster on a group of 200, which every animation frame
   of a large `Transform` pays several times.
+* The OpenGL software renderer crops the frame capture before converting it
+  when it blends a mobject, instead of converting the whole frame each
+  time: a 1080p frame of three mobjects takes 25% less CPU time.
 * `DecimalNumber$set_value()` keeps the glyphs when the displayed text and
   its settings do not change, and only updates the value.
 
