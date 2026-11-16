@@ -1621,3 +1621,18 @@ test_that("the OpenGL frame uses the configured background opacity", {
   expect_equal(alpha(list(background_opacity = 0.25)), 64)
   expect_equal(alpha(list()), 255)
 })
+
+test_that("get_frame() matches the frame read as an array", {
+  tempconfig(list(pixel_width = 64, pixel_height = 36, background_opacity = 0.5), {
+    r <- OpenGLRenderer()
+    on.exit(r$close_device())
+    s <- Scene$new(renderer = r)
+    circle <- OpenGLCircle(radius = 2)
+    circle$set_fill(RED, 0.6)
+    s$add(circle)
+    r$update_frame(s)
+    raw <- r$get_raw_frame_buffer_object_data()
+    expected <- array_to_native_raster(raw[rev(seq_len(dim(raw)[1])), , , drop = FALSE] / 255)
+    expect_identical(r$get_frame(), expected)
+  })
+})

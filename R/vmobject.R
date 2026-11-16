@@ -669,24 +669,34 @@ VMobjectClass <- R6::R6Class("VMobject", inherit = MobjectClass, lock_objects = 
     get_curve_functions_with_lengths = function(...) {
       lapply(seq_len(self$get_num_curves()), function(n) self$get_nth_curve_function_with_length(n, ...))
     },
+    # The lengths are kept with the points they were measured on, so a path
+    # that does not move (MoveAlongPath) is measured once. Any change to the
+    # points, by a method or by assigning $points, measures again.
+    curve_length_cache = NULL,
     get_curve_lengths = function(sample_points = NULL) {
-      curve_lengths(self$points[seq_len(4 * self$get_num_curves()), , drop = FALSE], sample_points %||% 10)
+      sample_points <- sample_points %||% 10
+      cache <- self$curve_length_cache
+      if (!is.null(cache) && cache$sample_points == sample_points && identical(cache$points, self$points)) {
+        return(cache$lengths)
+      }
+      lens <- curve_lengths(self$points[seq_len(4 * self$get_num_curves()), , drop = FALSE], sample_points)
+      self$curve_length_cache <- list(points = self$points, sample_points = sample_points, lengths = lens)
+      lens
     },
     point_from_proportion = function(alpha) {
       if (alpha < 0 || alpha > 1) stop("Alpha ", alpha, " not between 0 and 1.", call. = FALSE)
       self$throw_error_if_no_points()
       if (alpha == 1) return(self$points[nrow(self$points), ])
       lens <- self$get_curve_lengths()
-      target <- alpha * sum(lens)
-      cum <- 0
-      for (i in seq_along(lens)) {
-        if (cum + lens[i] >= target) {
-          residue <- if (lens[i] != 0) (target - cum) / lens[i] else 0
-          return(drop(cubic_basis(residue) %*% self$get_nth_curve_points(i)))
-        }
-        cum <- cum + lens[i]
-      }
-      self$points[nrow(self$points), ]
+      if (!length(lens)) return(self$points[nrow(self$points), ])
+      ends <- cumsum(lens)
+      target <- alpha * ends[length(ends)]
+      # The first curve whose end reaches the target.
+      i <- which(ends >= target)[1]
+      if (is.na(i)) return(self$points[nrow(self$points), ])
+      cum <- if (i > 1) ends[i - 1] else 0
+      residue <- if (lens[i] != 0) (target - cum) / lens[i] else 0
+      drop(cubic_basis(residue) %*% self$get_nth_curve_points(i))
     },
     # As upstream: the arc length up to the point, found by solving each
     # cubic for the point (proportions_along_bezier_curve_for_point()),

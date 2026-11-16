@@ -808,3 +808,14 @@ test_that("native raster packing keeps every pixel value", {
   x <- array(sample(0:255, 4 * 30 * 20, replace = TRUE), c(30, 20, 4))
   expect_equal(native_raster_to_array(array_to_native_raster(x / 255)), x)
 })
+
+test_that("point_from_proportion() measures again after the points change", {
+  path <- ParametricFunction(function(t) c(cos(3 * t), sin(2 * t), 0), t_range = c(0, 2 * pi, 0.1))
+  before <- path$point_from_proportion(0.37)
+  expect_equal(path$point_from_proportion(0.37), before)
+  path$points <- path$points * 2
+  expect_equal(path$point_from_proportion(0.37), 2 * before)
+  path$shift(RIGHT)
+  expect_equal(path$point_from_proportion(0.37), 2 * before + RIGHT)
+  expect_equal(path$point_from_proportion(1), path$points[nrow(path$points), ])
+})

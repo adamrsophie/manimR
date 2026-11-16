@@ -58,8 +58,14 @@ OpenGLSoftwareFramebufferClass <- R6::R6Class("OpenGLSoftwareFramebuffer", lock_
     # The pixels as an h x w x 4 array of values 0 to 255, bottom row first as
     # OpenGL reads them.
     read = function(viewport = self$viewport, components = 4, dtype = "f1") {
-      a <- self$with_device(function() native_raster_to_array(self$capture(native = TRUE)))
+      a <- native_raster_to_array(self$read_native())
       a[rev(seq_len(dim(a)[1])), , seq_len(components), drop = FALSE]
+    },
+    # The pixels as the device's nativeRaster, top row first.
+    read_native = function() {
+      x <- self$with_device(function() self$capture(native = TRUE))
+      attributes(x) <- list(dim = dim(x), class = "nativeRaster", channels = 4L)
+      x
     },
     release = function() {
       if (!is.null(self$device) && self$device %in% grDevices::dev.list()) {
@@ -1484,8 +1490,13 @@ OpenGLRendererClass <- R6::R6Class("OpenGLRenderer", inherit = RendererClass, lo
     # returns the RGBA array, top row first).
     get_frame = function() {
       if (is.null(self$get_pixel_shape())) stop("Pixel shape is None, cannot get frame.", call. = FALSE)
-      raw <- self$get_raw_frame_buffer_object_data(dtype = "f1")
-      self$last_frame <- array_to_native_raster(raw[rev(seq_len(dim(raw)[1])), , , drop = FALSE] / 255)
+      fbo <- self$frame_buffer_object
+      # A software framebuffer hands over its device's raster directly, without
+      # the unpacked array and its copies.
+      self$last_frame <- if (is.function(fbo$read_native)) fbo$read_native() else {
+        raw <- self$get_raw_frame_buffer_object_data(dtype = "f1")
+        array_to_native_raster(raw[rev(seq_len(dim(raw)[1])), , , drop = FALSE] / 255)
+      }
       self$last_frame
     },
     pixel_coords_to_space_coords = function(px, py, relative = FALSE, top_left = FALSE) {
