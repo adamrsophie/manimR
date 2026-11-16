@@ -1,3 +1,5 @@
+# manimR (development version)
+
 # manimR 0.1.0
 
 * First release: a native R port of Manim Community 0.22 (the Cairo style

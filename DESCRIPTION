@@ -1,6 +1,6 @@
 Package: manimR
 Title: Mathematical Animation Engine, a Native R Port of 'Manim'
-Version: 0.1.0
+Version: 0.1.0.9000
 Authors@R: c(
     person("Adam R", "Sophie", , "adamrsophie@gmail.com", role = c("aut", "cre")))
 Description: Create precise programmatic animations for explanatory math videos,
