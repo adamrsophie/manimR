@@ -39,6 +39,8 @@ Suggests:
     igraph,
     ggplot2,
     shiny,
+    promises,
+    future,
     httpuv,
     miniUI,
     knitr,
