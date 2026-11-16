@@ -1513,7 +1513,11 @@ OpenGLRendererClass <- R6::R6Class("OpenGLRenderer", inherit = RendererClass, lo
   active = list(
     background_color = function(value) {
       if (missing(value)) return(private$.background_color)
-      private$.background_color <- as.numeric(color_to_rgba(value))
+      # The frame is cleared with the configured background opacity (0 when
+      # `transparent` sets it), as the Cairo camera fills it.
+      rgba <- as.numeric(color_to_rgba(value))
+      rgba[4] <- rgba[4] * (cfg("background_opacity") %||% 1)
+      private$.background_color <- rgba
     }
   ),
   private = list(.background_color = NULL)

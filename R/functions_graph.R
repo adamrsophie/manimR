@@ -126,7 +126,10 @@ FunctionGraphClass <- R6::R6Class("FunctionGraph", inherit = ParametricFunctionC
       x_range <- x_range %||% c(-frame_x_radius(), frame_x_radius())
       self$x_range <- x_range
       self$graph_function <- func
-      super$initialize(function(t) c(t, func(t), 0), t_range = x_range, color = color, ...)
+      # One point for a number, coordinate rows for the vector of samples a
+      # vectorized graph passes.
+      super$initialize(function(t) if (length(t) > 1) rbind(t, func(t), 0) else c(t, func(t), 0),
+                       t_range = x_range, color = color, ...)
     },
     get_function = function() self$graph_function,
     get_point_from_function = function(x) self$func(x)

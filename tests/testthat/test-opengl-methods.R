@@ -1608,3 +1608,16 @@ test_that("a Window passes Windows mouse and key events to the scene", {
   expect_equal(xy, c(0.25 * cfg("frame_width"), 0.25 * cfg("frame_height")), tolerance = 0.05)
   expect_true("key a" %in% log, info = info)
 })
+
+test_that("the OpenGL frame uses the configured background opacity", {
+  alpha <- function(cf) tempconfig(c(list(pixel_width = 32, pixel_height = 18), cf), {
+    r <- OpenGLRenderer()
+    on.exit(r$close_device())
+    s <- Scene$new(renderer = r)
+    r$update_frame(s)
+    r$get_raw_frame_buffer_object_data()[1, 1, 4]
+  })
+  expect_equal(alpha(list(transparent = TRUE)), 0)
+  expect_equal(alpha(list(background_opacity = 0.25)), 64)
+  expect_equal(alpha(list()), 255)
+})

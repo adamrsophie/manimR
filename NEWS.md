@@ -14,11 +14,30 @@
   the hash), and the state of other R6 objects such as meshes.
 * The glyph cache of `DecimalNumber()` tells apart constructors that have
   the same code but capture different settings.
+* The OpenGL renderer clears the frame with the configured
+  `background_opacity`, so `transparent = TRUE` gives a transparent
+  background as under Cairo. It was always opaque.
+* Mesh updaters, such as one on a `FullScreenQuad()`, run during playback,
+  and a mesh with a time based updater keeps a wait from being frozen.
+  Before, they ran only through an explicit `update_meshes()`.
+* `FunctionGraph(use_vectorized = TRUE)` works: the curve function returns
+  coordinate rows for a vector of samples.
+* Packing pixels into a native raster and back keeps black at alpha 128,
+  whose bits are R's `NA_integer_`; it came back as `NA`.
+* manimR requires textshaping 0.4.0 or later, the first version with the
+  `weight` and `features` arguments it uses.
 
 ## Performance
 
 * `DecimalNumber$set_value()` keeps the glyphs when the displayed text and
   its settings do not change, and only updates the value.
+
+## Documentation
+
+* The README no longer says that `ImplicitFunction()` uses
+  `grDevices::contourLines()`; it uses the adaptive quadtree, as upstream.
+* The help of `knit_print.manim_output()` explains how it differs from the
+  `manim` chunk engine for documents that are not HTML.
 
 # manimR 0.1.0
 

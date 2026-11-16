@@ -799,3 +799,12 @@ test_that("set_value() keeps the glyphs when the displayed text is the same", {
   d$set_value(3.4)
   expect_equal(d$num_string, "3.400")
 })
+
+test_that("native raster packing keeps every pixel value", {
+  # Black at alpha 128 packs to the bits of NA_integer_.
+  half <- array(c(0, 0, 0, 128) / 255, c(1, 1, 4))
+  expect_equal(c(native_raster_to_array(array_to_native_raster(half))), c(0, 0, 0, 128))
+  set.seed(1)
+  x <- array(sample(0:255, 4 * 30 * 20, replace = TRUE), c(30, 20, 4))
+  expect_equal(native_raster_to_array(array_to_native_raster(x / 255)), x)
+})

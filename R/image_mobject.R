@@ -60,9 +60,13 @@ convert_image_mode <- function(pa, mode) {
 native_raster_to_array <- function(x) {
   h <- dim(x)[1]
   w <- dim(x)[2]
-  v <- as.integer(x)
-  channel <- function(shift) matrix(bitwAnd(bitwShiftR(v, shift), 255L), h, w, byrow = TRUE)
-  array(c(channel(0L), channel(8L), channel(16L), channel(24L)), c(h, w, 4))
+  # The pixel 0x80000000 (black, alpha 128) is R's NA_integer_: read the
+  # bits as an unsigned number instead of with integer operations.
+  v <- as.double(unclass(x))
+  v[is.na(v)] <- -2^31
+  v[v < 0] <- v[v < 0] + 2^32
+  channel <- function(shift) matrix((v %/% 2^shift) %% 256, h, w, byrow = TRUE)
+  array(c(channel(0), channel(8), channel(16), channel(24)), c(h, w, 4))
 }
 
 # The inverse for an h x w x 4 array of values 0 to 1: a nativeRaster draws
@@ -73,7 +77,9 @@ array_to_native_raster <- function(a) {
   byte <- function(k) round(t(a[, , k]) * 255)
   v <- byte(1) + byte(2) * 256 + byte(3) * 65536 + byte(4) * 16777216
   v[v >= 2^31] <- v[v >= 2^31] - 2^32
-  structure(as.integer(v), dim = c(h, w), class = "nativeRaster", channels = 4L)
+  # -2^31 has the bits of NA_integer_, which is that pixel.
+  v <- suppressWarnings(as.integer(v))
+  structure(v, dim = c(h, w), class = "nativeRaster", channels = 4L)
 }
 
 #' @title Image mobjects
