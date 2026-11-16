@@ -52,6 +52,9 @@
   (Kamada and Kawai layout) use a breadth first search from each vertex
   instead of Floyd and Warshall. On a tree of 300 vertices the tree layout
   went from 0.22 s to 0.02 s and the shortest paths from 0.83 s to 0.02 s.
+* `get_family()` collects members into one list instead of concatenating
+  at each level: 30% faster on a group of 200, which every animation frame
+  of a large `Transform` pays several times.
 * `DecimalNumber$set_value()` keeps the glyphs when the displayed text and
   its settings do not change, and only updates the value.
 

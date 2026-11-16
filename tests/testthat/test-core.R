@@ -306,3 +306,13 @@ test_that("unknown get_ and set_ methods reach fields, as upstream's __getattr__
   expect_true(is.function(sq$get_center))
   expect_null(sq$target)
 })
+
+test_that("get_family walks depth first, skips cycles and keeps the last duplicate", {
+  inner <- VGroup(Circle(), Dot())
+  shared <- Square()
+  g <- VGroup(shared, inner, shared)
+  inner$add(g)
+  fam <- g$get_family()
+  expect_identical(vapply(fam, function(m) m$mob_id, ""),
+                   c(g$mob_id, inner$mob_id, inner$submobjects[[1]]$mob_id, inner$submobjects[[2]]$mob_id, shared$mob_id))
+})
