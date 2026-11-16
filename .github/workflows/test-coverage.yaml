@@ -1,5 +1,5 @@
-# Measures test coverage with covr and uploads it to Codecov. The upload
-# authenticates with GitHub's OIDC token, so no Codecov secret is needed.
+# Measures test coverage with covr and uploads it to Codecov with the
+# repository's CODECOV_TOKEN secret.
 on:
   push:
     branches: [main, dev]
@@ -13,9 +13,6 @@ permissions: read-all
 jobs:
   test-coverage:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       NOT_CRAN: true
@@ -44,7 +41,7 @@ jobs:
 
       - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
-          use_oidc: true
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: ./cobertura.xml
           plugins: noop
           disable_search: true
