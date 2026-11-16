@@ -1559,10 +1559,15 @@ test_that("a Window passes Windows mouse and key events to the scene", {
     "$r = New-Object W+RECT; [void][W]::GetClientRect($h, [ref]$r)",
     "$p = New-Object W+POINT; $p.X = [int]($r.R * 3 / 4); $p.Y = [int]($r.B / 4); [void][W]::ClientToScreen($h, [ref]$p)",
     "\"window $h client $($r.R) x $($r.B) click $($p.X) $($p.Y) foreground $([W]::SetForegroundWindow($h))\" | Out-File -Encoding ascii $log",
-    "[void][W]::SetCursorPos($p.X, $p.Y); Start-Sleep -Milliseconds 500",
-    "[W]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero); [W]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)",
-    "Start-Sleep -Seconds 1",
-    "[W]::keybd_event(0x41, 0, 0, [UIntPtr]::Zero); [W]::keybd_event(0x41, 0, 2, [UIntPtr]::Zero)"
+    # A click can be lost while the window is still being raised, so the
+    # click is sent a few times; R stops reading once it has seen one.
+    "for ($i = 0; $i -lt 5; $i++) {",
+    "  [void][W]::SetForegroundWindow($h); [void][W]::SetCursorPos($p.X, $p.Y); Start-Sleep -Milliseconds 500",
+    "  [W]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero); Start-Sleep -Milliseconds 50; [W]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)",
+    "  Start-Sleep -Seconds 1",
+    "  [W]::keybd_event(0x41, 0, 0, [UIntPtr]::Zero); [W]::keybd_event(0x41, 0, 2, [UIntPtr]::Zero)",
+    "  Start-Sleep -Seconds 1",
+    "}"
   ), ps)
   script <- tempfile(fileext = ".R")
   writeLines(c(
