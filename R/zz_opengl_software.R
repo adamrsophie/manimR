@@ -316,7 +316,8 @@ software_layer <- function(W, H, fbo = NULL) {
       c0 <- min(vapply(frags, function(f) min(f$col), 0)); c1 <- max(vapply(frags, function(f) max(f$col), 0))
       h <- r1 - r0 + 1
       w <- c1 - c0 + 1
-      dst <- if (!is.null(fbo$capture)) native_raster_to_array(fbo$capture(native = TRUE))[r0:r1, c0:c1, , drop = FALSE]
+      # Cropped before the conversion, which costs per pixel of the frame.
+      dst <- if (!is.null(fbo$capture)) native_raster_to_array(native_raster_crop(fbo$capture(native = TRUE), r0, r1, c0, c1))
       if (!is.null(dst) && all(dst[, , 4] == 255)) {
         for (f in frags) {
           idx <- (f$col - c0) * h + (f$row - r0 + 1)

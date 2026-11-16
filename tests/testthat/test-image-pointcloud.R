@@ -251,3 +251,11 @@ test_that("pillow_transform() samples as Pillow's perspective transform", {
   expect_equal(out("bicubic")[, , 3], matrix(c(255, 255, 255, 255, 255, 255, 240, 196, 255, 245, 199, 0,
                                                159, 137, 120, 0, 45, 37, 26, 0), 4))
 })
+
+test_that("native_raster_crop matches cropping the converted array", {
+  set.seed(1)
+  x <- structure(sample.int(2^30, 12 * 7), dim = c(7L, 12L), class = "nativeRaster")
+  x[5] <- NA_integer_
+  x[9] <- -5L
+  expect_identical(native_raster_to_array(native_raster_crop(x, 2, 5, 3, 10)), native_raster_to_array(x)[2:5, 3:10, ])
+})
