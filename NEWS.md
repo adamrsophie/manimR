@@ -9,6 +9,8 @@
 
 ## Bug fixes
 
+* The OpenGL software renderer's image texture cache is bounded. It kept
+  every image's upscaled texture for the whole session.
 * `as_mobject()` keeps clipping: shapes outside a clipped viewport, such
   as a ggplot panel, are dropped, and shapes that cross it are cut. Content
   outside the page is clipped too, so a plot keeps its size.

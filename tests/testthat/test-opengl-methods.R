@@ -1641,3 +1641,13 @@ test_that("get_frame() matches the frame read as an array", {
     expect_identical(r$get_frame(), expected)
   })
 })
+
+test_that("the software image texture cache stays bounded", {
+  rm(list = ls(software_image_texture_cache), envir = software_image_texture_cache)
+  for (i in 1:40) {
+    img <- OpenGLImageMobject(array(i / 40, c(4, 4, 3)))
+    scene_frame(function(self) self$add(img), quality = "l", renderer = "opengl")
+  }
+  expect_lte(length(software_image_texture_cache), 32)
+  expect_true(img$mob_id %in% ls(software_image_texture_cache))
+})
