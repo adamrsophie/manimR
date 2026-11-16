@@ -2,7 +2,7 @@
 # arm64 macOS runners were not being assigned to this repository).
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
   workflow_dispatch:
 
