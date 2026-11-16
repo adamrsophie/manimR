@@ -1,5 +1,10 @@
 # manimR <a href="https://adamrsophie.github.io/manimR/"><img src="man/figures/logo.png" align="right" height="139" alt="manimR website" /></a>
 
+<!-- badges: start -->
+[![R-CMD-check](https://github.com/adamrsophie/manimR/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/adamrsophie/manimR/actions/workflows/R-CMD-check.yaml)
+[![Codecov test coverage](https://codecov.io/gh/adamrsophie/manimR/graph/badge.svg)](https://app.codecov.io/gh/adamrsophie/manimR)
+<!-- badges: end -->
+
 manimR is a native R port of [Manim Community](https://www.manim.community/), the
 animation engine for explanatory math videos. Scenes, mobjects, animations,
 LaTeX, text, graphing, 3D and camera tools follow the Python API closely, so
