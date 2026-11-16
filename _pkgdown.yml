@@ -61,6 +61,7 @@ reference:
   desc: Render scenes to video, GIF and images, from R or the command line.
   contents:
   - render
+  - render_report
   - render_file
   - find_scenes
   - manim_cli
