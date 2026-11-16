@@ -1186,9 +1186,24 @@ arrange_in_grid_impl <- function(self, rows, cols, buff, cell_alignment, row_ali
 }
 
 iter_family <- function(m, active) {
-  if (m$mob_id %in% active) return(list())
-  active <- c(active, m$mob_id)
-  c(list(m), unlist(lapply(m$submobjects, iter_family, active = active), recursive = FALSE))
+  # Collected into one preallocated list: concatenating per level made the
+  # walk quadratic in the number of members.
+  out <- vector("list", 64L)
+  n <- 0L
+  walk <- function(m, active) {
+    id <- m$mob_id
+    if (id %in% active) return()
+    n <<- n + 1L
+    if (n > length(out)) length(out) <<- 2L * length(out)
+    out[[n]] <<- m
+    subs <- m$submobjects
+    if (length(subs)) {
+      active <- c(active, id)
+      for (s in subs) walk(s, active)
+    }
+  }
+  walk(m, active)
+  out[seq_len(n)]
 }
 
 # Copies the mobjects and animations in `x`, at any depth of nested lists,
