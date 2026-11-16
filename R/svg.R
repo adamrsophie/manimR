@@ -482,6 +482,11 @@ svg_apply_css <- function(node, st, rules) {
 #'   `stroke_width`, `stroke_color` and `stroke_opacity`.
 #' @param path_string_config Arguments for [VMobjectFromSVGPath()].
 #' @param use_svg_cache Reuse earlier imports of the same file.
+#' @param clip_paths Apply the file's `clip-path` references: shapes outside
+#'   a clip are dropped and shapes that cross it are cut to it. Off by
+#'   default, as upstream ignores clips; [as_mobject()] turns it on.
+#' @param keep_images Keep `<image>` elements as placeholder rectangles that
+#'   [as_mobject()] replaces by [ImageMobject()]s. Off by default.
 #' @param ... Passed to [VMobject()].
 #' @export
 #' @examples
@@ -501,11 +506,20 @@ SVGMobjectClass <- R6::R6Class("SVGMobject", inherit = VMobjectClass, lock_objec
     svg_width = NULL,
     svg_default = NULL,
     path_string_config = NULL,
+    clip_paths = FALSE,
+    keep_images = FALSE,
+    # SVG features the import could not reproduce, one entry per feature.
+    unsupported = character(),
+    svg_interpolating = FALSE,
+    svg_viewbox = NULL,
     initialize = function(file_name = NULL, should_center = TRUE, height = 2, width = NULL, color = NULL,
                           opacity = NULL, fill_color = NULL, fill_opacity = NULL, stroke_color = NULL,
                           stroke_opacity = NULL, stroke_width = NULL, svg_default = NULL, path_string_config = NULL,
-                          use_svg_cache = TRUE, ...) {
+                          use_svg_cache = TRUE, clip_paths = FALSE, keep_images = FALSE, ...) {
       super$initialize(...)
+      self$clip_paths <- clip_paths
+      self$keep_images <- keep_images
+      self$unsupported <- character()
       self$file_name <- file_name
       self$should_center <- should_center
       self$svg_height <- height
@@ -525,7 +539,8 @@ SVGMobjectClass <- R6::R6Class("SVGMobject", inherit = VMobjectClass, lock_objec
       self$move_into_position()
     },
     hash_seed = function() {
-      list(class(self)[1], self$svg_default, self$path_string_config, self$file_name, cfg("renderer"))
+      list(class(self)[1], self$svg_default, self$path_string_config, self$file_name, cfg("renderer"),
+           self$clip_paths, self$keep_images)
     },
     # Imports the file, or copies an earlier import of it.
     init_svg_mobject = function(file_name = self$file_name, use_svg_cache = TRUE) {
@@ -543,6 +558,7 @@ SVGMobjectClass <- R6::R6Class("SVGMobject", inherit = VMobjectClass, lock_objec
           cp <- cached$copy()
           self$add(cp$submobjects)
           self$id_to_vgroup_dict <- cp$id_to_vgroup_dict
+          self$unsupported <- cp$unsupported
           return(invisible(self))
         }
       }
@@ -550,6 +566,7 @@ SVGMobjectClass <- R6::R6Class("SVGMobject", inherit = VMobjectClass, lock_objec
       if (use_svg_cache) {
         snap <- VGroup(self$submobjects)
         snap$id_to_vgroup_dict <- self$id_to_vgroup_dict
+        snap$unsupported <- self$unsupported
         assign(key, snap$copy(), envir = .manim$svg_cache)
       }
       invisible(self)
@@ -558,6 +575,10 @@ SVGMobjectClass <- R6::R6Class("SVGMobject", inherit = VMobjectClass, lock_objec
       path <- file_name %||% self$get_file_path()
       doc <- xml2::read_xml(path, options = "HUGE")
       xml2::xml_ns_strip(doc)
+      # The page a renderer shows: content outside the root's viewBox is
+      # clipped when clip_paths is on.
+      vb <- svg_numbers(xml2::xml_attr(xml2::xml_root(doc), "viewBox") %|na|% "")
+      self$svg_viewbox <- if (length(vb) == 4 && all(vb[3:4] > 0)) vb else NULL
       doc <- self$modify_xml_tree(doc)
       res <- self$get_mobjects_from(doc)
       self$add(res$mobjects)
@@ -613,10 +634,54 @@ SVGMobjectClass <- R6::R6Class("SVGMobject", inherit = VMobjectClass, lock_objec
       counter <- 0L
       skip <- c("defs", "clippath", "mask", "title", "desc", "metadata", "style", "symbol", "lineargradient",
                 "radialgradient", "pattern", "marker", "filter", "script", "font", "font-face")
-      walk <- function(node, M, style, stack, depth = 0L) {
+      note <- function(what) self$unsupported <- union(self$unsupported, what)
+      # The shape of a clipPath element in the coordinates of the element
+      # that refers to it, as one VMobject.
+      clip_shape <- function(ref, M) {
+        target <- by_id[[ref]]
+        if (is.null(target)) return(NULL)
+        if (!identical(xml2::xml_attr(target, "clipPathUnits") %|na|% "userSpaceOnUse", "userSpaceOnUse")) {
+          note("clipPathUnits other than userSpaceOnUse")
+          return(NULL)
+        }
+        Mc <- M %*% parse_svg_transform(xml2::xml_attr(target, "transform"))
+        pts <- list()
+        for (ch in xml2::xml_children(target)) {
+          shape <- list(node = ch, style = list(), transform = Mc %*% parse_svg_transform(xml2::xml_attr(ch, "transform")))
+          mob <- self$get_mob_from_shape_element(shape)
+          if (!is.null(mob)) pts[[length(pts) + 1L]] <- mob$points
+        }
+        if (!length(pts)) return(NULL)
+        out <- VMobject()
+        out$points <- do.call(rbind, pts)
+        out
+      }
+      walk <- function(node, M, style, stack, depth = 0L, clips = list()) {
         if (depth > 100) return(invisible(NULL))
         tag <- tolower(xml2::xml_name(node))
         if (tag %in% skip) return(invisible(NULL))
+        # Cairo paints an image with the SOURCE operator as a filter that adds
+        # a "source" group (the image, masked to its area) to a
+        # "destination" group (everything drawn before, masked to the rest).
+        # Drawing the destination and then the source on top gives the same
+        # picture where the image is opaque.
+        filt <- svg_url_ref(xml2::xml_attr(node, "filter"))
+        if (!is.na(filt)) {
+          groups_in <- svg_filter_inputs(by_id[[filt]])
+          if (length(groups_in) && all(groups_in %in% names(by_id))) {
+            Mf <- M %*% parse_svg_transform(xml2::xml_attr(node, "transform"))
+            for (g in groups_in) {
+              # Images in the source were drawn with interpolation.
+              self$svg_interpolating <- identical(g, groups_in[length(groups_in)])
+              for (ch in xml2::xml_children(by_id[[g]])) walk(ch, Mf, svg_node_style(node, style), stack, depth + 1L, clips)
+            }
+            self$svg_interpolating <- FALSE
+          } else {
+            note("filter")
+          }
+          return(invisible(NULL))
+        }
+        if (!is.na(xml2::xml_attr(node, "mask"))) note("mask")
         id <- xml2::xml_attr(node, "id")
         if (is.na(id)) {
           id <- paste0("numbered_group_", counter)
@@ -624,6 +689,20 @@ SVGMobjectClass <- R6::R6Class("SVGMobject", inherit = VMobjectClass, lock_objec
         }
         groups[[id]] <<- groups[[id]] %||% VGroup()
         Mn <- M %*% parse_svg_transform(xml2::xml_attr(node, "transform"))
+        clip_attr <- xml2::xml_attr(node, "clip-path")
+        if (is.na(clip_attr)) {
+          css <- xml2::xml_attr(node, "style") %|na|% ""
+          clip_attr <- regmatches(css, regexpr("clip-path:[^;]*", css))[1]
+        }
+        clip_ref <- svg_url_ref(clip_attr)
+        if (!is.na(clip_ref)) {
+          if (isTRUE(self$clip_paths)) {
+            cs <- clip_shape(clip_ref, Mn)
+            if (!is.null(cs)) clips <- c(clips, list(cs))
+          } else {
+            note("clip-path")
+          }
+        }
         st <- svg_node_style(node, style)
         # Elements with display: none are not rendered, with their children;
         # display is not inherited.
@@ -635,7 +714,7 @@ SVGMobjectClass <- R6::R6Class("SVGMobject", inherit = VMobjectClass, lock_objec
             Mn <- Mn %*% svg_matrix(1, 0, 0, 1, svg_length_px(xml2::xml_attr(node, "x") %|na|% "0"),
                                     svg_length_px(xml2::xml_attr(node, "y") %|na|% "0"))
           }
-          for (ch in xml2::xml_children(node)) walk(ch, Mn, st, c(stack, id), depth + 1L)
+          for (ch in xml2::xml_children(node)) walk(ch, Mn, st, c(stack, id), depth + 1L, clips)
         } else if (tag == "use") {
           attrs <- xml2::xml_attrs(node)
           href <- attrs[grepl("href$", names(attrs))]
@@ -646,9 +725,9 @@ SVGMobjectClass <- R6::R6Class("SVGMobject", inherit = VMobjectClass, lock_objec
             ty <- svg_length_px(xml2::xml_attr(node, "y") %|na|% "0")
             Mu <- Mn %*% svg_matrix(1, 0, 0, 1, tx, ty)
             if (tolower(xml2::xml_name(target)) == "symbol") {
-              for (ch in xml2::xml_children(target)) walk(ch, Mu, st, c(stack, id), depth + 1L)
+              for (ch in xml2::xml_children(target)) walk(ch, Mu, st, c(stack, id), depth + 1L, clips)
             } else {
-              walk(target, Mu, st, c(stack, id), depth + 1L)
+              walk(target, Mu, st, c(stack, id), depth + 1L, clips)
             }
           }
         } else {
@@ -656,6 +735,12 @@ SVGMobjectClass <- R6::R6Class("SVGMobject", inherit = VMobjectClass, lock_objec
           # Hidden shapes (visibility is inherited) are not drawn.
           vis <- tolower(trimws(shape$style$visibility %||% "visible"))
           mob <- if (vis %in% c("hidden", "collapse")) NULL else self$get_mob_from_shape_element(shape)
+          for (cs in clips) {
+            if (is.null(mob)) break
+            res <- svg_clip_mobject(mob, cs)
+            if (!is.null(res$note)) note(res$note)
+            mob <- res$mob
+          }
           if (!is.null(mob)) {
             mobs[[length(mobs) + 1L]] <<- mob
             for (g in stack) groups[[g]]$add(mob)
@@ -663,7 +748,13 @@ SVGMobjectClass <- R6::R6Class("SVGMobject", inherit = VMobjectClass, lock_objec
         }
         invisible(NULL)
       }
-      for (ch in xml2::xml_children(root)) walk(ch, svg_identity(), svg_node_style(root, list()), "root")
+      page <- list()
+      vb <- self$svg_viewbox
+      if (isTRUE(self$clip_paths) && !is.null(vb)) {
+        page <- list(Polygon(c(vb[1], vb[2], 0), c(vb[1] + vb[3], vb[2], 0), c(vb[1] + vb[3], vb[2] + vb[4], 0),
+                             c(vb[1], vb[2] + vb[4], 0)))
+      }
+      for (ch in xml2::xml_children(root)) walk(ch, svg_identity(), svg_node_style(root, list()), "root", clips = page)
       list(mobjects = mobs, groups = groups)
     },
     get_mob_from_shape_element = function(shape) {
@@ -677,6 +768,7 @@ SVGMobjectClass <- R6::R6Class("SVGMobject", inherit = VMobjectClass, lock_objec
         polygon = self$polygon_to_mobject(shape),
         polyline = self$polyline_to_mobject(shape),
         text = self$text_to_mobject(shape),
+        image = self$image_to_mobject(shape),
         {
           logger$warning("Unsupported element type: %s", tag)
           NULL
@@ -700,6 +792,31 @@ SVGMobjectClass <- R6::R6Class("SVGMobject", inherit = VMobjectClass, lock_objec
     ellipse_to_mobject = function(ellipse) svg_shape_to_mobject(ellipse$node),
     polygon_to_mobject = function(polygon) svg_shape_to_mobject(polygon$node),
     polyline_to_mobject = function(polyline) svg_shape_to_mobject(polyline$node),
+    # A rectangle in the image's place that carries its pixels in
+    # `svg_image`; as_mobject() swaps it for an ImageMobject.
+    image_to_mobject = function(image) {
+      node <- image$node
+      if (!isTRUE(self$keep_images)) {
+        self$unsupported <- union(self$unsupported, "image")
+        return(NULL)
+      }
+      attrs <- xml2::xml_attrs(node)
+      href <- attrs[grepl("href$", names(attrs))]
+      pixels <- if (length(href)) svg_data_uri_image(href[[1]]) else NULL
+      if (is.null(pixels)) {
+        self$unsupported <- union(self$unsupported, "image that is not an embedded PNG")
+        return(NULL)
+      }
+      num <- function(a, d = "0") svg_length_px(xml2::xml_attr(node, a) %|na|% d)
+      x <- num("x")
+      y <- num("y")
+      w <- num("width", as.character(dim(pixels)[2]))
+      h <- num("height", as.character(dim(pixels)[1]))
+      mob <- Polygon(c(x, y, 0), c(x + w, y, 0), c(x + w, y + h, 0), c(x, y + h, 0))
+      mob$svg_image <- pixels
+      mob$svg_image_interpolate <- isTRUE(self$svg_interpolating)
+      mob
+    },
     text_to_mobject = function(text) {
       logger$warning("Unsupported element type: text")
       NULL
@@ -781,3 +898,192 @@ VMobjectFromSVGPathClass <- R6::R6Class("VMobjectFromSVGPath", inherit = VMobjec
 #' @rdname SVGMobjectClass
 #' @export
 VMobjectFromSVGPath <- constructor(VMobjectFromSVGPathClass)
+
+# The id in a url(#id) reference, or NA.
+svg_url_ref <- function(value) {
+  if (length(value) != 1 || is.na(value)) return(NA_character_)
+  m <- regmatches(value, regexec("url\\(\\s*['\"]?#([^)'\"]+)['\"]?\\s*\\)", value))[[1]]
+  if (length(m) < 2) NA_character_ else m[2]
+}
+
+# The groups a Cairo compositing filter adds together, destination first
+# and then source; empty when the filter is something else.
+svg_filter_inputs <- function(filter) {
+  if (is.null(filter)) return(character())
+  refs <- character()
+  for (fe in xml2::xml_find_all(filter, ".//*[local-name()='feImage']")) {
+    attrs <- xml2::xml_attrs(fe)
+    href <- attrs[grepl("href$", names(attrs))]
+    if (length(href) && unname(attrs["result"]) %in% c("source", "destination")) {
+      refs[[unname(attrs["result"])]] <- sub("^#", "", href[[1]])
+    }
+  }
+  comp <- xml2::xml_find_all(filter, ".//*[local-name()='feComposite']")
+  if (!all(c("source", "destination") %in% names(refs)) || length(comp) != 1) return(character())
+  unname(refs[c("destination", "source")])
+}
+
+# Decodes base64 text to raw bytes.
+base64_to_raw <- function(text) {
+  alphabet <- c(LETTERS, letters, 0:9, "+", "/")
+  chars <- strsplit(gsub("[^A-Za-z0-9+/]", "", text), "")[[1]]
+  v <- match(chars, alphabet) - 1L
+  v <- c(v, rep(0L, (4 - length(v) %% 4) %% 4))
+  pad <- (4 - length(chars) %% 4) %% 4
+  q <- matrix(v, nrow = 4)
+  bytes <- rbind(q[1, ] * 4L + q[2, ] %/% 16L, (q[2, ] %% 16L) * 16L + q[3, ] %/% 4L, (q[3, ] %% 4L) * 64L + q[4, ])
+  out <- as.raw(as.vector(bytes))
+  if (pad) out <- out[seq_len(length(out) - pad)]
+  out
+}
+
+# The pixels (h x w x 4, 0 to 255) of a data: URI holding a PNG, or NULL.
+svg_data_uri_image <- function(href) {
+  if (!grepl("^data:image/png;base64,", href)) return(NULL)
+  img <- tryCatch(png::readPNG(base64_to_raw(sub("^data:image/png;base64,", "", href))), error = function(e) NULL)
+  if (is.null(img)) return(NULL)
+  if (length(dim(img)) == 2) img <- array(img, c(dim(img), 1))
+  img <- switch(dim(img)[3], array(c(img, img, img, 1 + 0 * img), c(dim(img)[1:2], 4)),
+                array(c(img[, , 1], img[, , 1], img[, , 1], img[, , 2]), c(dim(img)[1:2], 4)),
+                array(c(img, 1 + 0 * img[, , 1]), c(dim(img)[1:2], 4)), img)
+  round(img * 255)
+}
+
+# Liang and Barsky: the part [t0, t1] of the segment a to b inside the box,
+# or NULL.
+clip_segment_to_box <- function(a, b, box) {
+  d <- b - a
+  t0 <- 0
+  t1 <- 1
+  p <- c(-d[1], d[1], -d[2], d[2])
+  q <- c(a[1] - box[1], box[2] - a[1], a[2] - box[3], box[4] - a[2])
+  for (k in 1:4) {
+    if (abs(p[k]) < 1e-12) {
+      if (q[k] < 0) return(NULL)
+    } else {
+      r <- q[k] / p[k]
+      if (p[k] < 0) t0 <- max(t0, r) else t1 <- min(t1, r)
+      if (t0 > t1) return(NULL)
+    }
+  }
+  c(t0, t1)
+}
+
+# A shape cut to a clip shape: list(mob, note). Shapes inside the clip are
+# kept, shapes outside it dropped. A filled shape that crosses it becomes
+# its boolean intersection with the clip; an unfilled one keeps the parts of
+# its curves inside the clip's bounding box, which is the clip itself for
+# the rectangles R's devices write.
+svg_clip_mobject <- function(mob, clip) {
+  cp <- clip$points
+  box <- c(min(cp[, 1]), max(cp[, 1]), min(cp[, 2]), max(cp[, 2]))
+  mp <- mob$points
+  # Cairo writes coordinates to a few thousandths of a point.
+  eps <- max(0.01, 1e-6 * max(diff(box[1:2]), diff(box[3:4])))
+  if (min(mp[, 1]) >= box[1] - eps && max(mp[, 1]) <= box[2] + eps &&
+      min(mp[, 2]) >= box[3] - eps && max(mp[, 2]) <= box[4] + eps) return(list(mob = mob))
+  if (max(mp[, 1]) < box[1] || min(mp[, 1]) > box[2] || max(mp[, 2]) < box[3] || min(mp[, 2]) > box[4]) {
+    return(list(mob = NULL))
+  }
+  on_edge <- pmin(abs(cp[, 1] - box[1]), abs(cp[, 1] - box[2])) < eps | pmin(abs(cp[, 2] - box[3]), abs(cp[, 2] - box[4])) < eps
+  rect <- all(on_edge)
+  if (!is.null(mob$svg_image)) {
+    return(list(mob = mob, note = if (!rect) "image clipped by a shape that is not a rectangle"))
+  }
+  filled <- any(mob$get_fill_opacities() > 0)
+  if (filled && rect) {
+    # Each closed subpath, as a polygon (curves sampled), cut to the box.
+    polys <- lapply(mob$get_subpaths(), function(sp) {
+      poly <- svg_flatten_curves(sp, eps)
+      clip_polygon_to_box(poly, box)
+    })
+    polys <- Filter(function(p) nrow(p) >= 3, polys)
+    if (!length(polys)) return(list(mob = NULL))
+    pts <- do.call(rbind, lapply(polys, function(p) {
+      p <- rbind(p, p[1, ])
+      a <- p[-nrow(p), , drop = FALSE]
+      b <- p[-1, , drop = FALSE]
+      out <- matrix(0, 4 * nrow(a), 3)
+      out[seq(1, nrow(out), 4), ] <- a
+      out[seq(2, nrow(out), 4), ] <- a + (b - a) / 3
+      out[seq(3, nrow(out), 4), ] <- a + 2 * (b - a) / 3
+      out[seq(4, nrow(out), 4), ] <- b
+      out
+    }))
+    mob$points <- unname(pts)
+    return(list(mob = mob))
+  }
+  if (filled) {
+    cut <- Intersection(mob, clip)
+    if (!cut$has_points()) return(list(mob = NULL))
+    cut$match_style(mob)
+    return(list(mob = cut))
+  }
+  n <- nrow(mp) %/% 4
+  pieces <- list()
+  for (i in seq_len(n)) {
+    ctrl <- mp[(4 * i - 3):(4 * i), , drop = FALSE]
+    chord <- ctrl[4, ] - ctrl[1, ]
+    straight <- max(abs(ctrl[2, ] - ctrl[1, ] - chord / 3), abs(ctrl[3, ] - ctrl[1, ] - 2 * chord / 3)) < eps
+    ts <- if (straight) c(0, 1) else seq(0, 1, length.out = 9)
+    pts <- if (straight) ctrl[c(1, 4), , drop = FALSE] else cubic_basis(ts) %*% ctrl
+    for (k in seq_len(nrow(pts) - 1)) {
+      a <- pts[k, ]
+      b <- pts[k + 1, ]
+      tt <- clip_segment_to_box(a, b, box)
+      if (is.null(tt)) next
+      p0 <- a + tt[1] * (b - a)
+      p1 <- a + tt[2] * (b - a)
+      pieces[[length(pieces) + 1L]] <- rbind(p0, p0 + (p1 - p0) / 3, p0 + 2 * (p1 - p0) / 3, p1)
+    }
+  }
+  if (!length(pieces)) return(list(mob = NULL))
+  mob$points <- unname(do.call(rbind, pieces))
+  list(mob = mob, note = if (!rect) "line clipped by a shape that is not a rectangle")
+}
+
+# The corners of a path of cubic curves: straight curves by their ends,
+# others sampled at 8 steps. The last point, equal to the first for a
+# closed path, is left out.
+svg_flatten_curves <- function(points, eps = 1e-9) {
+  n <- nrow(points) %/% 4
+  out <- list()
+  for (i in seq_len(n)) {
+    ctrl <- points[(4 * i - 3):(4 * i), , drop = FALSE]
+    chord <- ctrl[4, ] - ctrl[1, ]
+    straight <- max(abs(ctrl[2, ] - ctrl[1, ] - chord / 3), abs(ctrl[3, ] - ctrl[1, ] - 2 * chord / 3)) < eps
+    pts <- if (straight) ctrl[1, , drop = FALSE] else cubic_basis(seq(0, 7 / 8, by = 1 / 8)) %*% ctrl
+    out[[i]] <- pts
+  }
+  p <- do.call(rbind, out)
+  if (n) p <- rbind(p, points[4 * n, ])
+  keep <- c(TRUE, rowSums(abs(diff(p))) > 0)
+  p <- p[keep, , drop = FALSE]
+  if (nrow(p) > 1 && sum(abs(p[1, ] - p[nrow(p), ])) < 1e-12) p <- p[-nrow(p), , drop = FALSE]
+  p
+}
+
+# Sutherland and Hodgman: a polygon (rows of points) cut to a box
+# c(xmin, xmax, ymin, ymax).
+clip_polygon_to_box <- function(poly, box) {
+  edges <- list(c(1, 1, box[1]), c(1, -1, box[2]), c(2, 1, box[3]), c(2, -1, box[4]))
+  for (e in edges) {
+    if (!nrow(poly)) break
+    k <- e[1]
+    inside <- function(p) e[2] * (p[k] - e[3]) >= 0
+    out <- list()
+    n <- nrow(poly)
+    for (i in seq_len(n)) {
+      cur <- poly[i, ]
+      prev <- poly[if (i == 1) n else i - 1, ]
+      if (inside(cur)) {
+        if (!inside(prev)) out[[length(out) + 1L]] <- prev + (cur - prev) * (e[3] - prev[k]) / (cur[k] - prev[k])
+        out[[length(out) + 1L]] <- cur
+      } else if (inside(prev)) {
+        out[[length(out) + 1L]] <- prev + (cur - prev) * (e[3] - prev[k]) / (cur[k] - prev[k])
+      }
+    }
+    poly <- if (length(out)) do.call(rbind, out) else matrix(0, 0, 3)
+  }
+  poly
+}

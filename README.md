@@ -200,7 +200,9 @@ output$scene <- renderManim({
 ## Other R graphics and data
 
 `as_mobject()` turns a ggplot2 chart, a grid grob or base graphics into a
-vector mobject that can be animated, and `GraphClass$from_igraph()` builds a
+vector mobject that can be animated. Clipped viewports stay clipped, raster
+layers become image mobjects, and `raster = TRUE` gives the whole plot as
+one image. Also, `GraphClass$from_igraph()` builds a
 `Graph()` from an igraph graph.
 
 ## R Markdown and Quarto
