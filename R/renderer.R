@@ -39,6 +39,9 @@ RendererClass <- R6::R6Class("Renderer", lock_objects = FALSE,
     replaying_cache = FALSE,
     original_skipping_status = FALSE,
     animations_hashes = NULL,
+    # One record per play for render_report(): its hash, whether it came
+    # from the cache and why, and the seconds it took.
+    play_log = NULL,
     last_frame = NULL,
     # When set (by scene_frame()), the time of the one frame to draw.
     target_time = NULL,
@@ -139,6 +142,7 @@ RendererClass <- R6::R6Class("Renderer", lock_objects = FALSE,
       fw <- self$file_writer
       hash <- NULL
       self$replaying_cache <- FALSE
+      started <- proc.time()[[3]]
       if (self$skip_animations) {
       } else if (isTRUE(cfg("disable_caching"))) {
         logger$info("Caching disabled.")
@@ -166,8 +170,10 @@ RendererClass <- R6::R6Class("Renderer", lock_objects = FALSE,
         # Frames that are drawn advance the time in add_frame().
         if (self$skip_animations) self$time <- self$time + scene$played_time
       }
+      cached <- self$replaying_cache
       self$replaying_cache <- FALSE
       fw$end_animation(!self$skip_animations)
+      self$play_log <- record_play(self$play_log, self$num_plays, hash, cached, started)
       self$num_plays <- self$num_plays + 1
       invisible(self)
     },

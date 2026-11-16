@@ -6,6 +6,10 @@
   encoding in the background while the next play renders, up to that many
   segments at once (on Unix-like systems). A scene of eight plays at high
   quality rendered in 3.6 s with four encoders against 7.3 s with one.
+* `render_report()` tells what a render ran: the renderer and where it
+  runs, the output format and size, the time and cache decision (with its
+  reason) of each play, the mobjects and points in the last frame, the
+  ffmpeg and encoder used, and the settings that had no effect.
 * `renderManim(async = TRUE)` renders in a background R process through
   promises and future, so a Shiny app keeps serving other sessions while a
   scene renders.

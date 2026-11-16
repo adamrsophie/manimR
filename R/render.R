@@ -54,6 +54,7 @@ render <- function(scene, quality = NULL, format = NULL, output_file = NULL, sav
   if (!is.null(module_name)) settings$module_name <- module_name
   if (!is.null(preview)) settings$preview <- preview
   is_instance <- inherits(scene, "Scene")
+  fixed <- character()
   if (is_instance) {
     # As upstream, a scene reads the camera settings when it is created, so
     # they cannot change an existing instance.
@@ -66,6 +67,8 @@ render <- function(scene, quality = NULL, format = NULL, output_file = NULL, sav
               "or set manim_config() before creating the scene.", call. = FALSE)
     }
   }
+  started <- proc.time()[[3]]
+  report <- NULL
   out <- with_manim_config(settings, {
     repeat {
       obj <- instantiate_scene(scene)
@@ -77,10 +80,11 @@ render <- function(scene, quality = NULL, format = NULL, output_file = NULL, sav
       # upstream's command line does.
       if (!isTRUE(res) || is_instance) break
     }
+    report <- render_report_of(obj, settings, proc.time()[[3]] - started, fixed)
     if (isTRUE(res)) NULL else res
   })
   if (is.null(out)) return(invisible(NULL))
-  invisible(structure(normalizePath(out, mustWork = FALSE), class = "manim_output"))
+  invisible(structure(normalizePath(out, mustWork = FALSE), class = "manim_output", report = report))
 }
 
 instantiate_scene <- function(scene) {

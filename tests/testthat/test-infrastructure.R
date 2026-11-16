@@ -511,3 +511,26 @@ test_that("renderManim(async = TRUE) renders through a future", {
     expect_true(file.exists(file.path(tempdir(), "manimR-shiny-out", dirname(src), basename(src))))
   })
 })
+
+test_that("render_report() records plays, cache reasons and settings without effect", {
+  skip_if_not(nzchar(Sys.which("ffmpeg")))
+  skip_on_cran()
+  construct <- function(self) {
+    s <- Square()
+    self$play(Create(s))
+    self$play(s$animate$shift(RIGHT))
+  }
+  dir <- withr_tempdir()
+  first <- render_report(suppressMessages(render(construct, quality = "l", media_dir = dir)))
+  expect_s3_class(first, "manim_render_report")
+  expect_equal(first$renderer, "cairo")
+  expect_equal(first$plays$reason, rep("new hash, rendered", 2))
+  expect_equal(first$encoder$codec, "libx264")
+  second <- render_report(suppressMessages(render(construct, quality = "l", media_dir = dir, encoder_queue_size = 4)))
+  expect_true(all(second$plays$cached))
+  expect_equal(second$plays$hash, first$plays$hash)
+  expect_match(second$no_effect, "encoder_queue_size")
+  expect_output(print(second), "2 hash found in cache")
+  off <- render_report(suppressMessages(render(construct, quality = "l", media_dir = dir, disable_caching = TRUE)))
+  expect_equal(off$plays$reason, rep("caching disabled", 2))
+})

@@ -1394,6 +1394,7 @@ OpenGLRendererClass <- R6::R6Class("OpenGLRenderer", inherit = RendererClass, lo
       fw <- self$file_writer
       hash <- NULL
       self$replaying_cache <- FALSE
+      started <- proc.time()[[3]]
       if (!self$skip_animations) {
         if (isTRUE(cfg("disable_caching"))) {
           hash <- sprintf("uncached_%05d", self$num_plays)
@@ -1425,8 +1426,10 @@ OpenGLRendererClass <- R6::R6Class("OpenGLRenderer", inherit = RendererClass, lo
         scene$play_internal()
         played <- scene$played_time
       }
+      cached <- self$replaying_cache
       self$replaying_cache <- FALSE
       fw$end_animation(!self$skip_animations)
+      self$play_log <- record_play(self$play_log, self$num_plays, hash, cached, started)
       # A conditional wait that stops early covers only the frames it ran.
       self$time <- self$time + played
       self$num_plays <- self$num_plays + 1
