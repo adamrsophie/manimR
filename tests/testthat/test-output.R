@@ -475,3 +475,65 @@ test_that("the background job addin renders into this session's media folder", {
                                   deparse(normalizePath(default_media_dir(), mustWork = FALSE))))
   expect_match(script[2], "render_file", fixed = TRUE)
 })
+
+test_that("as_mobject() keeps clipping and raster images", {
+  skip_if_not(svg_works(), "R's svg() device does not work")
+  clipped <- function() {
+    grid::pushViewport(grid::viewport(width = 0.5, height = 0.5, clip = "on"))
+    grid::grid.rect(width = 2, height = 2, gp = grid::gpar(fill = "black"))
+    grid::grid.lines(c(-1, 2), c(-1, 2))
+  }
+  # Drawn at 2 x 2 inches (144 points) and kept at SVG size: the viewport
+  # clips both shapes to its 72 point square.
+  m <- as_mobject(clipped, width = 2, height = 2, height_units = NULL)
+  expect_length(m$submobjects, 2)
+  for (s in m$submobjects) {
+    expect_equal(s$width, 72, tolerance = 1e-3)
+    expect_equal(s$height, 72, tolerance = 1e-3)
+  }
+  # Interpolated and plain images become ImageMobjects in their place.
+  colors <- matrix(c("red", "blue", "green", "white"), 2)
+  for (interpolate in c(TRUE, FALSE)) {
+    g <- as_mobject(grid::rasterGrob(colors, interpolate = interpolate))
+    expect_s3_class(g, "Group")
+    images <- Filter(function(s) inherits(s, "ImageMobject"), g$submobjects)
+    expect_length(images, 1)
+  }
+  frame <- native_raster_to_array(scene_frame(function(self) self$add(g), quality = "l"))
+  h <- dim(frame)[1]
+  w <- dim(frame)[2]
+  at <- function(dx, dy) frame[round(h / 2 + dy * h * 0.2), round(w / 2 + dx * h * 0.2), 1:3]
+  expect_equal(at(-1, -1), c(255, 0, 0))
+  expect_equal(at(1, -1), c(0, 255, 0))
+  expect_equal(at(-1, 1), c(0, 0, 255))
+  # raster = TRUE draws the whole plot as one image.
+  r <- as_mobject(clipped, raster = TRUE, res = 50, height_units = 3)
+  expect_s3_class(r, "ImageMobject")
+  expect_equal(r$height, 3)
+})
+
+test_that("as_mobject() of a ggplot with a raster layer matches its picture", {
+  skip_if_not(svg_works(), "R's svg() device does not work")
+  skip_if_not_installed("ggplot2")
+  skip_on_cran()
+  d <- data.frame(x = rep(1:3, 2), y = rep(1:2, each = 3), z = 1:6)
+  p <- ggplot2::ggplot(d, ggplot2::aes(x, y, fill = z)) + ggplot2::geom_raster() + ggplot2::geom_point()
+  frame <- function(m) native_raster_to_array(scene_frame(function(self) self$add(m), quality = "l"))
+  expect_lt(mean(abs(frame(as_mobject(p)) - frame(as_mobject(p, raster = TRUE)))), 4)
+})
+
+test_that("SVGMobject reports the features it cannot draw", {
+  file <- file.path(withr_tempdir(), "masked.svg")
+  writeLines(c('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">',
+               '<defs><mask id="m"><rect width="5" height="5" fill="white"/></mask>',
+               '<clipPath id="c"><rect width="5" height="5"/></clipPath></defs>',
+               '<rect width="10" height="10" mask="url(#m)"/>',
+               '<rect width="10" height="10" clip-path="url(#c)"/></svg>'), file)
+  plain <- SVGMobject(file, use_svg_cache = FALSE)
+  expect_setequal(plain$unsupported, c("mask", "clip-path"))
+  # Upstream's import ignores clips: both squares keep their size.
+  expect_equal(plain$submobjects[[2]]$width, plain$submobjects[[1]]$width)
+  clipped <- SVGMobject(file, use_svg_cache = FALSE, clip_paths = TRUE, height = NULL)
+  expect_equal(clipped$unsupported, "mask")
+  expect_equal(clipped$submobjects[[2]]$width, 5, tolerance = 1e-6)
+})

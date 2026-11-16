@@ -4,7 +4,16 @@
 \alias{as_mobject}
 \title{Turn R plots into mobjects}
 \usage{
-as_mobject(x, width = 7, height = 5, bg = "transparent", height_units = 6, ...)
+as_mobject(
+  x,
+  width = 7,
+  height = 5,
+  bg = "transparent",
+  height_units = 6,
+  raster = FALSE,
+  res = 150,
+  ...
+)
 }
 \arguments{
 \item{x}{The plot.}
@@ -17,10 +26,16 @@ only the plot's own elements.}
 \item{height_units}{Height of the mobject in scene units, or \code{NULL} to
 keep the SVG size.}
 
+\item{raster}{Draw the plot as one image (\code{\link[=ImageMobject]{ImageMobject()}}) instead of
+importing its shapes.}
+
+\item{res}{Resolution of the image in pixels per inch when \code{raster = TRUE}.}
+
 \item{...}{Passed to \code{\link[=SVGMobject]{SVGMobject()}}.}
 }
 \value{
-An \code{\link[=SVGMobject]{SVGMobject()}}.
+An \code{\link[=SVGMobject]{SVGMobject()}}; a \code{\link[=Group]{Group()}} when the plot has raster images;
+an \code{\link[=ImageMobject]{ImageMobject()}} when \code{raster = TRUE}.
 }
 \description{
 \code{as_mobject()} draws a plot into an SVG file with R's Cairo \code{svg()}
@@ -39,6 +54,14 @@ is drawn as it is;
 The plot is drawn on a white or transparent background (\code{bg}), at
 \code{width} x \code{height} inches; the mobject is then scaled to \code{height_units}
 scene units.
+
+Clipping is kept: shapes outside a clipped viewport (a ggplot panel, say)
+are dropped and shapes that cross it are cut. Raster images, such as a
+\code{rasterGrob()} or \code{geom_raster()}, become \code{\link[=ImageMobject]{ImageMobject()}}s; the result is
+then a \code{\link[=Group]{Group()}} of the vector parts and the images in drawing order. SVG
+features the import cannot reproduce (masks, other filters) are named in
+a warning; \code{raster = TRUE} then gives a faithful picture of the plot as a
+single image.
 }
 \examples{
 \dontshow{if (requireNamespace("ggplot2", quietly = TRUE) && local({f <- tempfile(fileext = ".svg"); d <- grDevices::dev.cur(); suppressWarnings(try(grDevices::svg(f), silent = TRUE)); if (grDevices::dev.cur() != d) grDevices::dev.off(); file.exists(f)})) withAutoprint(\{ # examplesIf}

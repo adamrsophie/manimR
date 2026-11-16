@@ -22,6 +22,8 @@ SVGMobject(
   svg_default = NULL,
   path_string_config = NULL,
   use_svg_cache = TRUE,
+  clip_paths = FALSE,
+  keep_images = FALSE,
   ...
 )
 
@@ -49,6 +51,13 @@ list with \code{color}, \code{opacity}, \code{fill_color}, \code{fill_opacity},
 \item{path_string_config}{Arguments for \code{\link[=VMobjectFromSVGPath]{VMobjectFromSVGPath()}}.}
 
 \item{use_svg_cache}{Reuse earlier imports of the same file.}
+
+\item{clip_paths}{Apply the file's \code{clip-path} references: shapes outside
+a clip are dropped and shapes that cross it are cut to it. Off by
+default, as upstream ignores clips; \code{\link[=as_mobject]{as_mobject()}} turns it on.}
+
+\item{keep_images}{Keep \verb{<image>} elements as placeholder rectangles that
+\code{\link[=as_mobject]{as_mobject()}} replaces by \code{\link[=ImageMobject]{ImageMobject()}}s. Off by default.}
 
 \item{...}{Passed to \code{\link[=VMobject]{VMobject()}}.}
 

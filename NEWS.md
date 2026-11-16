@@ -2,6 +2,18 @@
 
 ## Bug fixes
 
+* `as_mobject()` keeps clipping: shapes outside a clipped viewport, such
+  as a ggplot panel, are dropped, and shapes that cross it are cut. Content
+  outside the page is clipped too, so a plot keeps its size.
+* `as_mobject()` keeps raster images (`rasterGrob()`, `geom_raster()`,
+  color bars) as `ImageMobject()`s; a plot with images is returned as a
+  `Group()` in drawing order. It also reads the compositing filters that
+  Cairo writes around interpolated images, which before turned the whole
+  plot into a black rectangle.
+* `as_mobject(raster = TRUE)` draws the plot as one image, and
+  `as_mobject()` warns about SVG features it cannot reproduce.
+* `SVGMobject()` gains `clip_paths` and `keep_images` (both off, as
+  upstream) and lists what it could not draw in `$unsupported`.
 * A play whose movie file comes from the cache now steps through every frame
   time without drawing, so updaters that depend on `dt` leave the scene as
   a fresh render does. Before, the play took one step of its whole
