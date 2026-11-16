@@ -7,7 +7,7 @@
 \usage{
 manimOutput(outputId, width = "100\%")
 
-renderManim(expr, env = parent.frame(), quoted = FALSE, ...)
+renderManim(expr, env = parent.frame(), quoted = FALSE, ..., async = FALSE)
 }
 \arguments{
 \item{outputId}{Output name.}
@@ -20,6 +20,12 @@ renderManim(expr, env = parent.frame(), quoted = FALSE, ...)
 
 \item{...}{\code{\link[=render]{render()}} arguments for the scene, such as \code{quality = "l"}
 (the default) or \code{format = "gif"}.}
+
+\item{async}{Whether to render in a background R process, so the app
+keeps serving other sessions and outputs meanwhile. Needs the promises
+and future packages and a parallel future plan, such as
+\code{future::plan(future::multisession)}; the scene and the objects it
+refers to are copied to that process.}
 }
 \value{
 \code{manimOutput()} returns UI; \code{renderManim()} a render function.

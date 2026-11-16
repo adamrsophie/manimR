@@ -492,3 +492,22 @@ test_that("segments encoded in the background give the same video", {
                "ffmpeg")
   expect_length(list.files(bad, pattern = "\\.part", recursive = TRUE), 0)
 })
+
+test_that("renderManim(async = TRUE) renders through a future", {
+  skip_if_not_installed("shiny")
+  skip_if_not_installed("promises")
+  skip_if_not_installed("future")
+  skip_on_cran()
+  old <- future::plan(future::sequential)
+  on.exit(future::plan(old), add = TRUE)
+  server <- function(input, output, session) {
+    output$scene <- renderManim(function(self) self$add(Square(fill_opacity = 1)), format = "png",
+                                pixel_width = 64, pixel_height = 36, async = TRUE)
+  }
+  shiny::testServer(server, {
+    html <- as.character(output$scene$html)
+    src <- sub('^src="', "", sub('"$', "", regmatches(html, regexpr('src="[^"]+"', html))))
+    expect_match(src, "[.]png$")
+    expect_true(file.exists(file.path(tempdir(), "manimR-shiny-out", dirname(src), basename(src))))
+  })
+})

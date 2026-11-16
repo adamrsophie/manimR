@@ -17,6 +17,11 @@
 #' @param env,quoted The environment of `expr`, and whether it is quoted.
 #' @param ... [render()] arguments for the scene, such as `quality = "l"`
 #'   (the default) or `format = "gif"`.
+#' @param async Whether to render in a background R process, so the app
+#'   keeps serving other sessions and outputs meanwhile. Needs the promises
+#'   and future packages and a parallel future plan, such as
+#'   `future::plan(future::multisession)`; the scene and the objects it
+#'   refers to are copied to that process.
 #' @return `manimOutput()` returns UI; `renderManim()` a render function.
 #' @export
 #' @examplesIf interactive() && requireNamespace("shiny", quietly = TRUE)
@@ -38,8 +43,11 @@ manimOutput <- function(outputId, width = "100%") {
 
 #' @rdname manimOutput
 #' @export
-renderManim <- function(expr, env = parent.frame(), quoted = FALSE, ...) {
+renderManim <- function(expr, env = parent.frame(), quoted = FALSE, ..., async = FALSE) {
   if (!requireNamespace("shiny", quietly = TRUE)) stop("renderManim() needs the shiny package.", call. = FALSE)
+  if (async && !(requireNamespace("promises", quietly = TRUE) && requireNamespace("future", quietly = TRUE))) {
+    stop("renderManim(async = TRUE) needs the promises and future packages.", call. = FALSE)
+  }
   func <- shiny::exprToFunction(expr, env, quoted)
   args <- list(...)
   if (is.null(args$quality)) args$quality <- "l"
@@ -50,11 +58,9 @@ renderManim <- function(expr, env = parent.frame(), quoted = FALSE, ...) {
   # never show each other's renders.
   output_id <- substr(digest::digest(list(Sys.time(), stats::runif(1)), algo = "xxhash64"), 1, 10)
   shown <- new.env(parent = emptyenv())
-  shiny::renderUI({
-    x <- func()
-    path <- if (is.character(x)) unclass(x) else unclass(do.call(render, c(list(x), args)))
+  show <- function(path, session) {
     if (is.null(path) || !file.exists(path) || dir.exists(path)) return(NULL)
-    pub <- shiny_session_dir(shiny::getDefaultReactiveDomain())
+    pub <- shiny_session_dir(session)
     tag <- substr(digest::digest(file = path, algo = "xxhash64"), 1, 12)
     name <- paste0(output_id, "-", tag, ".", tolower(tools::file_ext(path)))
     dest <- file.path(pub$dir, name)
@@ -69,6 +75,15 @@ renderManim <- function(expr, env = parent.frame(), quoted = FALSE, ...) {
     } else {
       shiny::tags$img(src = src, style = "width:100%", alt = "manimR scene")
     }
+  }
+  shiny::renderUI({
+    x <- func()
+    session <- shiny::getDefaultReactiveDomain()
+    if (is.character(x)) return(show(unclass(x), session))
+    if (!async) return(show(unclass(do.call(render, c(list(x), args))), session))
+    job <- promises::future_promise(unclass(do.call(manimR::render, c(list(x), args))),
+                                    globals = list(x = x, args = args), packages = "manimR", seed = TRUE)
+    promises::then(job, function(path) show(path, session))
   })
 }
 
