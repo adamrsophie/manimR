@@ -222,14 +222,40 @@ graph_layout_spring <- function(graph, scale = 2, k = NULL, pos = NULL, fixed = 
 graph_shortest_paths <- function(graph) {
   ids <- graph$vertex_ids()
   n <- length(ids)
+  adj <- lapply(graph_neighbor_lists(graph), match, ids)
   D <- matrix(Inf, n, n, dimnames = list(ids, ids))
-  diag(D) <- 0
-  for (e in graph$edge_pairs) {
-    D[e[1], e[2]] <- min(D[e[1], e[2]], 1)
-    if (!graph$directed) D[e[2], e[1]] <- min(D[e[2], e[1]], 1)
+  # A breadth first search from each vertex: O(n m) instead of the n^3 of
+  # Floyd and Warshall, for the sparse graphs drawn here.
+  for (s in seq_len(n)) {
+    d <- rep(Inf, n)
+    d[s] <- 0
+    frontier <- s
+    level <- 0
+    while (length(frontier)) {
+      level <- level + 1
+      nxt <- unique(unlist(adj[frontier], use.names = FALSE))
+      nxt <- nxt[is.infinite(d[nxt])]
+      d[nxt] <- level
+      frontier <- nxt
+    }
+    D[s, ] <- d
   }
-  for (k in seq_len(n)) D <- pmin(D, outer(D[, k], D[k, ], `+`))
   D
+}
+
+# The neighbors of every vertex (successors for a directed graph), named by
+# vertex, in edge order as `$neighbors()` gives them.
+graph_neighbor_lists <- function(graph) {
+  ids <- graph$vertex_ids()
+  from <- vapply(graph$edge_pairs, `[`, "", 1)
+  to <- vapply(graph$edge_pairs, `[`, "", 2)
+  if (!graph$directed) {
+    # Each edge seen from both ends, kept in edge order.
+    both_from <- c(rbind(from, to))
+    to <- c(rbind(to, from))
+    from <- both_from
+  }
+  lapply(split(to, factor(from, levels = ids)), unique)
 }
 
 # Kamada and Kawai layout, as networkx.kamada_kawai_layout: minimizes the
@@ -317,7 +343,8 @@ graph_layout_tree <- function(graph, scale = 2, root_vertex = NULL, vertex_spaci
   if (is.null(root_vertex)) stop("The tree layout requires the root_vertex parameter", call. = FALSE)
   if (!graph$is_tree()) stop("The tree layout must be used with trees", call. = FALSE)
   root <- as.character(root_vertex)
-  nb <- function(v) graph$neighbors(v)
+  adj <- graph_neighbor_lists(graph)
+  nb <- function(v) adj[[v]]
   children <- list()
   children[[root]] <- nb(root)
   stack <- list(children[[root]])

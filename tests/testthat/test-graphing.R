@@ -483,3 +483,23 @@ test_that("a vectorized FunctionGraph matches the scalar one", {
   three <- FunctionGraph(function(x) x^2, x_range = c(0, 1, 0.5), use_vectorized = TRUE)
   expect_equal(three$points, FunctionGraph(function(x) x^2, x_range = c(0, 1, 0.5))$points, tolerance = 1e-12)
 })
+
+test_that("graph traversal helpers match a direct computation", {
+  set.seed(2)
+  for (directed in c(FALSE, TRUE)) {
+    n <- 25
+    pairs <- Filter(function(x) x[1] != x[2], unique(lapply(1:50, function(i) sort(sample(n, 2)))))
+    g <- if (directed) DiGraph(1:n, pairs) else Graph(1:n, pairs)
+    lists <- graph_neighbor_lists(g)
+    for (v in g$vertex_ids()) expect_identical(unname(lists[[v]]), g$neighbors(v))
+    # Floyd and Warshall as the reference.
+    D <- matrix(Inf, n, n)
+    diag(D) <- 0
+    for (p in pairs) {
+      D[p[1], p[2]] <- 1
+      if (!directed) D[p[2], p[1]] <- 1
+    }
+    for (k in 1:n) D <- pmin(D, outer(D[, k], D[k, ], `+`))
+    expect_equal(unname(graph_shortest_paths(g)), D)
+  }
+})
