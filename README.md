@@ -265,8 +265,6 @@ embedded the same way when it is printed.
   `max_inflight_encoders` and `encoder_queue_size` are accepted but have no
   effect.
 * Copy mobjects with `$copy()`; R6's `$clone()` keeps the original's id.
-* `ImplicitFunction()` traces contours with `grDevices::contourLines()`
-  instead of an adaptive quadtree.
 * Graph layouts, including `"planar"`, are native ports of the networkx
   algorithms, so igraph is not required. Where networkx picks an arbitrary
   element of a set, the first vertex is used, so a planar drawing can differ

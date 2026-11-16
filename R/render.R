@@ -100,9 +100,12 @@ print.manim_output <- function(x, ...) {
 #'
 #' In a knitr document, the value of [render()] printed at the end of an `r`
 #' chunk is embedded: a video player for MP4, WebM and MOV files in HTML
-#' output, an image for GIF and PNG files (and a note with the path in other
-#' output formats). The file is copied next to the chunk's figures, under a
-#' name made of the chunk label and a hash of its contents.
+#' output, an image for GIF and PNG files, and a note with the path for a
+#' video in other output formats. The `manim` chunk engine differs there: it
+#' renders a GIF for Markdown and Word and the last frame for LaTeX, so use
+#' the engine, or `render(format = "gif")`, for documents that are not HTML.
+#' The file is copied next to the chunk's figures, under a name made of the
+#' chunk label and a hash of its contents.
 #'
 #' @param x A `manim_output`, the value of [render()].
 #' @param options knitr chunk options; `out.width` sets the width.

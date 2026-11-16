@@ -474,3 +474,12 @@ test_that("ThreeDAxes give every axis piece upstream's sheen along the light", {
   on.exit(grDevices::dev.off())
   expect_lt(system.time(cam$draw_frame(list(ax)))[["user.self"]], 20)
 })
+
+test_that("a vectorized FunctionGraph matches the scalar one", {
+  scalar <- FunctionGraph(cos, x_range = c(0, 1, 0.1))
+  vectorized <- FunctionGraph(cos, x_range = c(0, 1, 0.1), use_vectorized = TRUE)
+  expect_equal(vectorized$points, scalar$points, tolerance = 1e-12)
+  # Three samples: the rows must still be read as coordinates.
+  three <- FunctionGraph(function(x) x^2, x_range = c(0, 1, 0.5), use_vectorized = TRUE)
+  expect_equal(three$points, FunctionGraph(function(x) x^2, x_range = c(0, 1, 0.5))$points, tolerance = 1e-12)
+})

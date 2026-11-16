@@ -26,7 +26,7 @@ Imports:
     grDevices,
     ragg,
     systemfonts (>= 1.2.0),
-    textshaping,
+    textshaping (>= 0.4.0),
     xml2,
     png,
     digest,

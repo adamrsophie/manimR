@@ -257,7 +257,11 @@ Scene <- R6::R6Class("Scene", lock_objects = FALSE,
       if (is.null(wait_anim$is_static_wait)) {
         should <- self$always_update_mobjects || length(self$updaters) > 0 ||
           !is.null(wait_anim$stop_condition) ||
-          any(vapply(self$get_mobject_family_members(), function(m) m$has_time_based_updater(), logical(1)))
+          any(vapply(self$get_mobject_family_members(), function(m) m$has_time_based_updater(), logical(1))) ||
+          # A mesh with a time based updater changes during the wait too.
+          any(vapply(self$meshes, function(obj) {
+            any(vapply(obj$get_family(), function(m) isTRUE(m$has_time_based_updater()), logical(1)))
+          }, logical(1)))
         wait_anim$is_static_wait <- !should
       }
       !isTRUE(wait_anim$is_static_wait)
@@ -416,6 +420,7 @@ Scene <- R6::R6Class("Scene", lock_objects = FALSE,
         a$interpolate(if (rt > 0) t / rt else 1)
       }
       self$update_mobjects(dt)
+      self$update_meshes(dt)
       self$update_self(dt)
       invisible(self)
     },

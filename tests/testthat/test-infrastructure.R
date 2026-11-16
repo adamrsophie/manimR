@@ -446,3 +446,22 @@ test_that("a wait that stops early advances the clock by the frames it ran", {
     expect_equal(clock, 0.4, info = renderer)
   }
 })
+
+test_that("mesh updaters run while a scene plays", {
+  skip_if_not(nzchar(Sys.which("ffmpeg")))
+  skip_on_cran()
+  elapsed <- NULL
+  construct <- function(self) {
+    total <- 0
+    quad <- FullScreenQuad(self$renderer$context, fragment_shader_source = paste(
+      "#version 330", "out vec4 frag_color;", "void main() { frag_color = vec4(0.2, 0.4, 0.6, 1.0); }", sep = "\n"))
+    quad$add_updater(function(m, dt) total <<- total + dt)
+    self$add(quad)
+    # The wait is not frozen: the mesh's updater depends on time.
+    self$wait(1)
+    elapsed <<- total
+  }
+  suppressMessages(render(construct, quality = "l", frame_rate = 10, renderer = "opengl", media_dir = withr_tempdir(),
+                          scene_name = "MeshTime"))
+  expect_equal(elapsed, 0.9, tolerance = 1e-9)
+})
