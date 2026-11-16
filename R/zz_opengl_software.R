@@ -1380,6 +1380,7 @@ OpenGLRendererClass <- R6::R6Class("OpenGLRenderer", inherit = RendererClass, lo
       scene$compile_animation_data(...)
       fw <- self$file_writer
       hash <- NULL
+      self$replaying_cache <- FALSE
       if (!self$skip_animations) {
         if (isTRUE(cfg("disable_caching"))) {
           hash <- sprintf("uncached_%05d", self$num_plays)
@@ -1389,6 +1390,7 @@ OpenGLRendererClass <- R6::R6Class("OpenGLRenderer", inherit = RendererClass, lo
           if (fw$is_already_cached(hash)) {
             logger$info("Animation %d : Using cached data (hash : %s)", self$num_plays, hash)
             self$skip_animations <- TRUE
+            self$replaying_cache <- TRUE
           }
         }
       }
@@ -1405,11 +1407,15 @@ OpenGLRendererClass <- R6::R6Class("OpenGLRenderer", inherit = RendererClass, lo
         }
         if (!is.null(self$window)) self$window$swap_buffers()
         self$animation_elapsed_time <- scene$duration
+        played <- scene$duration
       } else {
         scene$play_internal()
+        played <- scene$played_time
       }
+      self$replaying_cache <- FALSE
       fw$end_animation(!self$skip_animations)
-      self$time <- self$time + scene$duration
+      # A conditional wait that stops early covers only the frames it ran.
+      self$time <- self$time + played
       self$num_plays <- self$num_plays + 1
       invisible(self)
     },

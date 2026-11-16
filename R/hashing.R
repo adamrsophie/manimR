@@ -37,17 +37,33 @@ env_key <- function(env) sub("^<environment: (.*)>$", "\\1", utils::capture.outp
 # A plain, serializable description of a value: numbers, strings and
 # matrices as they are; mobjects and animations by their state; functions by
 # their code and the values they use from their environments (upstream's
-# inspect.getclosurevars globals and nonlocals); other environments are left
-# out.
+# inspect.getclosurevars globals and nonlocals); other R6 objects (meshes,
+# say) by their data fields, and plain environments that a function
+# captures by their bindings, so that changing a value an updater reads
+# changes the hash. The global environment and package environments are
+# left out: a function's globals are taken by name instead.
 hash_snapshot <- function(x, depth = 0, memo = NULL) {
   if (depth > 12 || is.null(x)) return(NULL)
   if (is_mobject(x)) return(snapshot_mobject(x, depth, memo))
   if (inherits(x, "Animation")) return(snapshot_animation(x, depth, memo))
   if (is.function(x)) return(snapshot_function(x, depth, memo))
-  if (is.environment(x)) return(NULL)
+  if (inherits(x, "R6")) return(snapshot_r6(x, depth, memo))
+  if (is.environment(x)) return(snapshot_environment(x, depth, memo))
   if (is.atomic(x)) return(x)
   if (is.list(x)) return(lapply(x, hash_snapshot, depth = depth + 1, memo = memo))
   NULL
+}
+
+snapshot_r6 <- function(x, depth, memo = NULL) {
+  if (!memo_visit(memo, paste0("r6:", env_key(x)))) return(HASH_ALREADY_PROCESSED)
+  list(class = class(x)[1], fields = lapply(data_fields(x), hash_snapshot, depth = depth + 1, memo = memo))
+}
+
+snapshot_environment <- function(env, depth, memo = NULL) {
+  if (identical(env, globalenv()) || closure_boundary(env)) return(NULL)
+  if (!memo_visit(memo, paste0("env:", env_key(env)))) return(HASH_ALREADY_PROCESSED)
+  nms <- sort(ls(env, all.names = TRUE))
+  lapply(stats::setNames(mget(nms, envir = env), nms), hash_snapshot, depth = depth + 1, memo = memo)
 }
 
 # Environments whose bindings are not values captured by a function: the
@@ -151,8 +167,12 @@ get_hash_from_play_call <- function(scene_object, camera_object, animations_list
   anims <- vapply(animations_list[anim_order], function(a) digest::digest(hash_snapshot(a, memo = memo), algo = "sha256"), "")
   mobs <- vapply(current_mobjects_list, function(m) digest::digest(hash_snapshot(m, memo = memo), algo = "sha256"), "")
   state <- digest::digest(hash_snapshot(renderer_state, memo = memo), algo = "sha256")
+  # The scene's own updaters run every frame of the play, so they belong to
+  # its identity too.
+  scene_updaters <- if (is.environment(scene_object)) get0("updaters", envir = scene_object, inherits = FALSE)
+  scene <- digest::digest(lapply(scene_updaters, hash_snapshot, memo = memo), algo = "sha256")
   parts <- list(backend = backend, encoder = encoder_fingerprint, camera = camera_json, animations = anims,
-                mobjects = mobs, renderer = state)
+                mobjects = mobs, renderer = state, scene = scene)
   feed <- unlist(lapply(names(parts), function(n) c(n, length(parts[[n]]), parts[[n]])))
   digest::digest(paste(nchar(feed, type = "bytes"), feed, sep = ":", collapse = "|"), algo = "sha256",
                  serialize = FALSE)

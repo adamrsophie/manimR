@@ -178,6 +178,19 @@ test_that("play hashes include private settings and global values", {
   b <- get_hash_from_play_call(sc, sc$camera, list(), list(m1))
   expect_false(identical(a, b))
   expect_match(a, "^[0-9a-f]{64}$")
+  # A value read from a captured environment counts, as do the scene's own
+  # updaters and the state of other R6 objects such as meshes.
+  params <- new.env()
+  params$speed <- 1
+  m2 <- Square()$add_updater(function(m, dt) m$shift(params$speed * dt * RIGHT))
+  a <- get_hash_from_play_call(sc, sc$camera, list(), list(m2))
+  params$speed <- 2
+  expect_false(identical(a, get_hash_from_play_call(sc, sc$camera, list(), list(m2))))
+  before <- get_hash_from_play_call(sc, sc$camera, list(), list(m1))
+  sc$add_updater(function(dt) NULL)
+  expect_false(identical(before, get_hash_from_play_call(sc, sc$camera, list(), list(m1))))
+  sc$updaters <- NULL
+  expect_identical(before, get_hash_from_play_call(sc, sc$camera, list(), list(m1)))
   # Cycles end in placeholders.
   g1 <- Group(Square())
   g2 <- Group(g1)

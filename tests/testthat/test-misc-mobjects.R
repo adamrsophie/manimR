@@ -777,3 +777,25 @@ test_that("Code reads its defaults from the class attributes", {
   b <- Code(code_string = "x <- 1", language = "r", background = "rectangle")
   expect_gt(b$background$width, a$background$width + 1)
 })
+
+test_that("number glyphs are cached by the constructor's captured settings", {
+  box <- function(w) function(s, ...) Rectangle(width = w, height = 1)
+  narrow <- DecimalNumber(1, mob_class = box(1))
+  wide <- DecimalNumber(1, mob_class = box(3))
+  expect_equal(narrow$submobjects[[1]]$width, 1)
+  expect_equal(wide$submobjects[[1]]$width, 3)
+})
+
+test_that("set_value() keeps the glyphs when the displayed text is the same", {
+  d <- DecimalNumber(1.2, mob_class = function(s, ...) Rectangle(width = 0.5, height = 1))
+  digits <- d$submobjects
+  d$set_value(1.201)
+  expect_equal(d$get_value(), 1.201)
+  expect_identical(d$submobjects, digits)
+  d$set_value(3.4)
+  expect_equal(d$num_string, "3.40")
+  expect_false(identical(d$submobjects, digits))
+  d$num_decimal_places <- 3
+  d$set_value(3.4)
+  expect_equal(d$num_string, "3.400")
+})

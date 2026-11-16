@@ -33,6 +33,7 @@ Scene <- R6::R6Class("Scene", lock_objects = FALSE,
     updaters = NULL,
     duration = 0,
     last_t = 0,
+    played_time = 0,
     stop_condition = NULL,
     always_update_mobjects = FALSE,
     random_seed = NULL,
@@ -371,7 +372,12 @@ Scene <- R6::R6Class("Scene", lock_objects = FALSE,
       # override_skip_animations).
       conditional <- length(self$animations) == 1 && inherits(self$animations[[1]], "Wait") &&
         !is.null(self$stop_condition)
-      times <- if (self$renderer$skip_animations && !conditional) self$duration else {
+      # A play whose movie file is cached still steps through every frame
+      # time without drawing, so updaters that use dt end where a fresh
+      # render leaves them.
+      replay <- isTRUE(self$renderer$replaying_cache)
+      stepped <- !self$renderer$skip_animations || conditional || replay
+      times <- if (!stepped) self$duration else {
         n <- ceiling(self$duration * fps - 1e-9)
         if (n > 0) (seq_len(n) - 1) / fps else numeric()
       }
@@ -381,18 +387,23 @@ Scene <- R6::R6Class("Scene", lock_objects = FALSE,
         utils::txtProgressBar(min = 0, max = length(times), style = 3, file = stderr())
       }
       if (!is.null(pb)) on.exit(close(pb), add = TRUE)
+      ran <- 0
       for (k in seq_along(times)) {
         t <- times[k]
         self$update_to_time(t)
-        if (!skip_rendering) self$renderer$render(self, t, self$moving_mobjects)
+        if (!skip_rendering && !replay) self$renderer$render(self, t, self$moving_mobjects)
         if (!is.null(pb)) utils::setTxtProgressBar(pb, k)
+        ran <- k
         if (!is.null(self$stop_condition) && isTRUE(self$stop_condition())) break
       }
+      # The scene time the play covered: the frames that ran, or the whole
+      # duration when a skipped play jumps to its end.
+      self$played_time <- if (stepped) ran / fps else self$duration
       for (a in self$animations) {
         a$finish()
         a$clean_up_from_scene(self)
       }
-      if (!self$renderer$skip_animations) self$update_mobjects(0)
+      if (!self$renderer$skip_animations || replay) self$update_mobjects(0)
       self$renderer$static_image <- NULL
       invisible(self)
     },
