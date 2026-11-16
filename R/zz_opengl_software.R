@@ -607,6 +607,12 @@ software_draw_opengl_image <- function(fbo, mobject, uniforms) {
   if (is.null(hit) || !identical(hit$orig, orig)) {
     texture <- if (!is.null(mobject$path)) orig else opengl_upscale_image(orig, mobject$resampling_algorithm %||% "bicubic")
     hit <- list(orig = orig, texture = texture)
+    # Textures are large and keyed by mobject, so images that are gone would
+    # stay in memory for the session. ponytail: cleared whole when full; an
+    # LRU if scenes with many images thrash it.
+    if (length(software_image_texture_cache) >= 32) {
+      rm(list = ls(software_image_texture_cache), envir = software_image_texture_cache)
+    }
     assign(mobject$mob_id, hit, envir = software_image_texture_cache)
   }
   img <- hit$texture
