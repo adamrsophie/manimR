@@ -36,6 +36,7 @@ RendererClass <- R6::R6Class("Renderer", lock_objects = FALSE,
     time = 0,
     num_plays = 0,
     skip_animations = FALSE,
+    replaying_cache = FALSE,
     original_skipping_status = FALSE,
     animations_hashes = NULL,
     last_frame = NULL,
@@ -137,8 +138,8 @@ RendererClass <- R6::R6Class("Renderer", lock_objects = FALSE,
       if (!is.null(self$target_time)) return(self$play_to_target(scene))
       fw <- self$file_writer
       hash <- NULL
+      self$replaying_cache <- FALSE
       if (self$skip_animations) {
-        self$time <- self$time + scene$duration
       } else if (isTRUE(cfg("disable_caching"))) {
         logger$info("Caching disabled.")
         hash <- sprintf("uncached_%05d", self$num_plays)
@@ -148,7 +149,7 @@ RendererClass <- R6::R6Class("Renderer", lock_objects = FALSE,
         if (fw$is_already_cached(hash)) {
           logger$info("Animation %d : Using cached data (hash : %s)", self$num_plays, hash)
           self$skip_animations <- TRUE
-          self$time <- self$time + scene$duration
+          self$replaying_cache <- TRUE
         }
       }
       fw$add_partial_movie_file(hash)
@@ -159,9 +160,13 @@ RendererClass <- R6::R6Class("Renderer", lock_objects = FALSE,
       if (scene$is_current_animation_frozen_frame()) {
         self$update_frame(scene, mobjects = scene$moving_mobjects)
         self$freeze_current_frame(scene$duration)
+        if (self$skip_animations) self$time <- self$time + scene$duration
       } else {
         scene$play_internal()
+        # Frames that are drawn advance the time in add_frame().
+        if (self$skip_animations) self$time <- self$time + scene$played_time
       }
+      self$replaying_cache <- FALSE
       fw$end_animation(!self$skip_animations)
       self$num_plays <- self$num_plays + 1
       invisible(self)

@@ -159,6 +159,29 @@ test_that("gain_to_background lowers earlier sounds", {
   expect_equal(level(-20) - level(0), -20, tolerance = 0.1)
 })
 
+test_that("a cached play leaves the scene as a fresh render does", {
+  skip_if_not(nzchar(Sys.which("ffmpeg")))
+  skip_on_cran()
+  dir <- withr_tempdir()
+  seen <- new.env()
+  construct <- function(self) {
+    tracker <- ValueTracker(1)
+    tracker$add_updater(function(m, dt) m$increment_value(m$get_value() * dt))
+    self$add(tracker)
+    self$wait(1)
+    seen$value <- c(seen$value, tracker$get_value())
+    seen$time <- c(seen$time, self$renderer$time)
+  }
+  tempconfig(list(frame_rate = 10), {
+    render(construct, quality = "l", media_dir = dir, scene_name = "Replayed", frame_rate = 10)
+    expect_message(render(construct, quality = "l", media_dir = dir, scene_name = "Replayed", frame_rate = 10),
+                   "Using cached data")
+  })
+  expect_length(seen$value, 2)
+  expect_equal(seen$value[2], seen$value[1])
+  expect_equal(seen$time[2], seen$time[1])
+})
+
 test_that("partial movie files are cached by play hash", {
   skip_if_not(nzchar(Sys.which("ffmpeg")))
   skip_on_cran()
@@ -401,4 +424,25 @@ test_that("video widths always carry a CSS unit", {
   expect_equal(manimR:::css_width(NULL), "100%")
   expect_equal(manimR:::css_width(672), "672px")
   expect_equal(manimR:::css_width("80%"), "80%")
+})
+
+test_that("a wait that stops early advances the clock by the frames it ran", {
+  skip_if_not(nzchar(Sys.which("ffmpeg")))
+  skip_on_cran()
+  for (renderer in c("cairo", "opengl")) {
+    clock <- NULL
+    construct <- function(self) {
+      k <- 0
+      self$add(Dot())
+      self$wait(2, stop_condition = function() {
+        k <<- k + 1
+        k >= 4
+      })
+      clock <<- self$renderer$time
+    }
+    suppressMessages(render(construct, quality = "l", frame_rate = 10, renderer = renderer, media_dir = withr_tempdir(),
+                            scene_name = "Stopped"))
+    # Frames at 0, 0.1, 0.2 and 0.3 ran: four frames, 0.4 seconds.
+    expect_equal(clock, 0.4, info = renderer)
+  }
 })

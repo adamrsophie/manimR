@@ -1,5 +1,25 @@
 # manimR (development version)
 
+## Bug fixes
+
+* A play whose movie file comes from the cache now steps through every frame
+  time without drawing, so updaters that depend on `dt` leave the scene as
+  a fresh render does. Before, the play took one step of its whole
+  duration, and later plays could start from a different state.
+* A wait that stops early through `stop_condition` advances the scene clock
+  by the frames it ran under both renderers. The OpenGL renderer advanced
+  it by the whole maximum duration.
+* Play hashes include the scene's own updaters, the bindings of
+  environments that an updater reads (so changing `params$speed` changes
+  the hash), and the state of other R6 objects such as meshes.
+* The glyph cache of `DecimalNumber()` tells apart constructors that have
+  the same code but capture different settings.
+
+## Performance
+
+* `DecimalNumber$set_value()` keeps the glyphs when the displayed text and
+  its settings do not change, and only updates the value.
+
 # manimR 0.1.0
 
 * First release: a native R port of Manim Community 0.22 (the Cairo style

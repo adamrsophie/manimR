@@ -9,7 +9,9 @@ format_number <- function(x, digits, include_sign = FALSE, group_with_commas = T
 
 string_to_mob <- function(string, mob_class, font_size, ...) {
   if (is.null(.manim$string_to_mob_map)) .manim$string_to_mob_map <- new.env(parent = emptyenv())
-  key <- paste(digest::digest(deparse(mob_class)), string, digest::digest(list(...)), sep = "\r")
+  # The constructor's code and the values it captures: two closures with the
+  # same code but different captured settings make different glyphs.
+  key <- paste(digest::digest(snapshot_function(mob_class, 0)), string, digest::digest(list(...)), sep = "\r")
   cached <- .manim$string_to_mob_map[[key]]
   if (is.null(cached)) {
     cached <- mob_class(string, ...)
@@ -106,6 +108,13 @@ DecimalNumberClass <- R6::R6Class("DecimalNumber", inherit = VMobjectClass, lock
     string_to_mob = function(string, mob_class = NULL, ...) {
       string_to_mob(string, mob_class %||% self$mob_class, self$base_font_size, ...)
     },
+    # What the digits drawn for `number` depend on.
+    digit_signature = function(number) {
+      list(self$get_num_string(number), snapshot_function(self$mob_class, 0), self$base_font_size, self$unit,
+           self$show_ellipsis, self$digit_buff_per_font_unit, self$unit_buff_per_font_unit,
+           self$include_background_rectangle, length(self$submobjects))
+    },
+    built_signature = NULL,
     set_submobjects_from_number = function(number) {
       self$number <- number
       self$submobjects <- list()
@@ -134,9 +143,17 @@ DecimalNumberClass <- R6::R6Class("DecimalNumber", inherit = VMobjectClass, lock
       if (!is.null(self$unit) && startsWith(self$unit, "^")) self$unit_sign$align_to(self, UP)
       self$initial_height <- self$height
       if (self$include_background_rectangle) self$add_background_rectangle()
+      self$built_signature <- self$digit_signature(number)
       invisible(self)
     },
     set_value = function(number) {
+      # The same displayed text with the same settings makes the same glyphs:
+      # keep them and update only the value.
+      if (identical(self$digit_signature(number), self$built_signature)) {
+        self$number <- number
+        self$init_colors()
+        return(invisible(self))
+      }
       old_family <- self$get_family()
       old_font_size <- self$font_size
       move_to_point <- self$get_edge_center(self$edge_to_fix)
