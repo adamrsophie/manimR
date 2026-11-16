@@ -133,7 +133,7 @@ data_fields <- function(obj, skip = character()) {
 snapshot_mobject <- function(m, depth, memo = NULL) {
   if (!memo_visit(memo, paste0("mob:", m$mob_id))) return(HASH_ALREADY_PROCESSED)
   fields <- data_fields(m, skip = c("submobjects", "mob_id", "saved_state", "target", "updaters", "name",
-                                    "z_index_group", "manager"))
+                                    "z_index_group", "manager", "curve_length_cache"))
   plain <- fields[vapply(fields, function(v) is.atomic(v) || (is.list(v) && !length(Filter(is.environment, v))), NA)]
   list(class = class(m)[1], fields = lapply(plain, hash_snapshot, depth = depth + 1, memo = memo),
        updaters = lapply(m$updaters, hash_snapshot, depth = depth + 1, memo = memo),
