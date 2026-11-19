@@ -2,6 +2,13 @@
 
 ## New features
 
+* `keyed_mobjects()` makes one mobject per row of a data frame, keyed by a
+  column, and `update_keyed()` animates it to new data: a key in both
+  tables keeps its object (with its updaters), which transforms to its new
+  row; new keys fade in and departing keys fade out. Missing and repeated
+  keys are rejected before anything changes. `keyed_points()` does the same
+  for a point cloud with one point per row, which is much faster for large
+  data (1,000 rows: 2 s against 80 s).
 * `max_inflight_encoders` works: above 1, each video segment's ffmpeg keeps
   encoding in the background while the next play renders, up to that many
   segments at once (on Unix-like systems). A scene of eight plays at high
