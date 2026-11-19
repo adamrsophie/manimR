@@ -83,6 +83,22 @@ add_points <- function(a, b) {
 #' `get_vertical_lines_to_graph()` and `get_T_label()`. `Axes` adds
 #' `plot_line_graph()`.
 #'
+#' `Axes` also has three helpers for statistical graphics, which take data
+#' coordinates:
+#' * `plot_step(x, y, x_end = NULL, color, ...)` draws a right-continuous
+#'   step function: `y[i]` holds from `x[i]` up to `x[i + 1]`, where it
+#'   jumps vertically, as an empirical distribution or a survival curve.
+#'   The last value holds to `x_end` (the end of the x axis by default).
+#'   `x` must increase strictly.
+#' * `plot_band(x, lower, upper, color, opacity = 0.3, step = FALSE, ...)`
+#'   fills the region between two curves, such as a confidence band; with
+#'   `step = TRUE` the edges are step functions as in `plot_step()`.
+#' * `plot_intervals(at, lower, upper, estimate = NULL, horizontal = FALSE,
+#'   color, cap = 0.1, dot_radius, ...)` draws an interval for each value of
+#'   `at`, with caps `cap` long (in scene units) and a dot at each estimate.
+#'   With `horizontal = TRUE` the intervals run along x at heights `at`, as
+#'   in a forest plot. It returns a `VGroup` with one `VGroup` per interval.
+#'
 #' Shapes follow upstream: `c2p(x, y)` with numbers, or `c2p(c(x, y))`,
 #' returns one point; `c2p(m)` with an n x k matrix whose rows are
 #' coordinates returns an n x 3 matrix of points; `c2p(xs, ys)` with vectors
@@ -579,9 +595,51 @@ AxesClass <- R6::R6Class("Axes", inherit = CoordinateSystemClass, lock_objects =
         line_graph$add_key_value_pair("vertex_dots", dots)
       }
       line_graph
+    },
+    plot_step = function(x, y, x_end = NULL, color = PURE_YELLOW, ...) {
+      VMobject(color = color, ...)$set_points_as_corners(self$c2p(step_corners(x, y, x_end %||% self$x_range[2])))
+    },
+    plot_band = function(x, lower, upper, color = BLUE, opacity = 0.3, step = FALSE, ...) {
+      if (length(lower) != length(x) || length(upper) != length(x)) {
+        stop("x, lower and upper must have the same length.", call. = FALSE)
+      }
+      lo <- if (step) step_corners(x, lower, x[length(x)]) else cbind(x, lower)
+      hi <- if (step) step_corners(x, upper, x[length(x)]) else cbind(x, upper)
+      corners <- rbind(hi, lo[rev(seq_len(nrow(lo))), , drop = FALSE])
+      do.call(Polygon, c(lapply(seq_len(nrow(corners)), function(i) as_point(self$c2p(corners[i, 1], corners[i, 2]))),
+                         list(color = color, fill_opacity = opacity, stroke_width = 0, ...)))
+    },
+    plot_intervals = function(at, lower, upper, estimate = NULL, horizontal = FALSE, color = WHITE, cap = 0.1,
+                              dot_radius = DEFAULT_DOT_RADIUS, ...) {
+      n <- length(at)
+      if (length(lower) != n || length(upper) != n || (!is.null(estimate) && length(estimate) != n)) {
+        stop("at, lower, upper and estimate must have the same length.", call. = FALSE)
+      }
+      pt <- function(pos, value) as_point(if (horizontal) self$c2p(value, pos) else self$c2p(pos, value))
+      across <- if (horizontal) UP else RIGHT
+      VGroup(lapply(seq_len(n), function(i) {
+        a <- pt(at[i], lower[i])
+        b <- pt(at[i], upper[i])
+        parts <- list(Line(a, b, color = color, ...),
+                      Line(a - across * cap / 2, a + across * cap / 2, color = color, ...),
+                      Line(b - across * cap / 2, b + across * cap / 2, color = color, ...))
+        if (!is.null(estimate)) parts[[4]] <- Dot(pt(at[i], estimate[i]), radius = dot_radius, color = color)
+        VGroup(parts)
+      }))
     }
   )
 )
+
+# The corners of a right-continuous step function in data coordinates: y[i]
+# from x[i] to x[i + 1], then a vertical jump; the last value runs to x_end.
+step_corners <- function(x, y, x_end) {
+  n <- length(x)
+  if (n == 0 || length(y) != n) stop("x and y must have the same, nonzero length.", call. = FALSE)
+  if (n > 1 && any(diff(x) <= 0)) stop("x must increase strictly.", call. = FALSE)
+  xs <- c(rbind(x, c(x[-1], x_end)))
+  ys <- rep(y, each = 2)
+  cbind(xs, ys)
+}
 
 #' @rdname coordinate_systems
 #' @export

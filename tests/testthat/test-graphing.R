@@ -503,3 +503,25 @@ test_that("graph traversal helpers match a direct computation", {
     expect_equal(unname(graph_shortest_paths(g)), D)
   }
 })
+
+test_that("Axes draw step functions, bands and intervals in data coordinates", {
+  ax <- Axes(x_range = c(0, 6, 1), y_range = c(0, 1, 0.25))
+  st <- ax$plot_step(c(0, 2, 4), c(1, 5 / 6, 5 / 8))
+  anchors <- st$get_anchors()
+  corners <- unique(round(ax$p2c(anchors)[, 1:2], 6))
+  expect_equal(corners, cbind(c(0, 2, 2, 4, 4, 6), c(1, 1, 5 / 6, 5 / 6, 5 / 8, 5 / 8)), ignore_attr = TRUE,
+               tolerance = 1e-5)
+  expect_error(ax$plot_step(c(0, 2, 2), c(1, 1, 1)), "increase strictly")
+  band <- ax$plot_band(c(0, 3, 6), c(0.1, 0.2, 0.3), c(0.5, 0.6, 0.7))
+  expect_equal(band$get_fill_opacity(), 0.3)
+  expect_equal(range(ax$p2c(band$get_anchors())[, 2]), c(0.1, 0.7), tolerance = 1e-6)
+  sband <- ax$plot_band(c(0, 3), c(0.1, 0.2), c(0.5, 0.6), step = TRUE)
+  # Steps up at x = 3 on both edges: (0, .5) (3, .5) (3, .6) and (3, .2) (3, .1) (0, .1).
+  expect_equal(nrow(unique(round(ax$p2c(sband$get_anchors())[, 1:2], 5))), 6)
+  iv <- ax$plot_intervals(c(1, 2), c(0.2, 0.3), c(0.6, 0.9), estimate = c(0.4, 0.5))
+  expect_length(iv$submobjects, 2)
+  expect_length(iv$submobjects[[1]]$submobjects, 4)
+  expect_equal(ax$p2c(iv$submobjects[[2]]$submobjects[[4]]$get_center())[1:2], c(2, 0.5), tolerance = 1e-6)
+  h <- ax$plot_intervals(0.5, 1, 3, horizontal = TRUE)
+  expect_equal(ax$p2c(h$submobjects[[1]]$submobjects[[1]]$get_start())[1:2], c(1, 0.5), tolerance = 1e-6)
+})

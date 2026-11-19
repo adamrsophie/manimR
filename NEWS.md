@@ -2,6 +2,11 @@
 
 ## New features
 
+* `Axes` gains `plot_step()` (a right-continuous step function, such as an
+  empirical distribution or a survival curve), `plot_band()` (the region
+  between two curves, such as a confidence band, optionally with step
+  edges) and `plot_intervals()` (vertical or horizontal intervals with caps
+  and estimates, as in a forest plot).
 * `keyed_mobjects()` makes one mobject per row of a data frame, keyed by a
   column, and `update_keyed()` animates it to new data: a key in both
   tables keeps its object (with its updaters), which transforms to its new
