@@ -114,6 +114,11 @@
 
 ## Performance
 
+* `render(workers = n)` draws the plays of a video in `n` forked
+  processes on Linux and macOS: each worker draws every `n`-th play that is
+  not cached into the partial movie cache, and the render then joins the
+  segments. Eight one-second plays at 1080p took 13 s with four workers
+  against 34 s with one, with identical frames.
 * Graph layouts build each vertex's neighbors once, and shortest paths
   (Kamada and Kawai layout) use a breadth first search from each vertex
   instead of Floyd and Warshall. On a tree of 300 vertices the tree layout

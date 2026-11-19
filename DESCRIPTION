@@ -24,6 +24,7 @@ Imports:
     R6,
     grid,
     grDevices,
+    parallel,
     ragg,
     systemfonts (>= 1.2.0),
     textshaping (>= 0.4.0),

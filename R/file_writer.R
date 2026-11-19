@@ -340,6 +340,12 @@ SceneFileWriterClass <- R6::R6Class("SceneFileWriter", lock_objects = FALSE,
     # Ends the scene: the partial movie files become the movie (and the
     # section videos); an image sequence is already written.
     finish = function() {
+      # A worker of render(workers = ) only fills the segment cache; the
+      # main render joins the segments.
+      if (!is.null(.manim$parallel_part)) {
+        self$join_all_encode_jobs()
+        return(invisible(NULL))
+      }
       if (self$output_spec$is_video) {
         self$join_all_encode_jobs()
         self$combine_to_movie()

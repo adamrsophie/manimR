@@ -29,6 +29,14 @@
 #' @param module_name Folder name under `<media_dir>/videos/` and `<media_dir>/images/`;
 #'   [render_file()] uses the script name. Defaults to `"manimR"`.
 #' @param scene_name Name used for output files; defaults to the scene class name.
+#' @param workers Number of processes that draw the plays of a video. With
+#'   more than one, forked workers (on Linux and macOS; Windows renders in
+#'   one process) each draw every `workers`-th play that is not cached into
+#'   the partial movie cache, stepping through the other plays without
+#'   drawing them; this render then joins the cached segments. It needs
+#'   caching, and pays off when drawing dominates (long plays, high
+#'   quality). A scene with random parts should set `seed`, so the workers
+#'   and this render make the same plays.
 #' @param progress Optional function called after each play with one
 #'   argument, the play's row of the timeline in [render_report()] (a
 #'   one-row data frame with `play`, `cached`, `reason`, `seconds`,
@@ -49,7 +57,17 @@
 #' }
 render <- function(scene, quality = NULL, format = NULL, output_file = NULL, save_last_frame = NULL,
                    preview = NULL, transparent = NULL, module_name = NULL, scene_name = NULL, progress = NULL,
-                   ...) {
+                   workers = 1, ...) {
+  if (!is.numeric(workers) || length(workers) != 1 || workers < 1) stop("`workers` must be a positive number.", call. = FALSE)
+  workers <- as.integer(workers)
+  if (workers > 1 && is.null(.manim$parallel_part) && .Platform$OS.type == "unix") {
+    # Arguments are evaluated here, once: a fork evaluating a promise such
+    # as media_dir = tempfile() would get its own value.
+    args <- c(list(scene, quality = quality, format = format, output_file = output_file,
+                   save_last_frame = save_last_frame, preview = FALSE, transparent = transparent,
+                   module_name = module_name, scene_name = scene_name), list(...))
+    render_parallel_parts(workers, function() do.call(render, args))
+  }
   if (!is.null(progress) && !is.function(progress)) stop("`progress` must be a function.", call. = FALSE)
   old_progress <- .manim$progress
   .manim$progress <- progress
@@ -105,6 +123,29 @@ render <- function(scene, quality = NULL, format = NULL, output_file = NULL, sav
   .manim$last_report <- report
   if (is.null(out)) return(invisible(NULL))
   invisible(structure(normalizePath(out, mustWork = FALSE), class = "manim_output", report = report))
+}
+
+# Runs `run` (a render of the same scene) in `workers` forked processes, the
+# k-th drawing the plays whose index is k modulo `workers`.
+render_parallel_parts <- function(workers, run) {
+  res <- parallel::mclapply(seq_len(workers) - 1L, function(k) {
+    .manim$parallel_part <- c(workers, k)
+    tryCatch({
+      suppressMessages(run())
+      NULL
+    }, error = function(e) conditionMessage(e))
+  }, mc.cores = workers, mc.preschedule = FALSE)
+  errors <- unique(unlist(Filter(is.character, res)))
+  # A worker that failed leaves its plays to this render, which reports
+  # the error itself if it happens again.
+  if (length(errors)) logger$warning("A render worker failed: %s", errors[1])
+  invisible(NULL)
+}
+
+# In a worker of render(workers = ), whether a play belongs to another one.
+parallel_part_skips <- function(index) {
+  part <- .manim$parallel_part
+  !is.null(part) && index %% part[1] != part[2]
 }
 
 instantiate_scene <- function(scene) {

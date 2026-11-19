@@ -15,6 +15,7 @@ render(
   module_name = NULL,
   scene_name = NULL,
   progress = NULL,
+  workers = 1,
   ...
 )
 }
@@ -57,6 +58,15 @@ available). Defaults to the \code{preview} setting.}
 argument, the play's row of the timeline in \code{\link[=render_report]{render_report()}} (a
 one-row data frame with \code{play}, \code{cached}, \code{reason}, \code{seconds},
 \code{section}, \code{frames}, \code{start} and \code{end}).}
+
+\item{workers}{Number of processes that draw the plays of a video. With
+more than one, forked workers (on Linux and macOS; Windows renders in
+one process) each draw every \code{workers}-th play that is not cached into
+the partial movie cache, stepping through the other plays without
+drawing them; this render then joins the cached segments. It needs
+caching, and pays off when drawing dominates (long plays, high
+quality). A scene with random parts should set \code{seed}, so the workers
+and this render make the same plays.}
 
 \item{...}{Further \code{\link[=manim_config]{manim_config()}} settings for this render, such as
 \code{background_color}, \code{frame_rate}, \code{save_sections} or \code{dry_run}.}
