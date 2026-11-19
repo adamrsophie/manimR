@@ -647,3 +647,65 @@ test_that("clean_cache() removes stale unfinished segments only", {
   expect_false(file.exists(old))
   expect_true(file.exists(new))
 })
+
+test_that("scene_frames() captures several times from one run", {
+  construct <- function(self) {
+    self$add(Dot(c(stats::runif(1, -3, 3), 0, 0), color = RED))
+    self$play(Create(Square()), run_time = 1)
+  }
+  fs <- scene_frames(construct, t = c(late = 0.8, early = 0.2, end = Inf), frame_rate = 10)
+  expect_named(fs, c("late", "early", "end"))
+  expect_true(all(vapply(fs, inherits, NA, "manim_frame_image")))
+  same <- scene_frames(construct, t = c(0.2, 0.8), frame_rate = 10, seed = 5)
+  expect_identical(unclass(scene_frame(construct, t = 0.2, frame_rate = 10, seed = 5)), unclass(same[[1]]))
+  expect_false(identical(unclass(fs$early), unclass(fs$late)))
+  expect_error(scene_frame(construct, t = c(1, 2)), "scene_frames")
+})
+
+test_that("scene frames and storyboards are written as PNG, PDF and SVG", {
+  construct <- function(self) self$play(Create(Square()), run_time = 1)
+  dir <- withr_tempdir()
+  files <- file.path(dir, c("a.png", "a.pdf", "a.svg"))
+  for (f in files[1:2]) scene_frame(construct, t = 0.5, file = f, frame_rate = 10)
+  expect_true(all(file.size(files[1:2]) > 0))
+  expect_equal(dim(png::readPNG(files[1]))[1:2], c(480, 854))
+  expect_identical(readBin(files[2], "raw", 4), charToRaw("%PDF"))
+  if (svg_available()) {
+    scene_frame(construct, t = 0.5, file = files[3], frame_rate = 10)
+    expect_true(any(grepl("<path", readLines(files[3], warn = FALSE))))
+  } else {
+    expect_error(scene_frame(construct, t = 0.5, file = files[3], frame_rate = 10), "cairo")
+  }
+  board <- file.path(dir, "board.png")
+  expect_identical(storyboard(construct, t = c(a = 0.2, b = 0.9), board, frame_rate = 10), board)
+  expect_equal(dim(png::readPNG(board))[2], 2 * 854)
+  expect_error(scene_frame(construct, t = 0.5, file = file.path(dir, "x.pdf"), renderer = "opengl"), "Cairo renderer")
+})
+
+test_that("render_report() gives the frames and times of each play and section", {
+  skip_if_not(nzchar(Sys.which("ffmpeg")) && nzchar(Sys.which("ffprobe")))
+  skip_on_cran()
+  construct <- function(self) {
+    self$play(Create(Square()), run_time = 0.5)
+    self$next_section("two")
+    k <- 0
+    self$wait(2, stop_condition = function() {
+      k <<- k + 1
+      k >= 3
+    })
+    self$wait(0.4)
+  }
+  for (renderer in c("cairo", "opengl")) {
+    out <- suppressMessages(render(construct, quality = "l", media_dir = withr_tempdir(), renderer = renderer,
+                                   frame_rate = 10))
+    rep <- render_report(out)
+    expect_equal(rep$plays$start_frame, c(0, 5, 8))
+    expect_equal(rep$plays$frames, c(5, 3, 4))
+    expect_equal(rep$plays$end, c(0.5, 0.8, 1.2))
+    expect_equal(rep$sections$section, c("autocreated", "two"))
+    expect_equal(rep$sections$frames, c(5, 7))
+    n <- system2("ffprobe", c("-v", "error", "-count_frames", "-select_streams", "v:0", "-show_entries",
+                              "stream=nb_read_frames", "-of", "csv=p=0", out), stdout = TRUE)
+    expect_equal(as.integer(n), sum(rep$plays$frames))
+  }
+})

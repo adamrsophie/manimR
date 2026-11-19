@@ -8,6 +8,13 @@
 #' the ffmpeg and encoder used for video, and the settings that had no
 #' effect.
 #'
+#' The report is also the movie's timeline. Each row of `plays` gives the
+#' play's section, its first frame (`start_frame`, counting from 0), its
+#' number of `frames`, and its `start` and `end` in seconds of the movie;
+#' `sections` sums them by section. Plays that were skipped add no frames.
+#' [scene_frame()] at a time `t` shows frame `floor(t * frame_rate)` of the
+#' movie, which is the frame a player shows at that time.
+#'
 #' The report of the latest render is also kept for the session, and
 #' `render_report()` with no argument returns it. That covers renders that
 #' return nothing (`dry_run`, `format = "none"`) and renders that failed,
@@ -27,12 +34,29 @@
 render_report <- function(x) if (missing(x)) .manim$last_report else attr(x, "report")
 
 # Appends one play to a renderer's log. `hash` is NULL for a play that was
-# skipped (skip_animations, or before from_animation_number).
-record_play <- function(log, index, hash, cached, started) {
+# skipped (skip_animations, or before from_animation_number), which adds no
+# frames to the movie. `frames` is the number of frames the play adds, and
+# the play starts at the frame after those of the plays before it.
+record_play <- function(log, index, hash, cached, started, frames = 0, fps = 1, section = NA_character_) {
   reason <- if (is.null(hash)) "skipped" else if (startsWith(hash, "uncached_")) "caching disabled"
             else if (cached) "hash found in cache" else "new hash, rendered"
+  frames <- if (is.null(hash)) 0L else as.integer(round(frames))
+  first <- if (is.null(log) || !nrow(log)) 0L else as.integer(sum(log$frames))
   rbind(log, data.frame(play = index, hash = hash %||% NA_character_, cached = isTRUE(cached), reason = reason,
-                        seconds = proc.time()[[3]] - started))
+                        seconds = proc.time()[[3]] - started, section = section %||% NA_character_,
+                        start_frame = first, frames = frames, start = first / fps, end = (first + frames) / fps))
+}
+
+# The frames and times of each section, from the plays.
+sections_timeline <- function(plays) {
+  if (!nrow(plays)) return(data.frame(section = character(), start_frame = integer(), frames = integer(),
+                                      start = numeric(), end = numeric()))
+  run <- cumsum(c(TRUE, plays$section[-1] != plays$section[-nrow(plays)] |
+                    is.na(plays$section[-1]) != is.na(plays$section[-nrow(plays)])))
+  do.call(rbind, lapply(split(plays, run), function(p) {
+    data.frame(section = p$section[1], start_frame = p$start_frame[1], frames = sum(p$frames),
+               start = p$start[1], end = p$end[nrow(p)])
+  }))
 }
 
 render_report_of <- function(scene, settings, seconds, camera_fixed = character(), error = NULL) {
@@ -42,6 +66,10 @@ render_report_of <- function(scene, settings, seconds, camera_fixed = character(
   shape <- if (is.function(renderer$get_pixel_shape)) renderer$get_pixel_shape()
            else c(scene$camera$pixel_width, scene$camera$pixel_height)
   fw <- renderer$file_writer
+  plays <- renderer$play_log %||% data.frame(play = integer(), hash = character(), cached = logical(),
+                                              reason = character(), seconds = numeric(), section = character(),
+                                              start_frame = integer(), frames = integer(), start = numeric(),
+                                              end = numeric())
   opengl <- identical(cfg("renderer"), RendererType$OPENGL)
   fam <- if (length(scene$mobjects)) unlist(lapply(scene$mobjects, function(m) m$get_family()), recursive = FALSE) else list()
   points <- sum(vapply(fam, function(m) NROW(m$points), 0))
@@ -63,8 +91,8 @@ render_report_of <- function(scene, settings, seconds, camera_fixed = character(
     frame_rate = as.numeric(scene$camera$frame_rate),
     seed = scene$random_seed,
     seconds = seconds,
-    plays = renderer$play_log %||% data.frame(play = integer(), hash = character(), cached = logical(),
-                                               reason = character(), seconds = numeric()),
+    plays = plays,
+    sections = sections_timeline(plays),
     mobjects = length(fam),
     points = points,
     ffmpeg = ffmpeg,

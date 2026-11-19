@@ -1429,7 +1429,11 @@ OpenGLRendererClass <- R6::R6Class("OpenGLRenderer", inherit = RendererClass, lo
       cached <- self$replaying_cache
       self$replaying_cache <- FALSE
       fw$end_animation(!self$skip_animations)
-      self$play_log <- record_play(self$play_log, self$num_plays, hash, cached, started)
+      fps <- self$camera$frame_rate
+      frozen_frames <- if (scene$is_current_animation_frozen_frame()) as.integer(cfg("frame_rate") * scene$duration)
+      self$play_log <- record_play(self$play_log, self$num_plays, hash, cached, started,
+                                   frames = frozen_frames %||% (played * fps), fps = fps,
+                                   section = fw$current_section()$name)
       # A play from the cache skipped drawing only; what follows it (such as
       # add_sound()) is not skipped.
       if (cached) self$skip_animations <- FALSE
