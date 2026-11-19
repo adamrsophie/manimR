@@ -607,3 +607,27 @@ test_that("async renders in separate sessions with the same scene name stay sepa
   }
   expect_false(identical(dirname(files[1]), dirname(files[2])))
 })
+
+test_that("render_report() keeps failed and dry runs and reads the scene's camera", {
+  skip_if_not(nzchar(Sys.which("ffmpeg")))
+  skip_on_cran()
+  x <- suppressMessages(render(function(self) self$play(Create(Square())), format = "none", quality = "l", seed = 7))
+  expect_null(x)
+  expect_equal(render_report()$status, "completed")
+  expect_equal(render_report()$seed, 7)
+  expect_error(suppressMessages(render(function(self) {
+    self$play(Create(Square()), run_time = 0.2)
+    stop("boom")
+  }, quality = "l", media_dir = withr_tempdir())), "boom")
+  failed <- render_report()
+  expect_equal(failed$status, "failed")
+  expect_equal(failed$error, "boom")
+  expect_equal(nrow(failed$plays), 1)
+  expect_output(print(failed), "failed: boom")
+  # A scene object keeps its camera; the video is encoded at its size.
+  obj <- with_manim_config(list(quality = "l"), manim_scene(function(self) self$play(Create(Square()), run_time = 0.2))$new())
+  out <- suppressWarnings(suppressMessages(render(obj, quality = "h", media_dir = withr_tempdir())))
+  expect_equal(unname(render_report(out)$size), c(854L, 480L))
+  meta <- get_video_metadata(out)
+  expect_equal(c(meta$width, meta$height), c(854, 480))
+})

@@ -16,6 +16,15 @@
 
 ## Bug fixes
 
+* A scene object rendered with a different `quality` than it was created
+  with encodes its video at the size and frame rate of its own camera. The
+  encoder took them from the configuration, so ffmpeg got frames of the
+  wrong size.
+* `render_report()` reads the size and frame rate from the scene's camera
+  and records the seed. With no argument it returns the report of the
+  latest render, including renders that return nothing (`format = "none"`,
+  `dry_run`) and renders that failed, whose report has `status = "failed"`
+  and the error.
 * `renderManim()` renders each output of each session into its own media
   directory unless `media_dir` is given, so async renders of scenes with
   the same name in two sessions no longer write to the same files. The

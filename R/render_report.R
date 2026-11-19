@@ -8,9 +8,14 @@
 #' the ffmpeg and encoder used for video, and the settings that had no
 #' effect.
 #'
-#' @param x The value of [render()].
+#' The report of the latest render is also kept for the session, and
+#' `render_report()` with no argument returns it. That covers renders that
+#' return nothing (`dry_run`, `format = "none"`) and renders that failed,
+#' whose report has `status = "failed"` and the error message.
+#'
+#' @param x The value of [render()]; leave it out for the latest render.
 #' @return A `manim_render_report` list, printed as a summary, or `NULL`
-#'   when `x` carries no report.
+#'   when there is no report.
 #' @export
 #' @examples
 #' \donttest{
@@ -19,7 +24,7 @@
 #'   render_report(out)
 #' }
 #' }
-render_report <- function(x) attr(x, "report")
+render_report <- function(x) if (missing(x)) .manim$last_report else attr(x, "report")
 
 # Appends one play to a renderer's log. `hash` is NULL for a play that was
 # skipped (skip_animations, or before from_animation_number).
@@ -30,8 +35,12 @@ record_play <- function(log, index, hash, cached, started) {
                         seconds = proc.time()[[3]] - started))
 }
 
-render_report_of <- function(scene, settings, seconds, camera_fixed = character()) {
+render_report_of <- function(scene, settings, seconds, camera_fixed = character(), error = NULL) {
   renderer <- scene$renderer
+  # The size and frame rate the scene drew with, which a scene object keeps
+  # from when it was created.
+  shape <- if (is.function(renderer$get_pixel_shape)) renderer$get_pixel_shape()
+           else c(scene$camera$pixel_width, scene$camera$pixel_height)
   fw <- renderer$file_writer
   opengl <- identical(cfg("renderer"), RendererType$OPENGL)
   fam <- if (length(scene$mobjects)) unlist(lapply(scene$mobjects, function(m) m$get_family()), recursive = FALSE) else list()
@@ -47,9 +56,12 @@ render_report_of <- function(scene, settings, seconds, camera_fixed = character(
   structure(list(
     renderer = if (opengl) "opengl" else "cairo",
     backend = if (opengl) "upstream's GLSL shaders run in software on the CPU" else "Cairo-style drawing through R graphics on the CPU",
+    status = if (is.null(error)) "completed" else "failed",
+    error = error,
     format = fw$output_spec$format,
-    size = c(width = as.integer(cfg("pixel_width")), height = as.integer(cfg("pixel_height"))),
-    frame_rate = as.numeric(cfg("frame_rate")),
+    size = c(width = as.integer(shape[1]), height = as.integer(shape[2])),
+    frame_rate = as.numeric(scene$camera$frame_rate),
+    seed = scene$random_seed,
     seconds = seconds,
     plays = renderer$play_log %||% data.frame(play = integer(), hash = character(), cached = logical(),
                                                reason = character(), seconds = numeric()),
@@ -75,6 +87,7 @@ ffmpeg_version <- function() {
 #' @export
 print.manim_render_report <- function(x, ...) {
   cat("<manimR render report>\n")
+  if (identical(x$status, "failed")) cat("Status:   failed: ", x$error, "\n", sep = "")
   cat("Renderer: ", x$renderer, " (", x$backend, ")\n", sep = "")
   cat("Output:   ", x$format, ", ", x$size[["width"]], "x", x$size[["height"]], " at ", x$frame_rate, " fps\n", sep = "")
   p <- x$plays
@@ -84,6 +97,7 @@ print.manim_render_report <- function(x, ...) {
     counts <- table(p$reason)
     cat("Plays:    ", paste(sprintf("%d %s", as.integer(counts), names(counts)), collapse = "; "), "\n", sep = "")
   }
+  if (!is.null(x$seed)) cat("Seed:     ", x$seed, "\n", sep = "")
   cat("Scene:    ", x$mobjects, " mobjects, ", x$points, " points in the last frame\n", sep = "")
   if (!is.null(x$ffmpeg)) {
     cat("Encoder:  ", x$encoder$codec, " (", x$encoder$pixel_format, ") in ", x$encoder$container_format, ", ",
