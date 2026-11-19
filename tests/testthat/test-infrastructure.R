@@ -747,3 +747,16 @@ test_that("renderManim(progress = TRUE) renders inside a Shiny progress bar", {
   }
   shiny::testServer(server, expect_match(as.character(output$s$html), "<img src="))
 })
+
+test_that("render(workers = ) draws plays in forked workers with the same frames", {
+  skip_if_not(nzchar(Sys.which("ffmpeg")))
+  skip_on_cran()
+  skip_on_os("windows")
+  construct <- function(self) for (i in 1:3) self$play(Rotate(Square(side_length = i), PI / 2), run_time = 0.3)
+  one <- suppressMessages(render(construct, quality = "l", media_dir = withr_tempdir()))
+  two <- suppressMessages(render(construct, quality = "l", media_dir = withr_tempdir(), workers = 2))
+  expect_true(all(render_report(two)$plays$cached))
+  md5 <- function(f) system2("ffmpeg", c("-v", "error", "-i", f, "-f", "md5", "-"), stdout = TRUE)
+  expect_identical(md5(two), md5(one))
+  expect_error(render(construct, format = "none", workers = 0), "positive number")
+})

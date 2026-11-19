@@ -1401,7 +1401,7 @@ OpenGLRendererClass <- R6::R6Class("OpenGLRenderer", inherit = RendererClass, lo
         } else {
           hash <- get_hash_from_play_call(scene, self$camera, scene$animations, scene$mobjects, backend = "opengl",
                                           encoder_fingerprint = video_encoder_fingerprint(scene$session_spec$video_encoder))
-          if (fw$is_already_cached(hash)) {
+          if (fw$is_already_cached(hash) || parallel_part_skips(self$num_plays)) {
             logger$info("Animation %d : Using cached data (hash : %s)", self$num_plays, hash)
             self$skip_animations <- TRUE
             self$replaying_cache <- TRUE
