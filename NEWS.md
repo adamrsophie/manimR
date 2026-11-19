@@ -137,6 +137,11 @@
 
 ## Documentation
 
+* A new article, "A Kaplan-Meier walkthrough", builds one scene from a
+  `survival::survfit()` result: people leave the risk set by key, the
+  estimate steps at each event and stays flat at censoring, and the
+  confidence band is drawn as steps. It checks its numbers against
+  `survfit()` and shows the storyboard and lesson made from the same scene.
 * The README no longer says that `ImplicitFunction()` uses
   `grDevices::contourLines()`; it uses the adaptive quadtree, as upstream.
 * The help of `knit_print.manim_output()` explains how it differs from the
