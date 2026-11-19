@@ -47,7 +47,8 @@ RendererCapabilities <- function(live_preview = FALSE) list(live_preview = isTRU
 # settings from the current configuration, checked against what the renderer
 # can do. The Cairo style renderer has no live preview window (manimR's
 # interactive window is scene$interactive_embed()).
-resolve_render_session <- function(capabilities = RendererCapabilities(), renderer_name = "CairoRenderer") {
+resolve_render_session <- function(capabilities = RendererCapabilities(), renderer_name = "CairoRenderer",
+                                   pixel_shape = NULL, frame_rate = NULL) {
   live <- isTRUE(cfg("live_preview")) || isTRUE(cfg("enable_gui"))
   dry <- isTRUE(cfg("dry_run"))
   transparent <- isTRUE(cfg("transparent"))
@@ -82,8 +83,11 @@ resolve_render_session <- function(capabilities = RendererCapabilities(), render
   if (presentation$show_in_file_browser && !output$enabled) {
     stop("show_in_file_browser requires a media artifact.", call. = FALSE)
   }
-  encoder <- resolve_video_encoder(output, width = cfg("pixel_width"), height = cfg("pixel_height"),
-                                   frame_rate = cfg("frame_rate"), codec = cfg("video_codec") %||% "auto",
+  # The size and frame rate of the frames the scene draws, which a scene
+  # object keeps from when it was created.
+  pixel_shape <- pixel_shape %||% c(cfg("pixel_width"), cfg("pixel_height"))
+  encoder <- resolve_video_encoder(output, width = pixel_shape[1], height = pixel_shape[2],
+                                   frame_rate = frame_rate %||% cfg("frame_rate"), codec = cfg("video_codec") %||% "auto",
                                    pixel_format = cfg("pixel_format") %||% "auto",
                                    options = cfg("video_encoder_options"))
   list(output = output, presentation = presentation, dry_run = dry, video_encoder = encoder)

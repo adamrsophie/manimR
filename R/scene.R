@@ -84,8 +84,11 @@ Scene <- R6::R6Class("Scene", lock_objects = FALSE,
     # paths, the file writer settings and the optional log file.
     # `module_name` and `output_file` override the settings of those names.
     init_output = function(module_name = NULL, output_file = NULL) {
+      shape <- if (is.function(self$renderer$get_pixel_shape)) self$renderer$get_pixel_shape()
+               else c(self$camera$pixel_width, self$camera$pixel_height)
       self$session_spec <- resolve_render_session(self$renderer$capabilities %||% RendererCapabilities(),
-                                                  renderer_name = class(self$renderer)[1])
+                                                  renderer_name = class(self$renderer)[1],
+                                                  pixel_shape = shape, frame_rate = self$camera$frame_rate)
       module <- module_name %||% resolve_module_name()
       wd <- getwd()
       layout <- resolve_media_layout(self$session_spec$output, module, self$scene_name(), wd)

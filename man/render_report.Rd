@@ -7,11 +7,11 @@
 render_report(x)
 }
 \arguments{
-\item{x}{The value of \code{\link[=render]{render()}}.}
+\item{x}{The value of \code{\link[=render]{render()}}; leave it out for the latest render.}
 }
 \value{
 A \code{manim_render_report} list, printed as a summary, or \code{NULL}
-when \code{x} carries no report.
+when there is no report.
 }
 \description{
 Every \code{\link[=render]{render()}} keeps a report of what ran: the renderer and where it
@@ -19,6 +19,12 @@ runs, the output format and size, the time each play took and whether it
 came from the cache and why, the mobjects and points in the last frame,
 the ffmpeg and encoder used for video, and the settings that had no
 effect.
+}
+\details{
+The report of the latest render is also kept for the session, and
+\code{render_report()} with no argument returns it. That covers renders that
+return nothing (\code{dry_run}, \code{format = "none"}) and renders that failed,
+whose report has \code{status = "failed"} and the error message.
 }
 \examples{
 \donttest{

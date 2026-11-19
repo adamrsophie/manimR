@@ -1430,6 +1430,9 @@ OpenGLRendererClass <- R6::R6Class("OpenGLRenderer", inherit = RendererClass, lo
       self$replaying_cache <- FALSE
       fw$end_animation(!self$skip_animations)
       self$play_log <- record_play(self$play_log, self$num_plays, hash, cached, started)
+      # A play from the cache skipped drawing only; what follows it (such as
+      # add_sound()) is not skipped.
+      if (cached) self$skip_animations <- FALSE
       # A conditional wait that stops early covers only the frames it ran.
       self$time <- self$time + played
       self$num_plays <- self$num_plays + 1

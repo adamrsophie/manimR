@@ -69,20 +69,31 @@ render <- function(scene, quality = NULL, format = NULL, output_file = NULL, sav
   }
   started <- proc.time()[[3]]
   report <- NULL
+  obj <- NULL
   out <- with_manim_config(settings, {
-    repeat {
-      obj <- instantiate_scene(scene)
-      if (!is.null(scene_name)) obj$scene_name_override <- scene_name
-      # The output settings of this call apply to a scene created earlier too.
-      if (is_instance || !is.null(scene_name)) obj$init_output()
-      res <- obj$get_manager()$render()
-      # An interactive rerun renders a new scene of the same class, as
-      # upstream's command line does.
-      if (!isTRUE(res) || is_instance) break
-    }
+    # A failed render keeps a report for render_report(); the error goes on.
+    withCallingHandlers({
+      repeat {
+        obj <- instantiate_scene(scene)
+        if (!is.null(scene_name)) obj$scene_name_override <- scene_name
+        # The output settings of this call apply to a scene created earlier too.
+        if (is_instance || !is.null(scene_name)) obj$init_output()
+        res <- obj$get_manager()$render()
+        # An interactive rerun renders a new scene of the same class, as
+        # upstream's command line does.
+        if (!isTRUE(res) || is_instance) break
+      }
+    }, error = function(e) {
+      if (!is.null(obj)) {
+        .manim$last_report <- tryCatch(render_report_of(obj, settings, proc.time()[[3]] - started, fixed,
+                                                        error = conditionMessage(e)),
+                                       error = function(e2) NULL)
+      }
+    })
     report <- render_report_of(obj, settings, proc.time()[[3]] - started, fixed)
     if (isTRUE(res)) NULL else res
   })
+  .manim$last_report <- report
   if (is.null(out)) return(invisible(NULL))
   invisible(structure(normalizePath(out, mustWork = FALSE), class = "manim_output", report = report))
 }

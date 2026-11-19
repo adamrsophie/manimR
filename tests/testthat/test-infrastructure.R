@@ -534,3 +534,116 @@ test_that("render_report() records plays, cache reasons and settings without eff
   off <- render_report(suppressMessages(render(construct, quality = "l", media_dir = dir, disable_caching = TRUE)))
   expect_equal(off$plays$reason, rep("caching disabled", 2))
 })
+
+test_that("a sound added after a play from the cache is kept", {
+  skip_if_not(nzchar(Sys.which("ffmpeg")) && nzchar(Sys.which("ffprobe")))
+  skip_on_cran()
+  wav <- tempfile(fileext = ".wav")
+  system2("ffmpeg", c("-y", "-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=440:duration=0.3", wav))
+  construct <- function(self) {
+    self$play(Create(Square()), run_time = 0.4)
+    self$add_sound(wav)
+    self$wait(0.4)
+  }
+  streams <- function(out) {
+    system2("ffprobe", c("-v", "error", "-show_entries", "stream=codec_type", "-of", "csv=p=0", out), stdout = TRUE)
+  }
+  for (renderer in c("cairo", "opengl")) {
+    dir <- withr_tempdir()
+    first <- suppressMessages(render(construct, quality = "l", media_dir = dir, renderer = renderer, scene_name = "Snd"))
+    second <- suppressMessages(render(construct, quality = "l", media_dir = dir, renderer = renderer, scene_name = "Snd"))
+    expect_true(all(render_report(second)$plays$cached))
+    expect_true("audio" %in% streams(first))
+    expect_true("audio" %in% streams(second))
+  }
+})
+
+test_that("scene_frame() after a wait that stopped early shows what follows it", {
+  construct <- function(self) {
+    k <- 0
+    self$wait(2, stop_condition = function() {
+      k <<- k + 1
+      k >= 3
+    })
+    self$add(Square(fill_color = RED, fill_opacity = 1))
+    self$wait(1)
+  }
+  red <- function(f) {
+    a <- native_raster_to_array(structure(f, class = "nativeRaster"))
+    sum(a[, , 1] > 150 & a[, , 2] < 100)
+  }
+  for (renderer in c("cairo", "opengl")) {
+    expect_equal(red(scene_frame(construct, t = 0.1, frame_rate = 10, renderer = renderer)), 0)
+    expect_gt(red(scene_frame(construct, t = 0.5, frame_rate = 10, renderer = renderer)), 1000)
+  }
+})
+
+test_that("async renders in separate sessions with the same scene name stay separate", {
+  skip_if_not_installed("shiny")
+  skip_if_not_installed("promises")
+  skip_if_not_installed("future")
+  skip_on_cran()
+  # The workers load the installed package, so this needs the version being
+  # tested to be installed (as under R CMD check).
+  skip_if(nzchar(Sys.getenv("DEVTOOLS_LOAD")) || "devtools_shims" %in% search(), "workers need the installed package")
+  old <- future::plan(future::multisession, workers = 2)
+  on.exit(future::plan(old), add = TRUE)
+  colors <- c(RED, BLUE)
+  files <- character()
+  for (col in colors) {
+    server <- function(input, output, session) {
+      output$scene <- renderManim(function(self) self$add(Square(fill_color = col, fill_opacity = 1)),
+                                  format = "png", pixel_width = 64, pixel_height = 36, scene_name = "Same",
+                                  async = TRUE)
+    }
+    shiny::testServer(server, {
+      html <- as.character(output$scene$html)
+      src <- sub('^src="', "", sub('"$', "", regmatches(html, regexpr('src="[^"]+"', html))))
+      files <<- c(files, file.path(tempdir(), "manimR-shiny-out", dirname(src), basename(src)))
+      expect_true(file.exists(files[length(files)]))
+      center <- png::readPNG(files[length(files)])[18, 32, 1:3]
+      expect_equal(center, unname(grDevices::col2rgb(col)[, 1]) / 255, tolerance = 0.02)
+    })
+  }
+  expect_false(identical(dirname(files[1]), dirname(files[2])))
+})
+
+test_that("render_report() keeps failed and dry runs and reads the scene's camera", {
+  skip_if_not(nzchar(Sys.which("ffmpeg")))
+  skip_on_cran()
+  x <- suppressMessages(render(function(self) self$play(Create(Square())), format = "none", quality = "l", seed = 7))
+  expect_null(x)
+  expect_equal(render_report()$status, "completed")
+  expect_equal(render_report()$seed, 7)
+  expect_error(suppressMessages(render(function(self) {
+    self$play(Create(Square()), run_time = 0.2)
+    stop("boom")
+  }, quality = "l", media_dir = withr_tempdir())), "boom")
+  failed <- render_report()
+  expect_equal(failed$status, "failed")
+  expect_equal(failed$error, "boom")
+  expect_equal(nrow(failed$plays), 1)
+  expect_output(print(failed), "failed: boom")
+  # A scene object keeps its camera; the video is encoded at its size.
+  obj <- with_manim_config(list(quality = "l"), manim_scene(function(self) self$play(Create(Square()), run_time = 0.2))$new())
+  out <- suppressWarnings(suppressMessages(render(obj, quality = "h", media_dir = withr_tempdir())))
+  expect_equal(unname(render_report(out)$size), c(854L, 480L))
+  meta <- get_video_metadata(out)
+  expect_equal(c(meta$width, meta$height), c(854, 480))
+})
+
+test_that("clean_cache() removes stale unfinished segments only", {
+  skip_if_not(nzchar(Sys.which("ffmpeg")))
+  skip_on_cran()
+  dir <- withr_tempdir()
+  construct <- function(self) self$play(Create(Square()), run_time = 0.2)
+  out <- suppressMessages(render(construct, quality = "l", media_dir = dir, scene_name = "Parts"))
+  pdir <- file.path(dirname(out), "partial_movie_files", "Parts")
+  old <- file.path(pdir, "killed.part.mp4")
+  new <- file.path(pdir, "running.part.mp4")
+  file.create(old, new)
+  Sys.setFileTime(old, Sys.time() - 3 * 3600)
+  suppressMessages(render(construct, quality = "l", media_dir = dir, scene_name = "Parts"))
+  expect_false(file.exists(old))
+  expect_true(file.exists(new))
+})

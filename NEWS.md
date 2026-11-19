@@ -16,6 +16,29 @@
 
 ## Bug fixes
 
+* The partial movie cache removes unfinished segment files (`.part`) more
+  than an hour old, which renders that were killed left behind.
+* A scene object rendered with a different `quality` than it was created
+  with encodes its video at the size and frame rate of its own camera. The
+  encoder took them from the configuration, so ffmpeg got frames of the
+  wrong size.
+* `render_report()` reads the size and frame rate from the scene's camera
+  and records the seed. With no argument it returns the report of the
+  latest render, including renders that return nothing (`format = "none"`,
+  `dry_run`) and renders that failed, whose report has `status = "failed"`
+  and the error.
+* `renderManim()` renders each output of each session into its own media
+  directory unless `media_dir` is given, so async renders of scenes with
+  the same name in two sessions no longer write to the same files. The
+  directories are removed when the session ends. Its help no longer says
+  `async = TRUE` keeps the asking session's other outputs responsive; it
+  frees other sessions.
+* `scene_frame()` at a time after a wait that stopped early through
+  `stop_condition` shows what playback shows there. It used the wait's
+  declared duration and returned the wait's last frame.
+* A sound added right after a play that came from the cache is kept. The
+  cache hit left the scene skipping, so `add_sound()` dropped it and a
+  second render of the same scene had no audio.
 * The OpenGL software renderer's image texture cache is bounded. It kept
   every image's upscaled texture for the whole session.
 * `as_mobject()` keeps clipping: shapes outside a clipped viewport, such

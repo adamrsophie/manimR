@@ -174,6 +174,9 @@ RendererClass <- R6::R6Class("Renderer", lock_objects = FALSE,
       self$replaying_cache <- FALSE
       fw$end_animation(!self$skip_animations)
       self$play_log <- record_play(self$play_log, self$num_plays, hash, cached, started)
+      # A play from the cache skipped drawing only; what follows it (such as
+      # add_sound()) is not skipped.
+      if (cached) self$skip_animations <- FALSE
       self$num_plays <- self$num_plays + 1
       invisible(self)
     },
@@ -187,7 +190,8 @@ RendererClass <- R6::R6Class("Renderer", lock_objects = FALSE,
       scene$begin_animations()
       if (start + scene$duration < self$target_time || !is.finite(self$target_time)) {
         scene$play_internal(skip_rendering = TRUE)
-        self$time <- start + scene$duration
+        # A conditional wait that stops early covers only the frames it ran.
+        self$time <- start + scene$played_time
         self$num_plays <- self$num_plays + 1
         return(invisible(self))
       }
@@ -199,9 +203,28 @@ RendererClass <- R6::R6Class("Renderer", lock_objects = FALSE,
         n <- ceiling(scene$duration * fps - 1e-9)
         times <- if (n > 0) (seq_len(n) - 1) / fps else 0
         times <- times[times <= target + 1e-9]
+        ran <- 0
         for (tt in if (length(times)) times else 0) {
           scene$update_to_time(tt)
-          if (!is.null(scene$stop_condition) && isTRUE(scene$stop_condition())) break
+          ran <- ran + 1
+          if (!is.null(scene$stop_condition) && isTRUE(scene$stop_condition())) {
+            # The wait stopped before the target time, so playback has moved
+            # on to what follows it: finish the play as play_internal() does
+            # and keep going.
+            if (start + ran / fps <= self$target_time + 1e-9) {
+              for (a in scene$animations) {
+                a$finish()
+                a$clean_up_from_scene(scene)
+              }
+              scene$update_mobjects(0)
+              self$static_image <- NULL
+              scene$played_time <- ran / fps
+              self$time <- start + ran / fps
+              self$num_plays <- self$num_plays + 1
+              return(invisible(self))
+            }
+            break
+          }
         }
       }
       self$static_image <- NULL

@@ -22,7 +22,8 @@ renderManim(expr, env = parent.frame(), quoted = FALSE, ..., async = FALSE)
 (the default) or \code{format = "gif"}.}
 
 \item{async}{Whether to render in a background R process, so the app
-keeps serving other sessions and outputs meanwhile. Needs the promises
+keeps serving other sessions meanwhile (the session that asked waits
+for the result, as for any Shiny output). Needs the promises
 and future packages and a parallel future plan, such as
 \code{future::plan(future::multisession)}; the scene and the objects it
 refers to are copied to that process.}
@@ -36,9 +37,12 @@ refers to are copied to that process.}
 returns a \link{Scene} class, a construct function (as \code{\link[=render]{render()}} takes) or the
 path of a rendered file, and the output shows the video (or image). The
 expression is reactive, so a scene built from inputs renders again when
-they change. Renders go to a temporary media directory and reuse its
-partial movie cache; each output of each session is shown its own copy
-of the file, served from a folder that is removed when the session ends.
+they change. Unless \code{media_dir} is given, each output of each session
+renders into its own temporary media directory, so concurrent renders of
+scenes with the same name never write to the same files; renders of one
+output reuse its partial movie cache. Each output of each session is
+shown its own copy of the file, served from a folder; both folders are
+removed when the session ends.
 }
 \examples{
 \dontshow{if (interactive() && requireNamespace("shiny", quietly = TRUE)) withAutoprint(\{ # examplesIf}
