@@ -47,6 +47,14 @@ record_play <- function(log, index, hash, cached, started, frames = 0, fps = 1, 
                         start_frame = first, frames = frames, start = first / fps, end = (first + frames) / fps))
 }
 
+# The subcaptions of a scene as a data frame of start and end times (in
+# seconds) and text.
+captions_table <- function(subcaptions) {
+  data.frame(start = vapply(subcaptions, function(s) as.numeric(s$start), 0),
+             end = vapply(subcaptions, function(s) as.numeric(s$end), 0),
+             text = vapply(subcaptions, function(s) paste(s$content, collapse = "\n"), ""))
+}
+
 # The frames and times of each section, from the plays.
 sections_timeline <- function(plays) {
   if (!nrow(plays)) return(data.frame(section = character(), start_frame = integer(), frames = integer(),
@@ -93,6 +101,7 @@ render_report_of <- function(scene, settings, seconds, camera_fixed = character(
     seconds = seconds,
     plays = plays,
     sections = sections_timeline(plays),
+    captions = captions_table(fw$subcaptions),
     mobjects = length(fam),
     points = points,
     ffmpeg = ffmpeg,

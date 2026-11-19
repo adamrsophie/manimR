@@ -2,6 +2,12 @@
 
 ## New features
 
+* `write_lesson()` writes a folder that plays a rendered movie in any
+  browser without R or a network: the movie, its sections as WebVTT
+  chapters, its subcaptions as WebVTT captions, and a page with chapter
+  buttons, captions, a transcript whose lines jump to their time, `n` and
+  `p` keys for the next and previous chapter, and an option to pause at
+  the end of each chapter.
 * `render_report()` is also the movie's timeline: each play has its
   section, first frame, number of frames, and start and end in seconds of
   the movie, and `sections` sums them by section. The counts match the
