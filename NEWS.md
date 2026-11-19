@@ -16,6 +16,8 @@
 
 ## Bug fixes
 
+* The partial movie cache removes unfinished segment files (`.part`) more
+  than an hour old, which renders that were killed left behind.
 * A scene object rendered with a different `quality` than it was created
   with encodes its video at the size and frame rate of its own camera. The
   encoder took them from the configuration, so ffmpeg got frames of the

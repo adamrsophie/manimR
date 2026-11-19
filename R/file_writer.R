@@ -422,7 +422,12 @@ SceneFileWriterClass <- R6::R6Class("SceneFileWriter", lock_objects = FALSE,
       dir <- self$partial_movie_directory
       ext <- self$output_plan$segment_extension
       files <- list.files(dir, pattern = paste0("\\", ext, "$"), full.names = TRUE)
-      files <- files[!grepl("\\.part\\.", files)]
+      parts <- grepl("\\.part\\.", files)
+      # Unfinished segments of renders that were killed. Recent ones may
+      # belong to another render still writing into this folder.
+      stale <- files[parts][difftime(Sys.time(), file.info(files[parts])$mtime, units = "hours") > 1]
+      unlink(stale)
+      files <- files[!parts]
       keep <- self$settings$max_files_cached %||% 100
       if (keep >= 0 && length(files) > keep) {
         atimes <- file.info(files)$atime
