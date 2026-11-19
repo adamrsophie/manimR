@@ -90,6 +90,7 @@ reference:
   - GroupClass
   - VGroupClass
   - VDictClass
+  - keyed_mobjects
   - VectorizedPointClass
   - '`[.Mobject`'
   - print_family
