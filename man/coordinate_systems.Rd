@@ -179,6 +179,23 @@ All coordinate systems share these methods (\code{CoordinateSystemClass}):
 \code{get_vertical_lines_to_graph()} and \code{get_T_label()}. \code{Axes} adds
 \code{plot_line_graph()}.
 
+\code{Axes} also has three helpers for statistical graphics, which take data
+coordinates:
+\itemize{
+\item \code{plot_step(x, y, x_end = NULL, color, ...)} draws a right-continuous
+step function: \code{y[i]} holds from \code{x[i]} up to \code{x[i + 1]}, where it
+jumps vertically, as an empirical distribution or a survival curve.
+The last value holds to \code{x_end} (the end of the x axis by default).
+\code{x} must increase strictly.
+\item \code{plot_band(x, lower, upper, color, opacity = 0.3, step = FALSE, ...)}
+fills the region between two curves, such as a confidence band; with
+\code{step = TRUE} the edges are step functions as in \code{plot_step()}.
+\item \code{plot_intervals(at, lower, upper, estimate = NULL, horizontal = FALSE, color, cap = 0.1, dot_radius, ...)} draws an interval for each value of
+\code{at}, with caps \code{cap} long (in scene units) and a dot at each estimate.
+With \code{horizontal = TRUE} the intervals run along x at heights \code{at}, as
+in a forest plot. It returns a \code{VGroup} with one \code{VGroup} per interval.
+}
+
 Shapes follow upstream: \code{c2p(x, y)} with numbers, or \code{c2p(c(x, y))},
 returns one point; \code{c2p(m)} with an n x k matrix whose rows are
 coordinates returns an n x 3 matrix of points; \code{c2p(xs, ys)} with vectors
