@@ -16,6 +16,12 @@
 
 ## Bug fixes
 
+* `renderManim()` renders each output of each session into its own media
+  directory unless `media_dir` is given, so async renders of scenes with
+  the same name in two sessions no longer write to the same files. The
+  directories are removed when the session ends. Its help no longer says
+  `async = TRUE` keeps the asking session's other outputs responsive; it
+  frees other sessions.
 * `scene_frame()` at a time after a wait that stopped early through
   `stop_condition` shows what playback shows there. It used the wait's
   declared duration and returned the wait's last frame.

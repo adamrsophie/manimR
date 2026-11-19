@@ -577,3 +577,33 @@ test_that("scene_frame() after a wait that stopped early shows what follows it",
     expect_gt(red(scene_frame(construct, t = 0.5, frame_rate = 10, renderer = renderer)), 1000)
   }
 })
+
+test_that("async renders in separate sessions with the same scene name stay separate", {
+  skip_if_not_installed("shiny")
+  skip_if_not_installed("promises")
+  skip_if_not_installed("future")
+  skip_on_cran()
+  # The workers load the installed package, so this needs the version being
+  # tested to be installed (as under R CMD check).
+  skip_if(nzchar(Sys.getenv("DEVTOOLS_LOAD")) || "devtools_shims" %in% search(), "workers need the installed package")
+  old <- future::plan(future::multisession, workers = 2)
+  on.exit(future::plan(old), add = TRUE)
+  colors <- c(RED, BLUE)
+  files <- character()
+  for (col in colors) {
+    server <- function(input, output, session) {
+      output$scene <- renderManim(function(self) self$add(Square(fill_color = col, fill_opacity = 1)),
+                                  format = "png", pixel_width = 64, pixel_height = 36, scene_name = "Same",
+                                  async = TRUE)
+    }
+    shiny::testServer(server, {
+      html <- as.character(output$scene$html)
+      src <- sub('^src="', "", sub('"$', "", regmatches(html, regexpr('src="[^"]+"', html))))
+      files <<- c(files, file.path(tempdir(), "manimR-shiny-out", dirname(src), basename(src)))
+      expect_true(file.exists(files[length(files)]))
+      center <- png::readPNG(files[length(files)])[18, 32, 1:3]
+      expect_equal(center, unname(grDevices::col2rgb(col)[, 1]) / 255, tolerance = 0.02)
+    })
+  }
+  expect_false(identical(dirname(files[1]), dirname(files[2])))
+})
