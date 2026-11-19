@@ -2,12 +2,21 @@
 % Please edit documentation in R/render_report.R
 \name{render_report}
 \alias{render_report}
+\alias{write_render_report}
 \title{Report on a render}
 \usage{
 render_report(x)
+
+write_render_report(x = render_report(), file, inputs = NULL)
 }
 \arguments{
 \item{x}{The value of \code{\link[=render]{render()}}; leave it out for the latest render.}
+
+\item{file}{Path of the JSON file to write.}
+
+\item{inputs}{Optional named list of the inputs of the scene (data
+frames, parameters, file paths); each is recorded as a SHA-256 digest,
+not as data.}
 }
 \value{
 A \code{manim_render_report} list, printed as a summary, or \code{NULL}
@@ -32,6 +41,12 @@ The report of the latest render is also kept for the session, and
 \code{render_report()} with no argument returns it. That covers renders that
 return nothing (\code{dry_run}, \code{format = "none"}) and renders that failed,
 whose report has \code{status = "failed"} and the error message.
+
+\code{write_render_report()} writes a report as JSON (this needs the
+jsonlite package) together with the R and manimR versions, the
+platform, a SHA-256 digest of the output file and digests of the given
+\code{inputs}, so a render can be compared with a later one. It writes the
+report of a failed render as well.
 }
 \examples{
 \donttest{

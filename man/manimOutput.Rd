@@ -7,7 +7,14 @@
 \usage{
 manimOutput(outputId, width = "100\%")
 
-renderManim(expr, env = parent.frame(), quoted = FALSE, ..., async = FALSE)
+renderManim(
+  expr,
+  env = parent.frame(),
+  quoted = FALSE,
+  ...,
+  async = FALSE,
+  progress = FALSE
+)
 }
 \arguments{
 \item{outputId}{Output name.}
@@ -27,6 +34,10 @@ for the result, as for any Shiny output). Needs the promises
 and future packages and a parallel future plan, such as
 \code{future::plan(future::multisession)}; the scene and the objects it
 refers to are copied to that process.}
+
+\item{progress}{Whether to show a Shiny progress bar that names each play
+as it finishes (not with \code{async = TRUE}, whose render runs in another
+process).}
 }
 \value{
 \code{manimOutput()} returns UI; \code{renderManim()} a render function.

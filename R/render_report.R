@@ -47,6 +47,42 @@ record_play <- function(log, index, hash, cached, started, frames = 0, fps = 1, 
                         start_frame = first, frames = frames, start = first / fps, end = (first + frames) / fps))
 }
 
+# Calls the progress function of the render, if any, with the latest play.
+notify_progress <- function(log) {
+  if (is.function(.manim$progress)) .manim$progress(log[nrow(log), , drop = FALSE])
+  invisible(NULL)
+}
+
+#' @rdname render_report
+#' @param file Path of the JSON file to write.
+#' @param inputs Optional named list of the inputs of the scene (data
+#'   frames, parameters, file paths); each is recorded as a SHA-256 digest,
+#'   not as data.
+#' @details `write_render_report()` writes a report as JSON (this needs the
+#'   jsonlite package) together with the R and manimR versions, the
+#'   platform, a SHA-256 digest of the output file and digests of the given
+#'   `inputs`, so a render can be compared with a later one. It writes the
+#'   report of a failed render as well.
+#' @export
+write_render_report <- function(x = render_report(), file, inputs = NULL) {
+  if (!requireNamespace("jsonlite", quietly = TRUE)) stop("write_render_report() needs the jsonlite package.", call. = FALSE)
+  report <- if (inherits(x, "manim_render_report")) x else render_report(x)
+  if (is.null(report)) stop("There is no render report to write.", call. = FALSE)
+  output <- if (inherits(x, "manim_output")) unclass(x)
+  if (!is.null(inputs) && (!is.list(inputs) || is.null(names(inputs)) || !all(nzchar(names(inputs))))) {
+    stop("`inputs` must be a named list.", call. = FALSE)
+  }
+  out <- c(list(manimR = as.character(utils::packageVersion("manimR")), R = R.version.string,
+                platform = R.version$platform, written = format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z"),
+                output = output,
+                output_sha256 = if (!is.null(output) && file.exists(output)) digest::digest(file = output, algo = "sha256"),
+                inputs = lapply(inputs, digest::digest, algo = "sha256")),
+           unclass(report))
+  jsonlite::write_json(out, file, auto_unbox = TRUE, pretty = TRUE, null = "null", na = "null", dataframe = "rows",
+                       digits = NA)
+  invisible(file)
+}
+
 # The subcaptions of a scene as a data frame of start and end times (in
 # seconds) and text.
 captions_table <- function(subcaptions) {

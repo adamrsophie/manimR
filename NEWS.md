@@ -2,6 +2,13 @@
 
 ## New features
 
+* `render(progress = )` takes a function that is called after each play
+  with the play's row of the timeline, and `renderManim(progress = TRUE)`
+  shows a Shiny progress bar for renders in the session.
+* `write_render_report()` writes a render report as JSON, with the R and
+  manimR versions, the platform, a SHA-256 digest of the output and digests
+  of the inputs a caller names, so a render can be compared with a later
+  one. It writes reports of failed renders too.
 * `write_lesson()` writes a folder that plays a rendered movie in any
   browser without R or a network: the movie, its sections as WebVTT
   chapters, its subcaptions as WebVTT captions, and a page with chapter

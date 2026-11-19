@@ -178,6 +178,7 @@ RendererClass <- R6::R6Class("Renderer", lock_objects = FALSE,
       self$play_log <- record_play(self$play_log, self$num_plays, hash, cached, started,
                                    frames = (self$time - time_before) * fps, fps = fps,
                                    section = fw$current_section()$name)
+      notify_progress(self$play_log)
       # A play from the cache skipped drawing only; what follows it (such as
       # add_sound()) is not skipped.
       if (cached) self$skip_animations <- FALSE

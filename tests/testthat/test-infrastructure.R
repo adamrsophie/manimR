@@ -709,3 +709,41 @@ test_that("render_report() gives the frames and times of each play and section",
     expect_equal(as.integer(n), sum(rep$plays$frames))
   }
 })
+
+test_that("render() calls `progress` after each play", {
+  seen <- list()
+  render(function(self) {
+    self$play(Create(Square()), run_time = 0.5)
+    self$wait(0.3)
+  }, quality = "l", format = "none", frame_rate = 10, progress = function(p) seen[[length(seen) + 1]] <<- p)
+  expect_length(seen, 2)
+  expect_equal(vapply(seen, function(p) p$play, 0), c(0, 1))
+  expect_equal(seen[[2]]$end, 0.8)
+  expect_error(render(function(self) NULL, format = "none", progress = 1), "must be a function")
+})
+
+test_that("write_render_report() writes JSON with digests of the output and inputs", {
+  skip_if_not_installed("jsonlite")
+  skip_if_not(nzchar(Sys.which("ffmpeg")))
+  skip_on_cran()
+  out <- suppressMessages(render(function(self) self$play(Create(Square()), run_time = 0.3), quality = "l",
+                                 media_dir = withr_tempdir(), seed = 2))
+  file <- tempfile(fileext = ".json")
+  write_render_report(out, file, inputs = list(data = mtcars, n = 3))
+  j <- jsonlite::read_json(file)
+  expect_equal(j$output_sha256, digest::digest(file = unclass(out), algo = "sha256"))
+  expect_equal(j$inputs$data, digest::digest(mtcars, algo = "sha256"))
+  expect_equal(j$seed, 2)
+  expect_equal(j$status, "completed")
+  expect_equal(j$plays[[1]]$frames, length(seq(0, 0.3 - 1e-9, by = 1 / 15)))
+  expect_error(write_render_report(out, file, inputs = list(1)), "named list")
+})
+
+test_that("renderManim(progress = TRUE) renders inside a Shiny progress bar", {
+  skip_if_not_installed("shiny")
+  server <- function(input, output, session) {
+    output$s <- renderManim(function(self) self$play(Create(Square()), run_time = 0.2), format = "png",
+                            pixel_width = 64, pixel_height = 36, progress = TRUE)
+  }
+  shiny::testServer(server, expect_match(as.character(output$s$html), "<img src="))
+})
