@@ -16,6 +16,9 @@
 
 ## Bug fixes
 
+* A sound added right after a play that came from the cache is kept. The
+  cache hit left the scene skipping, so `add_sound()` dropped it and a
+  second render of the same scene had no audio.
 * The OpenGL software renderer's image texture cache is bounded. It kept
   every image's upscaled texture for the whole session.
 * `as_mobject()` keeps clipping: shapes outside a clipped viewport, such

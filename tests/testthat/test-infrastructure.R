@@ -534,3 +534,26 @@ test_that("render_report() records plays, cache reasons and settings without eff
   off <- render_report(suppressMessages(render(construct, quality = "l", media_dir = dir, disable_caching = TRUE)))
   expect_equal(off$plays$reason, rep("caching disabled", 2))
 })
+
+test_that("a sound added after a play from the cache is kept", {
+  skip_if_not(nzchar(Sys.which("ffmpeg")) && nzchar(Sys.which("ffprobe")))
+  skip_on_cran()
+  wav <- tempfile(fileext = ".wav")
+  system2("ffmpeg", c("-y", "-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=440:duration=0.3", wav))
+  construct <- function(self) {
+    self$play(Create(Square()), run_time = 0.4)
+    self$add_sound(wav)
+    self$wait(0.4)
+  }
+  streams <- function(out) {
+    system2("ffprobe", c("-v", "error", "-show_entries", "stream=codec_type", "-of", "csv=p=0", out), stdout = TRUE)
+  }
+  for (renderer in c("cairo", "opengl")) {
+    dir <- withr_tempdir()
+    first <- suppressMessages(render(construct, quality = "l", media_dir = dir, renderer = renderer, scene_name = "Snd"))
+    second <- suppressMessages(render(construct, quality = "l", media_dir = dir, renderer = renderer, scene_name = "Snd"))
+    expect_true(all(render_report(second)$plays$cached))
+    expect_true("audio" %in% streams(first))
+    expect_true("audio" %in% streams(second))
+  }
+})
