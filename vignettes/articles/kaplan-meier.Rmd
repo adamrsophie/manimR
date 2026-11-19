@@ -1,0 +1,124 @@
+---
+title: "A Kaplan-Meier walkthrough"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{A Kaplan-Meier walkthrough}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 3.94, out.width = "100%")
+library(manimR)
+manim_config(verbosity = "WARNING", progress_bar = FALSE)
+in_pkgdown <- identical(Sys.getenv("IN_PKGDOWN"), "true")
+knitr::opts_chunk$set(format = if (in_pkgdown) "auto" else "png", quality = "l")
+manim_config(media_dir = file.path(tempdir(), "manimR-media"))
+has_survival <- requireNamespace("survival", quietly = TRUE)
+```
+
+Why does a survival curve stay flat when someone leaves follow-up? This
+article answers with one scene built from a `survival::survfit()` result.
+Six people are followed. At each event the curve drops by the share of the
+people still at risk who had the event; a censored person leaves the risk
+set without moving the curve.
+
+The scene uses three things from manimR:
+
+* `keyed_mobjects()` and `update_keyed()`, so each person keeps their own
+  dot from the first frame to the last and leaves when they stop being at
+  risk;
+* `Axes$plot_step()` and `Axes$plot_band()`, which draw the estimate and
+  its confidence band as step functions;
+* `Text()` labels, so the scene needs no LaTeX.
+
+## The data and the estimate
+
+```{r data, eval = has_survival}
+people <- data.frame(id = LETTERS[1:6], time = c(2, 2, 4, 5, 6, 7), status = c(1, 0, 1, 0, 1, 0))
+fit <- survival::survfit(survival::Surv(time, status) ~ 1, data = people)
+km <- data.frame(time = fit$time, at_risk = fit$n.risk, events = fit$n.event, surv = fit$surv,
+                 lower = fit$lower, upper = fit$upper)
+km
+```
+
+The scene draws the numbers in `km`; it computes nothing itself. Before an
+event at time `t` the risk set is everyone whose time is at least `t`, and
+the estimate after `t` is the estimate before it times
+`1 - events / at_risk`. Both match `survfit()`:
+
+```{r check, eval = has_survival}
+stopifnot(
+  all.equal(km$at_risk, vapply(km$time, function(t) sum(people$time >= t), 0)),
+  all.equal(km$surv, cumprod(1 - km$events / km$at_risk))
+)
+```
+
+## The scene
+
+The people sit in a row above the axes. At each time in `km` the people who
+leave (an event or censoring) are highlighted while they still count in the
+denominator, the curve steps to its new value, and then they fade out of the
+risk set.
+
+```{manim kaplan-meier, eval = has_survival}
+KaplanMeier <- manim_scene(function(self) {
+  ax <- Axes(x_range = c(0, 8, 1), y_range = c(0, 1, 0.25), x_length = 9, y_length = 4.2, tips = FALSE,
+             axis_config = list(include_numbers = FALSE))$shift(DOWN * 0.9)
+  x_labels <- VGroup(lapply(0:8, function(x) Text(as.character(x), font_size = 20)$next_to(ax$c2p(x, 0), DOWN)))
+  y_labels <- VGroup(lapply(c(0, 0.5, 1), function(y) Text(format(y), font_size = 20)$next_to(ax$c2p(0, y), LEFT)))
+  person <- function(r) {
+    x <- -3.75 + 1.5 * (match(r$id, people$id) - 1)
+    VGroup(Dot(c(x, 2.9, 0), radius = 0.18, color = BLUE), Text(r$id, font_size = 22)$move_to(c(x, 3.35, 0)))
+  }
+  at_risk <- keyed_mobjects(people, "id", person)
+  counter <- Text(sprintf("At risk: %d", nrow(people)), font_size = 26)$to_corner(UR)
+  estimate <- Text("S(t) = 1", font_size = 26)$next_to(counter, DOWN)$align_to(counter, RIGHT)
+  self$add(ax, x_labels, y_labels, at_risk, counter, estimate)
+  curve <- ax$plot_step(0, 1, x_end = 0.01, color = YELLOW)
+  self$add(curve)
+  surv <- 1
+  for (i in seq_len(nrow(km))) {
+    t <- km$time[i]
+    leaving <- people$id[people$time == t]
+    ids <- people$id[people$time > t]
+    # Highlight who leaves while they still count in the denominator.
+    self$play(lapply(leaving, function(k) at_risk[[k]]$animate$set_color(if (people$status[people$id == k] == 1) RED else GREY)),
+              Transform(counter, Text(sprintf("At risk: %d", km$at_risk[i]), font_size = 26)$move_to(counter)),
+              run_time = 0.6)
+    surv <- km$surv[i]
+    new_curve <- ax$plot_step(c(0, km$time[seq_len(i)]), c(1, km$surv[seq_len(i)]), x_end = t + 0.01, color = YELLOW)
+    label <- if (km$events[i] > 0) sprintf("S(t) = %.3f", surv) else sprintf("S(t) = %.3f (censored, no step)", surv)
+    self$play(Transform(curve, new_curve),
+              Transform(estimate, Text(label, font_size = 26)$next_to(counter, DOWN)$align_to(counter, RIGHT)),
+              run_time = 0.8)
+    self$play(update_keyed(at_risk, people[people$id %in% ids, ]), run_time = 0.6)
+  }
+  final <- ax$plot_step(c(0, km$time), c(1, km$surv), x_end = 8, color = YELLOW)
+  band <- ax$plot_band(c(0, km$time), c(1, km$lower), c(1, km$upper), color = YELLOW, opacity = 0.2, step = TRUE)
+  self$play(Transform(curve, final), FadeIn(band), run_time = 1)
+  self$wait(1)
+})
+```
+
+The last frame shows the full estimate with its 95% confidence band from
+`survfit()` (the default log scale, whose upper limit is 1 here).
+
+## Stills and a lesson from the same scene
+
+The same scene gives the frames for a handout. `storyboard()` runs it once
+and draws the chosen times side by side as vectors:
+
+```{r storyboard, eval = FALSE}
+storyboard(KaplanMeier, t = c("Day 2 event" = 1.2, "Day 4 event" = 3.2, "End" = Inf),
+           "kaplan-meier.pdf")
+```
+
+`write_lesson()` turns a render into a folder that plays offline, with a
+chapter for each section of the scene and the captions added with
+`add_subcaption()`:
+
+```{r lesson, eval = FALSE}
+out <- render(KaplanMeier, quality = "m")
+write_lesson(out, "kaplan-meier-lesson", title = "Kaplan-Meier, step by step")
+```

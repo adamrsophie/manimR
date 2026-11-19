@@ -42,6 +42,10 @@ articles:
   - articles/rendering
   - articles/rstudio-knitr-shiny
   - articles/utilities
+- title: Recipes
+  navbar: Recipes
+  contents:
+  - articles/kaplan-meier
 reference:
 - title: Scenes
   desc: Scene classes and the scene manager.
