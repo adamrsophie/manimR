@@ -666,11 +666,16 @@ test_that("scene frames and storyboards are written as PNG, PDF and SVG", {
   construct <- function(self) self$play(Create(Square()), run_time = 1)
   dir <- withr_tempdir()
   files <- file.path(dir, c("a.png", "a.pdf", "a.svg"))
-  for (f in files) scene_frame(construct, t = 0.5, file = f, frame_rate = 10)
-  expect_true(all(file.size(files) > 0))
+  for (f in files[1:2]) scene_frame(construct, t = 0.5, file = f, frame_rate = 10)
+  expect_true(all(file.size(files[1:2]) > 0))
   expect_equal(dim(png::readPNG(files[1]))[1:2], c(480, 854))
-  expect_true(any(grepl("<path", readLines(files[3], warn = FALSE))))
   expect_identical(readBin(files[2], "raw", 4), charToRaw("%PDF"))
+  if (svg_available()) {
+    scene_frame(construct, t = 0.5, file = files[3], frame_rate = 10)
+    expect_true(any(grepl("<path", readLines(files[3], warn = FALSE))))
+  } else {
+    expect_error(scene_frame(construct, t = 0.5, file = files[3], frame_rate = 10), "cairo")
+  }
   board <- file.path(dir, "board.png")
   expect_identical(storyboard(construct, t = c(a = 0.2, b = 0.9), board, frame_rate = 10), board)
   expect_equal(dim(png::readPNG(board))[2], 2 * 854)

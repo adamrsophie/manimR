@@ -277,13 +277,26 @@ vector_camera <- function(renderer) {
   cam
 }
 
+# Whether grDevices::svg() works. capabilities("cairo") can be TRUE while the
+# cairo module fails to load (CRAN macOS builds without XQuartz).
+svg_available <- function() {
+  if (!isTRUE(capabilities("cairo"))) return(FALSE)
+  f <- tempfile(fileext = ".svg")
+  on.exit(unlink(f))
+  ok <- tryCatch({
+    grDevices::svg(f)
+    grDevices::dev.off()
+    TRUE
+  }, warning = function(w) FALSE, error = function(e) FALSE)
+  ok && file.exists(f)
+}
+
 open_graphics_file <- function(file, width, height) {
   switch(tolower(tools::file_ext(file)),
     pdf = grDevices::pdf(file, width = width, height = height),
-    svg = {
-      if (!isTRUE(capabilities("cairo"))) stop("SVG output needs R built with cairo.", call. = FALSE)
-      grDevices::svg(file, width = width, height = height)
-    },
+    svg = if (!svg_available()) {
+      stop("SVG output needs R's cairo graphics, which do not load here (on macOS they need XQuartz).", call. = FALSE)
+    } else grDevices::svg(file, width = width, height = height),
     png = ragg::agg_png(file, width = width, height = height, units = "in", res = 96),
     stop("`file` must end in .pdf, .svg or .png.", call. = FALSE))
 }
