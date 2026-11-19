@@ -557,3 +557,23 @@ test_that("a sound added after a play from the cache is kept", {
     expect_true("audio" %in% streams(second))
   }
 })
+
+test_that("scene_frame() after a wait that stopped early shows what follows it", {
+  construct <- function(self) {
+    k <- 0
+    self$wait(2, stop_condition = function() {
+      k <<- k + 1
+      k >= 3
+    })
+    self$add(Square(fill_color = RED, fill_opacity = 1))
+    self$wait(1)
+  }
+  red <- function(f) {
+    a <- native_raster_to_array(structure(f, class = "nativeRaster"))
+    sum(a[, , 1] > 150 & a[, , 2] < 100)
+  }
+  for (renderer in c("cairo", "opengl")) {
+    expect_equal(red(scene_frame(construct, t = 0.1, frame_rate = 10, renderer = renderer)), 0)
+    expect_gt(red(scene_frame(construct, t = 0.5, frame_rate = 10, renderer = renderer)), 1000)
+  }
+})

@@ -16,6 +16,9 @@
 
 ## Bug fixes
 
+* `scene_frame()` at a time after a wait that stopped early through
+  `stop_condition` shows what playback shows there. It used the wait's
+  declared duration and returned the wait's last frame.
 * A sound added right after a play that came from the cache is kept. The
   cache hit left the scene skipping, so `add_sound()` dropped it and a
   second render of the same scene had no audio.
