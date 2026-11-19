@@ -21,6 +21,13 @@ the ffmpeg and encoder used for video, and the settings that had no
 effect.
 }
 \details{
+The report is also the movie's timeline. Each row of \code{plays} gives the
+play's section, its first frame (\code{start_frame}, counting from 0), its
+number of \code{frames}, and its \code{start} and \code{end} in seconds of the movie;
+\code{sections} sums them by section. Plays that were skipped add no frames.
+\code{\link[=scene_frame]{scene_frame()}} at a time \code{t} shows frame \code{floor(t * frame_rate)} of the
+movie, which is the frame a player shows at that time.
+
 The report of the latest render is also kept for the session, and
 \code{render_report()} with no argument returns it. That covers renders that
 return nothing (\code{dry_run}, \code{format = "none"}) and renders that failed,

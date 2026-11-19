@@ -2,6 +2,15 @@
 
 ## New features
 
+* `render_report()` is also the movie's timeline: each play has its
+  section, first frame, number of frames, and start and end in seconds of
+  the movie, and `sections` sums them by section. The counts match the
+  frames ffmpeg writes, including waits that stop early.
+* `scene_frames()` captures the frames at several times from one run of a
+  scene, and `storyboard()` draws them side by side with labels into one
+  PDF, SVG or PNG file. `scene_frame(file = )` and `scene_frames(files = )`
+  also write the frames, as PNG or as vector PDF and SVG drawn by the 2D
+  camera.
 * `Axes` gains `plot_step()` (a right-continuous step function, such as an
   empirical distribution or a survival curve), `plot_band()` (the region
   between two curves, such as a confidence band, optionally with step

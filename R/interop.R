@@ -136,7 +136,19 @@ swap_image_placeholders <- function(mob) {
 #' gives), and the play running at `t` is drawn at its last frame at or
 #' before `t`, the frame a video shows then. It is a quick way to
 #' look at any point of a scene while writing it; `plot()` shows the frame.
-#' `t = Inf` gives the last frame.
+#' `t = Inf` gives the last frame. The frame at time `t` is frame
+#' `floor(t * frame_rate)` of the movie, as in the timeline of
+#' [render_report()].
+#'
+#' `scene_frames()` returns the frames at several times from one run of the
+#' scene, so a scene with random parts shows one consistent run.
+#'
+#' With `file` (`files` for `scene_frames()`), the frame is also written to
+#' a file: a PNG of the frame, or a PDF or SVG in which the 2D camera draws
+#' the scene again as vectors, for figures that scale. `storyboard()` draws
+#' the frames at several times side by side, each with a label, into one
+#' PDF, SVG or PNG file, again from one run. Vector output and storyboards
+#' need the Cairo renderer; image mobjects stay images in them.
 #'
 #' `expect_snapshot_frame()` is a testthat expectation for packages that
 #' make scenes: it saves the frame as a PNG snapshot (see
@@ -144,35 +156,158 @@ swap_image_placeholders <- function(mob) {
 #'
 #' @param scene A [Scene] class, a construct function or a scene object, as
 #'   [render()] takes.
-#' @param t Time in seconds.
+#' @param t Time in seconds; for `scene_frames()` and `storyboard()`, one or
+#'   more times, which may be named.
+#' @param file,files File (one per time for `files`) to write the frame to,
+#'   ending in `.png`, `.pdf` or `.svg`.
+#' @param ncol Number of columns of the storyboard.
+#' @param labels Labels under the frames of the storyboard; by default the
+#'   names of `t`, or the times.
 #' @param quality Quality flag or preset name.
 #' @param ... Further [manim_config()] settings.
 #' @param name Snapshot name for `expect_snapshot_frame()`.
-#' @return `scene_frame()` returns a `manim_frame_image`, a native raster.
+#' @return `scene_frame()` returns a `manim_frame_image`, a native raster;
+#'   `scene_frames()` a list of them, named as `t`; `storyboard()` `file`,
+#'   invisibly.
 #' @export
 #' @examples
 #' f <- scene_frame(function(self) self$play(Create(Circle()), run_time = 2), t = 1)
 #' plot(f)
-scene_frame <- function(scene, t = Inf, quality = "l", ...) {
-  settings <- c(list(quality = quality, format = "none", progress_bar = FALSE), list(...))
+#' fs <- scene_frames(function(self) self$play(Create(Circle()), run_time = 2), t = c(start = 0.5, end = 2))
+#' pdf_file <- tempfile(fileext = ".pdf")
+#' storyboard(function(self) self$play(Create(Circle()), run_time = 2), t = c(0.5, 1, 2), pdf_file)
+scene_frame <- function(scene, t = Inf, quality = "l", ..., file = NULL) {
+  if (length(t) != 1) stop("`t` must be one time; use scene_frames() for several.", call. = FALSE)
+  frame <- scene_frames(scene, t, quality = quality, ..., files = file)[[1]]
+  if (is.null(file)) frame else invisible(frame)
+}
+
+#' @rdname scene_frame
+#' @export
+scene_frames <- function(scene, t, quality = "l", ..., files = NULL) {
+  if (!is.numeric(t) || !length(t) || anyNA(t)) stop("`t` must be one or more times.", call. = FALSE)
+  if (!is.null(files) && length(files) != length(t)) stop("`files` needs one file per time.", call. = FALSE)
+  frames <- scene_at_times(scene, t, list(quality = quality, ...), function(renderer, scene, i) {
+    frame <- renderer$get_frame()
+    if (!is.null(files)) write_scene_file(renderer, scene, frame, files[i])
+    frame
+  })
+  frames <- lapply(frames, function(f) structure(f, class = c("manim_frame_image", class(f))))
+  names(frames) <- names(t)
+  frames
+}
+
+#' @rdname scene_frame
+#' @export
+storyboard <- function(scene, t, file, ncol = min(length(t), 3), labels = names(t), quality = "l", ...) {
+  if (!is.numeric(t) || !length(t) || anyNA(t)) stop("`t` must be one or more times.", call. = FALSE)
+  ext <- tolower(tools::file_ext(file))
+  if (!ext %in% c("pdf", "svg", "png")) stop("`file` must end in .pdf, .svg or .png.", call. = FALSE)
+  labels <- labels %||% sprintf("t = %s s", format(t))
+  nrow <- ceiling(length(t) / ncol)
+  dev <- NULL
+  label_h <- 0.4
+  scene_at_times(scene, t, list(quality = quality, ...), function(renderer, scene, i) {
+    cam <- vector_camera(renderer)
+    w <- cam$pixel_width / 96
+    h <- cam$pixel_height / 96
+    prev <- grDevices::dev.cur()
+    on.exit(if (prev > 1) grDevices::dev.set(prev), add = TRUE)
+    if (is.null(dev)) {
+      open_graphics_file(file, ncol * w, nrow * (h + label_h))
+      dev <<- grDevices::dev.cur()
+      grid::grid.newpage(recording = FALSE)
+      grid::pushViewport(grid::viewport(layout = grid::grid.layout(nrow * 2, ncol,
+        heights = grid::unit(rep(c(h, label_h), nrow), "inches")), name = "storyboard"))
+      grid::upViewport()
+    }
+    grDevices::dev.set(dev)
+    k <- i - 1
+    grid::seekViewport("storyboard")
+    grid::pushViewport(grid::viewport(layout.pos.row = 2 * (k %/% ncol) + 1, layout.pos.col = k %% ncol + 1))
+    cam$draw_frame(list_update(scene$mobjects, scene$foreground_mobjects))
+    grid::upViewport()
+    grid::pushViewport(grid::viewport(layout.pos.row = 2 * (k %/% ncol) + 2, layout.pos.col = k %% ncol + 1))
+    grid::grid.text(labels[order(t)][i], gp = grid::gpar(fontsize = 14))
+    grid::upViewport()
+    NULL
+  }, finally = function() if (!is.null(dev)) grDevices::dev.off(dev))
+  invisible(file)
+}
+
+# Runs a scene once and calls capture(renderer, scene, i) at each time of
+# `t` in increasing order; returns the captures in the order of `t`.
+scene_at_times <- function(scene, t, settings, capture, finally = NULL) {
+  if (!is.null(finally)) on.exit(finally(), add = TRUE)
+  settings <- c(list(format = "none", progress_bar = FALSE), settings)
   with_manim_config(settings, {
     obj <- instantiate_scene(scene)
-    obj$renderer$target_time <- t
+    ord <- order(t)
+    renderer <- obj$renderer
+    renderer$target_time <- t[ord]
+    renderer$target_frames <- list()
+    renderer$on_target <- function(scene, i) capture(renderer, scene, i)
+    on.exit({
+      renderer$target_time <- NULL
+      renderer$on_target <- NULL
+    }, add = TRUE)
     if (inherits(scene, "Scene")) obj$init_output()
+    found <- function(cnd) cnd$frames
     res <- tryCatch({
       obj$get_manager()$render()
       NULL
-    }, manim_frame_found = function(cnd) cnd$frame)
+    }, manim_frame_found = found)
     if (is.null(res)) {
-      # t is at or after the end: the last frame.
-      obj$renderer$static_image <- NULL
+      # Times at or after the end show the last frame.
       res <- tryCatch({
-        obj$renderer$update_frame(obj)
-        obj$renderer$get_frame()
-      }, finally = obj$renderer$close_device())
+        while (length(renderer$target_time)) renderer$capture_target(obj)
+        renderer$target_frames
+      }, manim_frame_found = found, finally = renderer$close_device())
     }
-    structure(res, class = c("manim_frame_image", class(res)))
+    res[order(ord)]
   })
+}
+
+# The 2D camera of a renderer, which can draw on any graphics device.
+vector_camera <- function(renderer) {
+  cam <- renderer$camera
+  if (inherits(renderer, "OpenGLRenderer") || !is.function(cam$draw_frame)) {
+    stop("Vector output (PDF, SVG) and storyboards need the Cairo renderer.", call. = FALSE)
+  }
+  cam
+}
+
+open_graphics_file <- function(file, width, height) {
+  switch(tolower(tools::file_ext(file)),
+    pdf = grDevices::pdf(file, width = width, height = height),
+    svg = {
+      if (!isTRUE(capabilities("cairo"))) stop("SVG output needs R built with cairo.", call. = FALSE)
+      grDevices::svg(file, width = width, height = height)
+    },
+    png = ragg::agg_png(file, width = width, height = height, units = "in", res = 96),
+    stop("`file` must end in .pdf, .svg or .png.", call. = FALSE))
+}
+
+# Writes the scene as it is now: a PNG of the frame, or PDF and SVG drawn
+# again as vectors by the camera.
+write_scene_file <- function(renderer, scene, frame, file) {
+  ext <- tolower(tools::file_ext(file))
+  if (ext == "png") {
+    png::writePNG(frame_to_png_array(frame), file)
+    return(invisible(file))
+  }
+  if (!ext %in% c("pdf", "svg")) stop("`files` must end in .png, .pdf or .svg.", call. = FALSE)
+  cam <- vector_camera(renderer)
+  prev <- grDevices::dev.cur()
+  open_graphics_file(file, cam$pixel_width / 96, cam$pixel_height / 96)
+  dev <- grDevices::dev.cur()
+  on.exit({
+    grDevices::dev.off(dev)
+    if (prev > 1) grDevices::dev.set(prev)
+  }, add = TRUE)
+  grid::grid.newpage(recording = FALSE)
+  cam$draw_frame(list_update(scene$mobjects, scene$foreground_mobjects))
+  invisible(file)
 }
 
 #' @export

@@ -2,10 +2,24 @@
 % Please edit documentation in R/interop.R
 \name{scene_frame}
 \alias{scene_frame}
+\alias{scene_frames}
+\alias{storyboard}
 \alias{expect_snapshot_frame}
 \title{Render one frame of a scene}
 \usage{
-scene_frame(scene, t = Inf, quality = "l", ...)
+scene_frame(scene, t = Inf, quality = "l", ..., file = NULL)
+
+scene_frames(scene, t, quality = "l", ..., files = NULL)
+
+storyboard(
+  scene,
+  t,
+  file,
+  ncol = min(length(t), 3),
+  labels = names(t),
+  quality = "l",
+  ...
+)
 
 expect_snapshot_frame(scene, t = Inf, name = "frame", quality = "l", ...)
 }
@@ -13,16 +27,27 @@ expect_snapshot_frame(scene, t = Inf, name = "frame", quality = "l", ...)
 \item{scene}{A \link{Scene} class, a construct function or a scene object, as
 \code{\link[=render]{render()}} takes.}
 
-\item{t}{Time in seconds.}
+\item{t}{Time in seconds; for \code{scene_frames()} and \code{storyboard()}, one or
+more times, which may be named.}
 
 \item{quality}{Quality flag or preset name.}
 
 \item{...}{Further \code{\link[=manim_config]{manim_config()}} settings.}
 
+\item{file, files}{File (one per time for \code{files}) to write the frame to,
+ending in \code{.png}, \code{.pdf} or \code{.svg}.}
+
+\item{ncol}{Number of columns of the storyboard.}
+
+\item{labels}{Labels under the frames of the storyboard; by default the
+names of \code{t}, or the times.}
+
 \item{name}{Snapshot name for \code{expect_snapshot_frame()}.}
 }
 \value{
-\code{scene_frame()} returns a \code{manim_frame_image}, a native raster.
+\code{scene_frame()} returns a \code{manim_frame_image}, a native raster;
+\code{scene_frames()} a list of them, named as \code{t}; \code{storyboard()} \code{file},
+invisibly.
 }
 \description{
 \code{scene_frame()} renders the frame shown at time \code{t} (in seconds) of a
@@ -31,9 +56,21 @@ their frames without drawing them (so updaters reach the state a render
 gives), and the play running at \code{t} is drawn at its last frame at or
 before \code{t}, the frame a video shows then. It is a quick way to
 look at any point of a scene while writing it; \code{plot()} shows the frame.
-\code{t = Inf} gives the last frame.
+\code{t = Inf} gives the last frame. The frame at time \code{t} is frame
+\code{floor(t * frame_rate)} of the movie, as in the timeline of
+\code{\link[=render_report]{render_report()}}.
 }
 \details{
+\code{scene_frames()} returns the frames at several times from one run of the
+scene, so a scene with random parts shows one consistent run.
+
+With \code{file} (\code{files} for \code{scene_frames()}), the frame is also written to
+a file: a PNG of the frame, or a PDF or SVG in which the 2D camera draws
+the scene again as vectors, for figures that scale. \code{storyboard()} draws
+the frames at several times side by side, each with a label, into one
+PDF, SVG or PNG file, again from one run. Vector output and storyboards
+need the Cairo renderer; image mobjects stay images in them.
+
 \code{expect_snapshot_frame()} is a testthat expectation for packages that
 make scenes: it saves the frame as a PNG snapshot (see
 \code{\link[testthat:expect_snapshot_file]{testthat::expect_snapshot_file()}}) and fails when it changes.
@@ -41,4 +78,7 @@ make scenes: it saves the frame as a PNG snapshot (see
 \examples{
 f <- scene_frame(function(self) self$play(Create(Circle()), run_time = 2), t = 1)
 plot(f)
+fs <- scene_frames(function(self) self$play(Create(Circle()), run_time = 2), t = c(start = 0.5, end = 2))
+pdf_file <- tempfile(fileext = ".pdf")
+storyboard(function(self) self$play(Create(Circle()), run_time = 2), t = c(0.5, 1, 2), pdf_file)
 }

@@ -143,6 +143,7 @@ RendererClass <- R6::R6Class("Renderer", lock_objects = FALSE,
       hash <- NULL
       self$replaying_cache <- FALSE
       started <- proc.time()[[3]]
+      time_before <- self$time
       if (self$skip_animations) {
       } else if (isTRUE(cfg("disable_caching"))) {
         logger$info("Caching disabled.")
@@ -173,66 +174,90 @@ RendererClass <- R6::R6Class("Renderer", lock_objects = FALSE,
       cached <- self$replaying_cache
       self$replaying_cache <- FALSE
       fw$end_animation(!self$skip_animations)
-      self$play_log <- record_play(self$play_log, self$num_plays, hash, cached, started)
+      fps <- self$camera$frame_rate
+      self$play_log <- record_play(self$play_log, self$num_plays, hash, cached, started,
+                                   frames = (self$time - time_before) * fps, fps = fps,
+                                   section = fw$current_section()$name)
       # A play from the cache skipped drawing only; what follows it (such as
       # add_sound()) is not skipped.
       if (cached) self$skip_animations <- FALSE
       self$num_plays <- self$num_plays + 1
       invisible(self)
     },
-    # scene_frame(): plays that end before the target time step through
-    # their frame times without drawing, so updaters that use dt reach the
-    # state a render gives; the play running at that time steps to its last
-    # frame time at or before it, which is drawn and returned through a
-    # manim_frame_found condition.
+    # scene_frame() and scene_frames(): `target_time` holds the times still
+    # to capture, in increasing order. Plays that end before the next one
+    # step through their frame times without drawing, so updaters that use dt
+    # reach the state a render gives. In a play that covers a target, the
+    # frame shown at a time is the last frame time at or before it (frame
+    # floor(t * frame_rate) of the movie); `on_target(scene, i)` captures it.
+    # After the last target a manim_frame_found condition ends the render.
     play_to_target = function(scene) {
       start <- self$time
       scene$begin_animations()
-      if (start + scene$duration < self$target_time || !is.finite(self$target_time)) {
+      if (start + scene$duration < self$target_time[1] || !is.finite(self$target_time[1])) {
         scene$play_internal(skip_rendering = TRUE)
         # A conditional wait that stops early covers only the frames it ran.
         self$time <- start + scene$played_time
         self$num_plays <- self$num_plays + 1
         return(invisible(self))
       }
-      target <- max(self$target_time - start, 0)
+      fps <- scene$camera$frame_rate
       if (self$skip_animations) {
-        scene$update_to_time(target)
+        while (length(self$target_time) && self$target_time[1] <= start + scene$duration + 1e-9) {
+          scene$update_to_time(max(self$target_time[1] - start, 0))
+          self$capture_target(scene)
+        }
+        ran <- scene$duration * fps
       } else {
-        fps <- scene$camera$frame_rate
         n <- ceiling(scene$duration * fps - 1e-9)
         times <- if (n > 0) (seq_len(n) - 1) / fps else 0
-        times <- times[times <= target + 1e-9]
         ran <- 0
-        for (tt in if (length(times)) times else 0) {
-          scene$update_to_time(tt)
-          ran <- ran + 1
-          if (!is.null(scene$stop_condition) && isTRUE(scene$stop_condition())) {
-            # The wait stopped before the target time, so playback has moved
-            # on to what follows it: finish the play as play_internal() does
-            # and keep going.
-            if (start + ran / fps <= self$target_time + 1e-9) {
-              for (a in scene$animations) {
-                a$finish()
-                a$clean_up_from_scene(scene)
-              }
-              scene$update_mobjects(0)
-              self$static_image <- NULL
-              scene$played_time <- ran / fps
-              self$time <- start + ran / fps
-              self$num_plays <- self$num_plays + 1
-              return(invisible(self))
-            }
-            break
-          }
+        for (k in seq_along(times)) {
+          scene$update_to_time(times[k])
+          ran <- k
+          stopped <- !is.null(scene$stop_condition) && isTRUE(scene$stop_condition())
+          # The targets this frame shows: up to the next frame, the end of a
+          # wait that stopped early, or the end of the play.
+          shows <- if (stopped) function(t) t < start + ran / fps - 1e-9
+                   else if (k == length(times)) function(t) t <= start + scene$duration + 1e-9
+                   else function(t) t < start + times[k + 1] - 1e-9
+          while (length(self$target_time) && shows(self$target_time[1])) self$capture_target(scene)
+          if (stopped) break
         }
       }
+      # Targets remain after this play: finish it as play_internal() does
+      # and go on.
+      for (a in scene$animations) {
+        a$finish()
+        a$clean_up_from_scene(scene)
+      }
+      scene$update_mobjects(0)
+      self$static_image <- NULL
+      scene$played_time <- ran / fps
+      self$time <- start + ran / fps
+      self$num_plays <- self$num_plays + 1
+      invisible(self)
+    },
+    # Captures the scene for the first remaining target; after the last one,
+    # ends the render with the captures.
+    capture_target = function(scene) {
       self$static_image <- NULL
       self$update_frame(scene)
-      frame <- self$get_frame()
-      self$close_device()
-      stop(structure(class = c("manim_frame_found", "condition"), list(message = "frame", call = NULL, frame = frame)))
+      i <- length(self$target_frames) + 1
+      # list(): a capture may be NULL.
+      self$target_frames[i] <- list(if (is.null(self$on_target)) self$get_frame() else self$on_target(scene, i))
+      self$target_time <- self$target_time[-1]
+      if (!length(self$target_time)) {
+        self$close_device()
+        stop(structure(class = c("manim_frame_found", "condition"),
+                       list(message = "frame", call = NULL, frames = self$target_frames)))
+      }
+      invisible(self)
     },
+    target_frames = list(),
+    # Set by scene_frames() and storyboard() to capture something else than
+    # the raster frame.
+    on_target = NULL,
     render = function(scene, time, moving_mobjects = NULL) {
       if (self$skip_animations) return(invisible(self))
       self$update_frame(scene, moving_mobjects)
