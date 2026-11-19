@@ -20,6 +20,9 @@
 #' @param env,quoted The environment of `expr`, and whether it is quoted.
 #' @param ... [render()] arguments for the scene, such as `quality = "l"`
 #'   (the default) or `format = "gif"`.
+#' @param progress Whether to show a Shiny progress bar that names each play
+#'   as it finishes (not with `async = TRUE`, whose render runs in another
+#'   process).
 #' @param async Whether to render in a background R process, so the app
 #'   keeps serving other sessions meanwhile (the session that asked waits
 #'   for the result, as for any Shiny output). Needs the promises
@@ -47,7 +50,7 @@ manimOutput <- function(outputId, width = "100%") {
 
 #' @rdname manimOutput
 #' @export
-renderManim <- function(expr, env = parent.frame(), quoted = FALSE, ..., async = FALSE) {
+renderManim <- function(expr, env = parent.frame(), quoted = FALSE, ..., async = FALSE, progress = FALSE) {
   if (!requireNamespace("shiny", quietly = TRUE)) stop("renderManim() needs the shiny package.", call. = FALSE)
   if (async && !(requireNamespace("promises", quietly = TRUE) && requireNamespace("future", quietly = TRUE))) {
     stop("renderManim(async = TRUE) needs the promises and future packages.", call. = FALSE)
@@ -85,6 +88,12 @@ renderManim <- function(expr, env = parent.frame(), quoted = FALSE, ..., async =
     session <- shiny::getDefaultReactiveDomain()
     if (is.character(x)) return(show(unclass(x), session))
     if (own_media) args$media_dir <- file.path(shiny_session_dir(session)$media, output_id)
+    if (!async && progress) {
+      return(shiny::withProgress(message = "Rendering", value = 0, {
+        notify <- function(p) shiny::setProgress(detail = sprintf("play %d done, %.1f s of video", p$play + 1, p$end))
+        show(unclass(do.call(render, c(list(x), args, list(progress = notify)))), session)
+      }))
+    }
     if (!async) return(show(unclass(do.call(render, c(list(x), args))), session))
     job <- promises::future_promise(unclass(do.call(manimR::render, c(list(x), args))),
                                     globals = list(x = x, args = args), packages = "manimR", seed = TRUE)

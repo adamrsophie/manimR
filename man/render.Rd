@@ -14,6 +14,7 @@ render(
   transparent = NULL,
   module_name = NULL,
   scene_name = NULL,
+  progress = NULL,
   ...
 )
 }
@@ -51,6 +52,11 @@ available). Defaults to the \code{preview} setting.}
 \code{\link[=render_file]{render_file()}} uses the script name. Defaults to \code{"manimR"}.}
 
 \item{scene_name}{Name used for output files; defaults to the scene class name.}
+
+\item{progress}{Optional function called after each play with one
+argument, the play's row of the timeline in \code{\link[=render_report]{render_report()}} (a
+one-row data frame with \code{play}, \code{cached}, \code{reason}, \code{seconds},
+\code{section}, \code{frames}, \code{start} and \code{end}).}
 
 \item{...}{Further \code{\link[=manim_config]{manim_config()}} settings for this render, such as
 \code{background_color}, \code{frame_rate}, \code{save_sections} or \code{dry_run}.}

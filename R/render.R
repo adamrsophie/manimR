@@ -29,6 +29,10 @@
 #' @param module_name Folder name under `<media_dir>/videos/` and `<media_dir>/images/`;
 #'   [render_file()] uses the script name. Defaults to `"manimR"`.
 #' @param scene_name Name used for output files; defaults to the scene class name.
+#' @param progress Optional function called after each play with one
+#'   argument, the play's row of the timeline in [render_report()] (a
+#'   one-row data frame with `play`, `cached`, `reason`, `seconds`,
+#'   `section`, `frames`, `start` and `end`).
 #' @param ... Further [manim_config()] settings for this render, such as
 #'   `background_color`, `frame_rate`, `save_sections` or `dry_run`.
 #' @return The path of the artifact, invisibly, with class `manim_output`;
@@ -44,7 +48,12 @@
 #' render(function(self) self$play(Create(Circle())), quality = "l")
 #' }
 render <- function(scene, quality = NULL, format = NULL, output_file = NULL, save_last_frame = NULL,
-                   preview = NULL, transparent = NULL, module_name = NULL, scene_name = NULL, ...) {
+                   preview = NULL, transparent = NULL, module_name = NULL, scene_name = NULL, progress = NULL,
+                   ...) {
+  if (!is.null(progress) && !is.function(progress)) stop("`progress` must be a function.", call. = FALSE)
+  old_progress <- .manim$progress
+  .manim$progress <- progress
+  on.exit(.manim$progress <- old_progress, add = TRUE)
   settings <- list(...)
   if (!is.null(quality)) settings$quality <- quality
   if (!is.null(format)) settings$format <- format
